@@ -1,6 +1,8 @@
 # AGENTS.md — instrucciones para agentes que trabajan en Skopos
 
-Este proyecto se construye siguiendo el método de
+**Empieza por `docs/guia-rapida.md`** (5 minutos) si es tu primera vez
+aquí. Luego `docs/hoja-de-ruta.md` para saber qué ya está hecho y qué
+falta. Este proyecto se construye siguiendo el método de
 [Skevi](https://github.com/kristhianmanue1/Skevi) (fases F0→F3). Antes de
 tocar código, lee `docs/f0-analisis-y-requerimientos.md`, `docs/adr/`,
 `docs/specs/f1-specs.md` y `docs/contratos/f1-contratos.md` — las

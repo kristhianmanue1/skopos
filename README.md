@@ -37,6 +37,8 @@ descargado y probado end-to-end). MongoDB local instalado vía Homebrew
 
 ## Documentación de diseño
 
+- `docs/guia-rapida.md` — arrancar contexto en 5 minutos (empieza aquí).
+- `docs/hoja-de-ruta.md` — hitos, qué está cerrado y qué falta.
 - `docs/f0-analisis-y-requerimientos.md` — problema, REQ-*, restricciones,
   evidencia.
 - `docs/adr/` — decisiones con alternativas (motor de IA, interfaz de
