@@ -3,6 +3,9 @@ name = "skopos"
 version = "0.1.0"
 description = "Observa turnos de un CLI de IA, los analiza y los hace recuperables por tema."
 requires-python = ">=3.9"
+dependencies = [
+    "pymongo>=4.17,<5",
+]
 
 [build-system]
 requires = ["setuptools>=68"]

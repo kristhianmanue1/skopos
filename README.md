@@ -9,8 +9,16 @@ Construido siguiendo el método de
 de diseño están en `docs/`, no aquí — este README es el contrato de
 arranque: cómo se construye, corre y prueba.
 
-**Estado:** F2 (cascarón). Sólo la capa de captura (`skopos.captura`,
-SPEC-001) está implementada; análisis, almacenamiento y consulta son F3.
+**Estado:** F3 en curso. Implementadas: captura (`skopos.captura`,
+SPEC-001), análisis vía Ollama local (`skopos.analisis`, SPEC-002),
+almacenamiento en MongoDB local (`skopos.almacenamiento`, SPEC-003).
+Pendiente: el CLI de consulta (`skopos query`, SPEC-004) y el orquestador
+que conecta las tres piezas en un pipeline (detectado→analizado→guardado,
+`docs/f1-maquina-estados.md`).
+
+Modelo de análisis confirmado: `qwen3:8b` (sucesor de `qwen2.5:7b`,
+descargado y probado end-to-end). MongoDB local instalado vía Homebrew
+(`mongodb-community`, tap `mongodb/brew`) y corriendo como servicio.
 
 ## Documentación de diseño
 
@@ -48,9 +56,12 @@ python3 -m unittest discover -s tests
 
 ## Decisiones de cascarón
 
-- **Gestor de paquetes:** `pip` + `venv` estándar, sin lockfile todavía —
-  el proyecto no tiene dependencias externas aún (sólo stdlib). Se agrega
-  lockfile cuando se declare la primera dependencia real (pymongo, en F3).
+- **Gestor de paquetes:** `pip` + `venv` estándar. Dependencia declarada:
+  `pymongo>=4.17,<5` (confirmada contra MongoDB 8.3.7 local). Sin
+  lockfile todavía — una sola dependencia directa no lo justifica aún.
+- **Modelo de análisis:** Ollama local vía su API HTTP
+  (`urllib` de stdlib, sin cliente HTTP nuevo como dependencia), modelo
+  `qwen3:8b`.
 - **Estructura:** `src/skopos/` por paquete instalable
   (`pyproject.toml`, `setuptools`), `tests/` con `unittest` de la
   biblioteca estándar — sin dependencias de testing nuevas.
@@ -62,10 +73,13 @@ python3 -m unittest discover -s tests
   del estándar de Skevi (800 líneas genérico, 200 `AGENTS.md`, 300
   `README.md`) por declaración, sin gate automatizado propio todavía.
 
-## Pendientes conocidos antes de F3
+## Pendientes conocidos
 
-- MongoDB no está instalado en el entorno de desarrollo (confirmado, ver
-  `docs/f0-analisis-y-requerimientos.md` EV-5) — necesario para
-  implementar `almacenamiento.py` (SPEC-003).
-- Modelo local de Ollama a confirmar (ADR-001 elige Ollama como motor,
-  falta elegir el modelo concreto a descargar).
+- `skopos.cli` (SPEC-004, `skopos query <tema>`) — todavía no existe.
+- Orquestador del pipeline completo (detectado→analizado→guardado,
+  incluida la máquina de estados y sus fallos) — todavía no existe; hoy
+  `captura`, `analisis` y `almacenamiento` son piezas probadas por
+  separado, no conectadas entre sí.
+- Integración con escrubery (REQ-10) implementada en `analisis.py` pero
+  sin probar contra el repo real todavía (requiere pasar
+  `escrubery_script` explícitamente al llamar `analizar_turno`).
