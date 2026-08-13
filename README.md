@@ -84,21 +84,33 @@ python3 -m unittest discover -s tests
   del estándar de Skevi (800 líneas genérico, 200 `AGENTS.md`, 300
   `README.md`) por declaración, sin gate automatizado propio todavía.
 
-## Pendientes conocidos
+## Próximos pasos (orden sugerido, ninguno decidido todavía)
 
-- **Primer arranque del vigilante = backfill completo, sin aviso previo.**
-  `skopos watch` no distingue turnos históricos de turnos nuevos: la
-  primera vez que corre contra `~/.codex/sessions/` real, analiza (con
-  Ollama, uno por uno) todo lo que nunca se guardó, sin feedback hasta
-  terminar el ciclo completo — puede ser mucho volumen y mucho tiempo si
-  hay historial acumulado. Confirmado al probarlo: lo detuve manualmente
-  en vez de dejarlo terminar. Falta decidir (F1, con el humano): ¿arranca
-  sólo "desde ahora" por defecto y el backfill es opt-in explícito?
-- Integración con escrubery (REQ-10) implementada en `analisis.py` pero
-  sin probar contra el repo real todavía (requiere pasar
-  `escrubery_script` explícitamente al llamar `analizar_turno`).
-- `qwen3:8b` con `think:false` responde en 1-7s con el modelo ya cargado
-  en memoria, pero Ollama lo descarga tras inactividad — la primera
-  llamada tras eso puede tardar hasta ~90s (medido). El timeout por
-  defecto (120s) lo cubre; considerar precargar el modelo si esto importa
-  para uso interactivo.
+1. **Política de arranque del vigilante.** `skopos watch` no distingue
+   turnos históricos de nuevos: la primera corrida real analiza TODO lo
+   no guardado, sin feedback hasta terminar el ciclo completo. Confirmado
+   al probarlo — lo detuve manualmente en vez de dejarlo correr sin
+   límite. Falta decidir con el humano: ¿arranca "desde ahora" por
+   defecto y el backfill es opt-in explícito?
+2. **Herramienta de lectura por sesión/fecha/rango.** Discutido en
+   conversación (2026-08-13), no implementado: un comando distinto de
+   `skopos query` (que busca por tema) para leer una conversación
+   completa filtrando por `session_id`, fecha o rango de horas — ahora es
+   viable porque `ocurrido_en` ya existe en cada documento. Diseño
+   pendiente: ¿un `skopos read --session <id>` / `--desde --hasta`?
+3. Probar la integración con escrubery (REQ-10) contra el repo real —
+   implementada en `analisis.py` pero nunca ejercitada de verdad (exige
+   pasar `escrubery_script` explícitamente).
+4. Evaluar si conviene precargar `qwen3:8b` en memoria antes de un uso
+   interactivo — Ollama lo descarga tras inactividad; la primera llamada
+   tras eso puede tardar ~90s (medido), cubierto por el timeout de 120s
+   pero no ideal para latencia percibida.
+
+## Datos operativos medidos (para dimensionar lo anterior)
+
+- Sesión real de hoy (28 turnos, 1.2MB, 42,958 caracteres, ~13min de
+  conversación real): 548.8s de procesamiento total, ~19.6s/turno, 0
+  fallos.
+- La sesión más grande del entorno de desarrollo tiene ~23,700 líneas —
+  a ese ritmo, un backfill completo del historial tomaría horas, no
+  minutos. Esto es lo que hace urgente el punto 1 de arriba.

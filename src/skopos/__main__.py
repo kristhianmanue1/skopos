@@ -1,4 +1,4 @@
-"""Punto de entrada de Skopos: `skopos` (versión) o `skopos query <tema>`."""
+"""Punto de entrada de Skopos: `skopos`, `skopos query <tema>`, `skopos watch`."""
 
 from __future__ import annotations
 
@@ -8,18 +8,28 @@ from skopos import __version__
 from skopos.cli import query_command
 from skopos.vigilante import watch_command
 
+COMANDOS = {"query": query_command, "watch": watch_command}
+
+_AYUDA = f"""skopos {__version__}
+
+Comandos:
+  query <tema>              busca por tema en lo ya analizado (SPEC-004)
+  watch [--sessions-dir DIR] [--intervalo SEGUNDOS]
+                             vigila y procesa turnos nuevos (SPEC-005)
+
+`skopos <comando> --help` muestra los argumentos de cada uno."""
+
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
-    if not argv:
-        print(f"skopos {__version__}")
+    if not argv or argv[0] in {"-h", "--help", "help"}:
+        print(_AYUDA)
         return 0
-    if argv[0] == "query":
-        return query_command(argv[1:])
-    if argv[0] == "watch":
-        return watch_command(argv[1:])
-    print(f"comando desconocido: {argv[0]}", file=sys.stderr)
-    return 1
+    comando = COMANDOS.get(argv[0])
+    if comando is None:
+        print(f"comando desconocido: {argv[0]}\n\n{_AYUDA}", file=sys.stderr)
+        return 1
+    return comando(argv[1:])
 
 
 if __name__ == "__main__":

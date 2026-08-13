@@ -11,9 +11,16 @@ contradigas sin registrar un ADR nuevo que sustituya al anterior.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate && pip install -e .   # build
-python3 -m skopos                                                        # run
+python3 -m skopos                                                        # ayuda + comandos disponibles
+python3 -m skopos query "<tema>"                                         # SPEC-004
+python3 -m skopos watch                                                  # SPEC-005
 python3 -m unittest discover -s tests                                    # test
 ```
+
+Requiere en el entorno: MongoDB local corriendo (`brew services start
+mongodb/brew/mongodb-community`) y Ollama con `qwen3:8b` descargado
+(`ollama pull qwen3:8b`). Ver `README.md` "Próximos pasos" para lo que
+falta y por qué.
 
 ## Convenciones
 
