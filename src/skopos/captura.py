@@ -15,6 +15,9 @@ from pathlib import Path
 from typing import Iterator
 
 
+CLI_ORIGEN = "codex-cli"  # nombre tal como lo identifica escrubery (EV-7 de F0)
+
+
 @dataclass(frozen=True)
 class Turno:
     turn_id: str
@@ -25,6 +28,7 @@ class Turno:
     ruta_origen: str
     offset_inicio: int
     offset_fin: int
+    cli: str = CLI_ORIGEN
 
 
 def _iter_eventos_con_offsets(path: Path) -> Iterator[tuple[object, int, int]]:

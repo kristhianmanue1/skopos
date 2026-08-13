@@ -52,6 +52,7 @@ class QueryTests(unittest.TestCase):
                 ruta_origen=str(self.rollout),
                 offset_inicio=0,
                 offset_fin=len("contenido completo"),
+                cli="codex-cli", modelo_analisis="test-modelo",
             ),
             coleccion=self.coleccion,
         )
@@ -75,6 +76,7 @@ class QueryTests(unittest.TestCase):
                 ruta_origen="/no/existe/rollout.jsonl",
                 offset_inicio=0,
                 offset_fin=10,
+                cli="codex-cli", modelo_analisis="test-modelo",
             ),
             coleccion=self.coleccion,
         )

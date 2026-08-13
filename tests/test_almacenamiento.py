@@ -41,6 +41,7 @@ def _analisis_ejemplo(tema="bases de datos", turn_id="t1") -> Analisis:
         ruta_origen="/tmp/rollout-test.jsonl",
         offset_inicio=0,
         offset_fin=100,
+        cli="codex-cli", modelo_analisis="test-modelo",
         entidades=["MongoDB"],
     )
 
@@ -84,6 +85,7 @@ class AlmacenamientoTests(unittest.TestCase):
             ruta_origen="/tmp/rollout-test.jsonl",
             offset_inicio=100,
             offset_fin=200,
+            cli="codex-cli", modelo_analisis="test-modelo",
             dominio="arquitectura-software",
             metadata_cli={"cli_producto": {"nombre": "codex-cli"}},
         )

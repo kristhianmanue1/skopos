@@ -38,9 +38,18 @@ Entrada (esquema del documento insertado en la colección):
   `ruta_origen`: string [obligatorio] — ruta al `rollout-*.jsonl` de origen
   `offset_inicio`: int [obligatorio]
   `offset_fin`: int [obligatorio]
+  `cli`: string [obligatorio] — CLI de origen del turno (ej.
+  `"codex-cli"`, mismo nombre que usa escrubery)
+  `modelo_analisis`: string [obligatorio] — modelo que produjo este
+  análisis (ej. `"qwen3:8b"`); necesario para comparar CLIs/modelos entre
+  sí más adelante
+  `ocurrido_en`: string (ISO 8601) [opcional] — cuándo pasó la
+  conversación de verdad (del evento `task_complete` original), NO cuándo
+  Skopos la procesó; puede faltar si el CLI de origen no trae timestamp
   `dominio`: string [opcional] — presente si se usó configuración de
   dominio (ADR-003)
-  `creado_en`: string (ISO 8601) [obligatorio]
+  `creado_en`: string (ISO 8601) [obligatorio] — cuándo Skopos guardó el
+  documento (puede ser mucho después de `ocurrido_en` si hubo backfill)
 
 Salida: el mismo documento, recuperable mediante consulta sobre `tema`.
 

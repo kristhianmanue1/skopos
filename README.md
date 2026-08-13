@@ -11,12 +11,21 @@ arranque: cómo se construye, corre y prueba.
 
 **Estado:** F3 — pipeline completo funcionando de punta a punta con datos
 reales: captura (SPEC-001) → análisis vía Ollama local (SPEC-002) →
-almacenamiento en MongoDB local (SPEC-003) → consulta por CLI (SPEC-004).
-Verificado contra rollouts reales de Codex, no sólo fixtures sintéticos.
+almacenamiento en MongoDB local (SPEC-003) → consulta por CLI (SPEC-004) →
+vigilante en vivo (SPEC-005). Verificado contra rollouts reales de Codex,
+no sólo fixtures sintéticos.
 
 ```bash
 python3 -m skopos query "<tema>"
+python3 -m skopos watch [--sessions-dir DIR] [--intervalo SEGUNDOS]
 ```
+
+**Prueba de escala real** (sesión de hoy, 28 turnos, 1.2MB): 42,958
+caracteres de conversación real (~13 min de conversación según
+`ocurrido_en`) tardaron 548.8s (~9min, ~19.6s/turno) en procesarse
+completos — captura + análisis con `qwen3:8b` + guardado en Mongo, 0
+fallos. Referencia útil para estimar cuánto tardaría un backfill de
+sesiones grandes (la mayor en este entorno tiene ~23,700 líneas).
 
 Modelo de análisis confirmado: `qwen3:8b` (sucesor de `qwen2.5:7b`,
 descargado y probado end-to-end). MongoDB local instalado vía Homebrew

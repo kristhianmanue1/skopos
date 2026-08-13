@@ -51,8 +51,11 @@ ficha de escrubery opcional (mismo archivo, contrato
 
 Salidas: `Analisis` con `tema`, `resumen`, `entidades` (opcional),
 `referencia_origen` (`turn_id` + `ruta_origen` + offsets del `Turno`),
-`metadata_cli` (opcional, presente sólo si escrubery respondió con
-ficha).
+`cli` (de dónde vino el turno) y `modelo_analisis` (qué modelo lo
+analizó) — vitales para comparar CLIs y modelos entre sí más adelante,
+`ocurrido_en` (timestamp real de la conversación, tomado de
+`Turno.timestamp_cierre`, no de cuándo se analizó), `metadata_cli`
+(opcional, presente sólo si escrubery respondió con ficha).
 
 Errores: si el modelo local no responde o responde vacío, el turno queda
 en estado `fallido` (ver máquina de estados) — nunca se guarda un

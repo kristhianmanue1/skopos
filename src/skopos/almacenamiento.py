@@ -28,8 +28,12 @@ def _documento(analisis: Analisis) -> dict:
         "ruta_origen": analisis.ruta_origen,
         "offset_inicio": analisis.offset_inicio,
         "offset_fin": analisis.offset_fin,
+        "cli": analisis.cli,
+        "modelo_analisis": analisis.modelo_analisis,
         "creado_en": datetime.now(timezone.utc).isoformat(),
     }
+    if analisis.ocurrido_en:
+        documento["ocurrido_en"] = analisis.ocurrido_en
     if analisis.entidades:
         documento["entidades"] = analisis.entidades
     if analisis.dominio:

@@ -72,6 +72,7 @@ class CicloTests(unittest.TestCase):
             tema="x", resumen="y", turn_id=turno.turn_id, session_id=turno.session_id,
             ruta_origen=turno.ruta_origen, offset_inicio=turno.offset_inicio,
             offset_fin=turno.offset_fin,
+            cli="codex-cli", modelo_analisis="test-modelo",
         )
 
     def test_turno_nuevo_queda_guardado(self):

@@ -40,6 +40,9 @@ class Analisis:
     ruta_origen: str
     offset_inicio: int
     offset_fin: int
+    cli: str
+    modelo_analisis: str
+    ocurrido_en: str | None = None
     entidades: list[str] = field(default_factory=list)
     dominio: str | None = None
     metadata_cli: dict | None = None
@@ -171,6 +174,9 @@ def analizar_turno(
         ruta_origen=turno.ruta_origen,
         offset_inicio=turno.offset_inicio,
         offset_fin=turno.offset_fin,
+        cli=turno.cli,
+        modelo_analisis=modelo,
+        ocurrido_en=turno.timestamp_cierre,
         dominio=(dominio_config or {}).get("domain"),
         metadata_cli=metadata_cli,
     )
