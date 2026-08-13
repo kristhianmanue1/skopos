@@ -1,0 +1,12 @@
+[project]
+name = "skopos"
+version = "0.1.0"
+description = "Observa turnos de un CLI de IA, los analiza y los hace recuperables por tema."
+requires-python = ">=3.9"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

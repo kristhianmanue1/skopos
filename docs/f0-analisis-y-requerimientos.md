@@ -184,6 +184,19 @@ EV-7: escrubery existe como clon local y su CLI de consulta funciona |
 CLIs y proveedores disponibles, incluido "codex-cli";
 `.../consultar ficha cli codex-cli` → JSON real con comandos y bloque de
 procedencia (fuente, fecha, hash) por cada uno
+
+EV-8: el esquema de mensaje asumido en EV-3 estaba incompleto — corregido
+durante F2 al validar contra un rollout real | primera implementación de
+extracción de texto (payload.type en {message, agent_message,
+user_message}, campo "text") devolvió texto vacío en los 5 turnos de un
+rollout real; inspección directa del payload mostró el esquema real:
+`payload = {type: "message", role: "user"|"assistant"|"developer",
+content: [{type: "input_text"|"output_text", text: "..."}]}`. El rol
+"developer" contiene instrucciones de sistema/permisos inyectadas por
+Codex, no conversación, y se excluye deliberadamente de texto_usuario y
+texto_agente. Tras la corrección, la extracción sobre un rollout real
+produjo texto no vacío (verificado, sin imprimir contenido privado del
+usuario en este documento).
 ```
 
 ## Reporte de fase
