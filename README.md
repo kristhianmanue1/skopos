@@ -1,5 +1,9 @@
 # Skopos
 
+Skopos (Σκοπός)
+
+Significado: Observador, meta, objetivo o vigilante. Aunque tiene una 'k' intermedia, la cadencia y el inicio suave le dan cierta similitud.
+
 Observa turnos de un CLI de IA (Codex, para empezar), analiza lo dicho y
 lo guarda de forma recuperable por tema, con acceso al fragmento completo
 de origen cuando hace falta.
@@ -105,6 +109,38 @@ python3 -m unittest discover -s tests
    interactivo — Ollama lo descarga tras inactividad; la primera llamada
    tras eso puede tardar ~90s (medido), cubierto por el timeout de 120s
    pero no ideal para latencia percibida.
+5. Búsqueda semántica (embeddings) si `$text` (ADR-006) resulta
+   insuficiente en uso real — `nomic-embed-text` ya está disponible.
+
+## Riesgos conocidos, aceptados por ahora (no resueltos en esta ronda)
+
+- **Sin retención ni borrado.** Los documentos guardados no expiran ni
+  hay comando para borrarlos selectivamente (más allá de vaciar la
+  colección a mano, como se hizo hoy). Las conversaciones capturadas
+  quedan indefinidamente en Mongo, incluidas rutas absolutas del sistema
+  de archivos del usuario. Aceptado explícitamente por ahora — todo
+  corre local, sin exposición externa; se revisita si `metadata_cli`/otro
+  consumidor externo (REQ-10, F0) se activa de verdad.
+- **Redacción de secretos es defensa por patrón, no garantía.** Cubre
+  formatos conocidos (API keys de OpenAI/Anthropic, AWS, GitHub, Slack,
+  JWT) en `tema`/`resumen`/`entidades`; no cubre secretos con formato
+  desconocido, ni protege `fragmento_completo` (que siempre expone el
+  texto original sin redactar, por diseño — es la evidencia cruda).
+
+## Ronda adversarial de arquitectura (2026-08-13)
+
+Ejecutada con contexto fresco (subagente separado, sin haber escrito el
+código) enfocada en buenas prácticas para software que produce/consume
+salida de agentes de IA. Encontró y se corrigieron: 3 BLOCKER (fallo de
+Mongo en el chequeo de deduplicación tumbaba `watch` entero; inyección de
+prompt reproducida contra Ollama real que filtró un secreto falso a
+Mongo; CONTRATO que prometía lectura incremental nunca implementada) y 4
+HIGH (condición de carrera sin índice único sobre `turn_id`; búsqueda por
+tema con igualdad exacta que fallaba contra reformulaciones del LLM;
+ítems no-string en `entidades` coercionados en vez de descartados;
+validación de borde ausente pese a que el contrato la prometía). Detalle
+completo en los ADR/CONTRATO/SPEC actualizados y en `tests/` (8 tests
+nuevos de regresión, uno por hallazgo corregido).
 
 ## Datos operativos medidos (para dimensionar lo anterior)
 

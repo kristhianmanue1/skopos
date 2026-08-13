@@ -5,9 +5,6 @@
 Entrada:
   `ruta`: string [obligatorio] — ruta a un archivo `*.jsonl` bajo
   `~/.codex/sessions/`
-  `offset`: int [opcional] — posición de lectura desde la que continuar
-  (por defecto 0, o el tamaño actual del archivo en modo "baseline" para
-  ignorar histórico, igual que `RolloutWatcher.baseline()` del prototipo)
 
 Salida:
   eventos: lista de objetos JSON, uno por línea válida — Skopos no valida
@@ -20,8 +17,15 @@ Errores:
   `línea corrupta`: se descarta esa línea, se continúa con el resto
 
 Invariantes:
-  - el offset de lectura nunca retrocede, salvo que el archivo se trunque
-    (tamaño actual menor que el offset conocido)
+  - el archivo se lee completo en cada llamada, desde el byte 0 — no hay
+    lectura incremental ni parámetro `offset`/`baseline` (a diferencia
+    del prototipo original). Decisión consciente, ver ADR-005: la
+    deduplicación entre ciclos vive en Mongo, no en el punto de lectura
+    del archivo. Corrección de la v1 original de este contrato, que
+    prometía un `offset` que nunca se implementó (ronda adversarial
+    2026-08-13) — si el volumen de rollouts hace que releer archivos
+    completos sea un problema medido, eso es un ADR nuevo, no un ajuste
+    silencioso aquí.
 
 Compatibilidad: el formato de los rollouts es externo, de Codex, y no
 versionado por Skopos. Un cambio de Codex que rompa el parseo se detecta
@@ -51,15 +55,25 @@ Entrada (esquema del documento insertado en la colección):
   `creado_en`: string (ISO 8601) [obligatorio] — cuándo Skopos guardó el
   documento (puede ser mucho después de `ocurrido_en` si hubo backfill)
 
-Salida: el mismo documento, recuperable mediante consulta sobre `tema`.
+Salida: el mismo documento, recuperable mediante búsqueda de texto sobre
+`tema`/`resumen` (ver CONTRATO cli-skopos-query v1 — cambió de igualdad
+exacta a `$text` en la ronda adversarial 2026-08-13).
 
 Errores:
-  inserción sin `turn_id`, `ruta_origen` u offsets: rechazada, no se
-  persiste (invariante de SPEC-003: ningún documento queda huérfano)
+  inserción sin `turn_id` o sin `ruta_origen`: rechazada explícitamente
+  por `guardar_analisis` (`DocumentoInvalido`), no se persiste —
+  aplicado en el borde desde la ronda adversarial 2026-08-13; antes de
+  eso la garantía era sólo "por construcción" del resto del pipeline, no
+  una barrera real
+  `turn_id` duplicado (dos escrituras concurrentes para el mismo turno):
+  rechazada por el índice único de Mongo (`DuplicateKeyError`), el
+  orquestador lo trata como "omitido", no como fallo
 
 Invariantes:
   - todo documento es resoluble a un fragmento real vía `ruta_origen` +
     `offset_inicio` + `offset_fin`
+  - `turn_id` es único en la colección (índice único, cierra la
+    condición de carrera entre `existe_turn_id` e `insert_one`)
 
 Compatibilidad: agregar campos opcionales es compatible hacia atrás;
 quitar o renombrar `tema`, `resumen`, `turn_id`, `ruta_origen`,
@@ -114,11 +128,15 @@ fija ese contrato, sólo declara cómo tolera su ausencia o cambio.
 
 Entrada:
   `tema`: string [obligatorio] — primer argumento posicional de
-  `skopos query <tema>`
+  `skopos query <tema>`; se usa como término de búsqueda de texto
+  completo (`$text`) sobre `tema`+`resumen`, no como igualdad exacta —
+  corregido en la ronda adversarial 2026-08-13: la igualdad exacta
+  fallaba contra temas que el LLM redacta con palabras distintas para
+  la misma idea (verificado con datos reales)
 
 Salida (JSON a stdout):
   `resultados`: lista de objetos `{tema, resumen, turn_id, ruta_origen,
-  fragmento_completo}`
+  fragmento_completo}`, ordenados por relevancia de texto (`textScore`)
 
 Errores:
   tema sin resultados: exit 0, `{"resultados": []}`
@@ -127,6 +145,9 @@ Errores:
 
 Invariantes:
   - stdout es siempre JSON válido cuando el exit code es 0
+  - `$text` es coincidencia por palabra, no semántica: sinónimos o
+    reformulaciones sin palabras en común no se recuperan (búsqueda por
+    embeddings queda para un ADR futuro si la evidencia lo justifica)
 
 Compatibilidad: agregar campos al objeto de resultado es compatible;
 quitar o renombrar campos exige v2.

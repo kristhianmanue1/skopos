@@ -142,6 +142,42 @@ class ProcesarRolloutTests(unittest.TestCase):
         estados = {r.turn_id: r.estado for r in resultados}
         self.assertEqual(estados, {"t1": "fallido", "t2": "guardado"})
 
+    def test_fallo_de_dedup_no_tumba_el_proceso_entero(self):
+        # ronda adversarial 2026-08-13 [BLOCKER]: ya_guardado sin try/except
+        # dejaba que un PyMongoError se propagara sin capturar, matando el
+        # ciclo completo del vigilante en vez de fallar sólo este turno.
+        self._escribir([_mensaje("user", "hola"), _cierre("t1")])
+
+        def dedup_que_falla(turn_id, *, coleccion):
+            raise PyMongoError("mongo caído")
+
+        resultados = procesar_rollout(
+            self.path, coleccion=object(), ya_guardado=dedup_que_falla
+        )
+        self.assertEqual(resultados[0].estado, "fallido")
+        self.assertIn("mongo caído", resultados[0].motivo)
+
+    def test_turno_totalmente_vacio_se_omite_sin_llamar_al_modelo(self):
+        # ronda adversarial 2026-08-13 [MED]: un turno sin texto real
+        # igual disparaba una llamada cara a Ollama y se guardaba como
+        # análisis válido.
+        self._escribir([_cierre("t1")])  # ningún response_item, sólo el cierre
+        analizar_llamado = []
+
+        def analizar_que_no_deberia_llamarse(turno, **_):
+            analizar_llamado.append(turno.turn_id)
+            raise AssertionError("no debería llamarse para un turno vacío")
+
+        resultados = procesar_rollout(
+            self.path,
+            coleccion=object(),
+            analizar=analizar_que_no_deberia_llamarse,
+            ya_guardado=_nunca_visto,
+        )
+        self.assertEqual(resultados[0].estado, "omitido")
+        self.assertEqual(resultados[0].motivo, "sin contenido significativo")
+        self.assertEqual(analizar_llamado, [])
+
     def test_turno_ya_guardado_se_omite_sin_analizar_ni_guardar(self):
         self._escribir([_mensaje("user", "hola"), _cierre("t1")])
         analizar_llamado = []

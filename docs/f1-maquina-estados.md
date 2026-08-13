@@ -8,9 +8,12 @@ ESTADOS: detectado, analizado, guardado, fallido, omitido
 
 TRANSICIONES:
   detectado --ya_guardado--> omitido
+  detectado --dedup_falla--> fallido
+  detectado --sin_contenido--> omitido
   detectado --analisis_ok--> analizado
   detectado --analisis_falla--> fallido
   analizado --persistencia_ok--> guardado
+  analizado --persistencia_duplicada--> omitido
   analizado --persistencia_falla--> fallido
 
 INVARIANTES:
@@ -21,7 +24,11 @@ INVARIANTES:
   - un timeout de análisis (SPEC-002) o de persistencia (SPEC-003)
     produce "fallido" explícito; "guardado" nunca se infiere por ausencia
     de error;
-  - "omitido" existe para el vigilante en vivo (docs/adr/ADR-005): un
-    turno con turn_id ya guardado en Mongo no se vuelve a analizar ni a
-    persistir en un ciclo posterior.
+  - "omitido" tiene tres causas, todas legítimas y distintas de "fallido"
+    (ronda adversarial 2026-08-13 verificó que un fallo de Mongo durante
+    el chequeo de deduplicación no debía tumbar el ciclo entero — corregido
+    para que produzca "fallido" del turno, no un crash del proceso):
+    turn_id ya guardado (ADR-005), turno sin contenido significativo
+    (no vale una llamada a Ollama), o duplicado detectado por el índice
+    único de Mongo al momento de insertar (dos ejecuciones concurrentes).
 ```

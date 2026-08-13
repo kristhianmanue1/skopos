@@ -10,8 +10,10 @@ from __future__ import annotations
 import unittest
 
 import pymongo
+from pymongo.errors import DuplicateKeyError
 
 from skopos.almacenamiento import (
+    DocumentoInvalido,
     buscar_por_tema,
     coleccion_local,
     existe_turn_id,
@@ -32,10 +34,10 @@ def _mongo_disponible() -> bool:
         return False
 
 
-def _analisis_ejemplo(tema="bases de datos", turn_id="t1") -> Analisis:
+def _analisis_ejemplo(tema="bases de datos", turn_id="t1", resumen="explica MongoDB") -> Analisis:
     return Analisis(
         tema=tema,
-        resumen="explica MongoDB",
+        resumen=resumen,
         turn_id=turn_id,
         session_id="s1",
         ruta_origen="/tmp/rollout-test.jsonl",
@@ -105,6 +107,42 @@ class AlmacenamientoTests(unittest.TestCase):
         guardar_analisis(_analisis_ejemplo(turn_id="t1"), coleccion=self.coleccion)
         self.assertTrue(existe_turn_id("t1", coleccion=self.coleccion))
         self.assertFalse(existe_turn_id("otro-turno", coleccion=self.coleccion))
+
+    def test_turn_id_duplicado_lo_rechaza_el_indice_unico(self):
+        # ronda adversarial 2026-08-13 [HIGH]: sin índice único, dos
+        # inserciones para el mismo turn_id convivían sin error.
+        guardar_analisis(_analisis_ejemplo(turn_id="dup"), coleccion=self.coleccion)
+        with self.assertRaises(DuplicateKeyError):
+            guardar_analisis(_analisis_ejemplo(turn_id="dup"), coleccion=self.coleccion)
+
+    def test_guardar_sin_turn_id_o_ruta_origen_se_rechaza(self):
+        # ronda adversarial 2026-08-13 [HIGH]: el CONTRATO prometía rechazo
+        # en el borde; el código sólo confiaba en que nunca pasara.
+        sin_turn_id = _analisis_ejemplo(turn_id="")
+        with self.assertRaises(DocumentoInvalido):
+            guardar_analisis(sin_turn_id, coleccion=self.coleccion)
+        self.assertEqual(self.coleccion.count_documents({}), 0)
+
+    def test_busqueda_por_tema_encuentra_reformulaciones_con_palabras_en_comun(self):
+        # ronda adversarial 2026-08-13 [HIGH]: igualdad exacta fallaba
+        # contra temas que el LLM redacta distinto para la misma idea.
+        guardar_analisis(
+            _analisis_ejemplo(tema="Índices en MongoDB", turn_id="t1"),
+            coleccion=self.coleccion,
+        )
+        guardar_analisis(
+            _analisis_ejemplo(tema="Optimización de consulta en MongoDB", turn_id="t2"),
+            coleccion=self.coleccion,
+        )
+        guardar_analisis(
+            _analisis_ejemplo(tema="Recetas de cocina", turn_id="t3", resumen="pasta al pesto"),
+            coleccion=self.coleccion,
+        )
+        resultados = buscar_por_tema("Índices MongoDB", coleccion=self.coleccion)
+        turn_ids = {r["turn_id"] for r in resultados}
+        self.assertIn("t1", turn_ids)
+        self.assertIn("t2", turn_ids)
+        self.assertNotIn("t3", turn_ids)
 
 
 if __name__ == "__main__":
