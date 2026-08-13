@@ -76,6 +76,31 @@ Errores:
 Compatibilidad: agregar campos opcionales es compatible; quitar o
 renombrar `domain` exige v2.
 
+## CONTRATO: consulta-escrubery-cli v1
+
+Entrada:
+  `cli`: string [obligatorio] — nombre del CLI tal como lo identifica
+  escrubery (confirmado con datos reales: `"codex-cli"`, ver
+  `scripts/consultar listar` en EV-7 de F0)
+
+Salida:
+  `ficha`: objeto JSON con metadata y bloque de `procedencia` (fuente,
+  fecha, hash) por dato, tal como lo devuelve
+  `scripts/consultar ficha cli <cli>`; ausente si escrubery no tiene
+  ficha para ese CLI
+
+Errores:
+  escrubery no disponible (proceso falla, timeout, clon local ausente o
+  desactualizado): se trata como "sin ficha" — nunca produce un error
+  fatal ni bloquea el análisis (ADR-004, REQ-10)
+
+Invariantes:
+  - una consulta fallida a escrubery nunca detiene el pipeline de Skopos
+
+Compatibilidad: escrubery es un proyecto externo con su propio ciclo de
+vida y su propio contrato (`CONTRATO_API_v0.md` en ese repo); Skopos no
+fija ese contrato, sólo declara cómo tolera su ausencia o cambio.
+
 ## CONTRATO: cli-skopos-query v1
 
 Entrada:

@@ -81,6 +81,18 @@ REQ-9 [restricción] [fuente: humano]
 Enunciado: el modelo de IA para el análisis es local en esta primera
 iteración; soporte de proveedor externo queda fuera de alcance por ahora.
 Prioridad: imprescindible (para el alcance inicial)
+
+REQ-10 [funcional] [fuente: humano, agregado tras cierre inicial de F0]
+Enunciado: al analizar un turno, Skopos puede enriquecer el análisis con
+metadata de referencia sobre el CLI observado (comandos, versión,
+comportamiento documentado), consultando el servicio escrubery
+(`github.com/kristhianmanue1/escrubery`, clon local en
+`/Users/krisnova/www/aria/escrubery`).
+Criterio de aceptación: si escrubery está disponible y tiene ficha para el
+CLI observado, el `Analisis` incluye esa metadata de referencia; si
+escrubery no está disponible o no tiene datos, el turno se procesa igual,
+sin ese campo — nunca bloquea el pipeline crítico (REQ-1..4).
+Prioridad: deseable — explícitamente no bloqueante.
 ```
 
 ## No objetivos
@@ -96,6 +108,8 @@ Prioridad: imprescindible (para el alcance inicial)
   no-funcional pendiente de acotar en F1, no bloquea F0.
 - No se construye interfaz de usuario para personas; el consumidor de la
   recuperación es programático (agente o sistema), no una UI.
+- Skopos no reimplementa lo que escrubery ya resuelve (fichas de CLIs) —
+  lo consulta como fuente de referencia opcional, no lo duplica.
 
 ## Restricciones
 
@@ -105,10 +119,15 @@ Prioridad: imprescindible (para el alcance inicial)
 - Se parte del prototipo existente
   `/Users/krisnova/www/kratos/prototypes/conversation_observer/` como
   evidencia del formato de datos de origen; no se descarta, se extiende.
+- escrubery es un proyecto separado y privado, consultado en modo lectura
+  vía su propio CLI (`scripts/consultar`); Skopos no lo modifica ni
+  depende de él para su flujo crítico (REQ-10).
 
 ## Fronteras
 
 - Entrada: archivos `rollout-*.jsonl` de Codex en `~/.codex/sessions/`.
+- Entrada opcional: fichas de escrubery vía `scripts/consultar ficha cli
+  <nombre>` (REQ-10), sólo para enriquecer el análisis.
 - Salida: documentos en una colección de MongoDB local, consultables por
   tema, con referencia al fragmento de origen completo.
 - Consumidores: el propio agente conversacional y/o otro sistema/agente,
@@ -159,6 +178,12 @@ EV-5: MongoDB no está instalado en el entorno de desarrollo |
 
 EV-6: hay un runtime de modelo local disponible |
 `which ollama` → /opt/homebrew/bin/ollama
+
+EV-7: escrubery existe como clon local y su CLI de consulta funciona |
+`/Users/krisnova/www/aria/escrubery/scripts/consultar listar` → lista
+CLIs y proveedores disponibles, incluido "codex-cli";
+`.../consultar ficha cli codex-cli` → JSON real con comandos y bloque de
+procedencia (fuente, fecha, hash) por cada uno
 ```
 
 ## Reporte de fase

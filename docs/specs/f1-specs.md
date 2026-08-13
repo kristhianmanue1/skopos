@@ -36,17 +36,23 @@ Invariantes: un `turn_id` ya emitido nunca se vuelve a emitir (dentro del
 límite de deduplicación acotada); el offset de lectura nunca retrocede
 salvo que el archivo se trunque.
 
-## SPEC-002 [cubre: REQ-2, REQ-5]
+## SPEC-002 [cubre: REQ-2, REQ-5, REQ-10]
 
 Comportamiento: dado un `Turno` (SPEC-001) y opcionalmente una
 configuración de dominio (ADR-003), un modelo de IA local (ADR-001)
-produce un análisis estructurado.
+produce un análisis estructurado. Opcionalmente, se enriquece con
+metadata de referencia sobre el CLI observado, consultando escrubery
+(ADR-004) — ese paso nunca bloquea ni condiciona el resto del análisis.
 
 Entradas: `Turno` (`texto_usuario`, `texto_agente`); configuración de
-dominio opcional (`docs/contratos/f1-contratos.md`, contrato de config).
+dominio opcional (`docs/contratos/f1-contratos.md`, contrato de config);
+ficha de escrubery opcional (mismo archivo, contrato
+`consulta-escrubery-cli`).
 
 Salidas: `Analisis` con `tema`, `resumen`, `entidades` (opcional),
-`referencia_origen` (`turn_id` + `ruta_origen` + offsets del `Turno`).
+`referencia_origen` (`turn_id` + `ruta_origen` + offsets del `Turno`),
+`metadata_cli` (opcional, presente sólo si escrubery respondió con
+ficha).
 
 Errores: si el modelo local no responde o responde vacío, el turno queda
 en estado `fallido` (ver máquina de estados) — nunca se guarda un
@@ -62,9 +68,14 @@ Casos:
     verificable comparando ambas salidas.
   - DADO que el modelo local no responde (timeout) CUANDO se intenta el
     análisis ENTONCES el turno pasa a `fallido`, nunca se infiere éxito.
+  - DADO que escrubery no está disponible o no tiene ficha para el CLI
+    observado CUANDO se analiza un `Turno` ENTONCES el `Analisis` se
+    produce igual, sin `metadata_cli`, y el turno no pasa a `fallido` por
+    esa causa.
 
 Invariantes: ningún `Analisis` se guarda sin `referencia_origen`; un
-análisis fallido nunca se confunde con uno vacío exitoso.
+análisis fallido nunca se confunde con uno vacío exitoso; un fallo de
+escrubery nunca produce un `Analisis` fallido (ADR-004).
 
 ## SPEC-003 [cubre: REQ-3]
 
