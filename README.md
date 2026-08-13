@@ -9,12 +9,14 @@ Construido siguiendo el método de
 de diseño están en `docs/`, no aquí — este README es el contrato de
 arranque: cómo se construye, corre y prueba.
 
-**Estado:** F3 en curso. Implementadas: captura (`skopos.captura`,
-SPEC-001), análisis vía Ollama local (`skopos.analisis`, SPEC-002),
-almacenamiento en MongoDB local (`skopos.almacenamiento`, SPEC-003).
-Pendiente: el CLI de consulta (`skopos query`, SPEC-004) y el orquestador
-que conecta las tres piezas en un pipeline (detectado→analizado→guardado,
-`docs/f1-maquina-estados.md`).
+**Estado:** F3 — pipeline completo funcionando de punta a punta con datos
+reales: captura (SPEC-001) → análisis vía Ollama local (SPEC-002) →
+almacenamiento en MongoDB local (SPEC-003) → consulta por CLI (SPEC-004).
+Verificado contra rollouts reales de Codex, no sólo fixtures sintéticos.
+
+```bash
+python3 -m skopos query "<tema>"
+```
 
 Modelo de análisis confirmado: `qwen3:8b` (sucesor de `qwen2.5:7b`,
 descargado y probado end-to-end). MongoDB local instalado vía Homebrew
@@ -75,11 +77,14 @@ python3 -m unittest discover -s tests
 
 ## Pendientes conocidos
 
-- `skopos.cli` (SPEC-004, `skopos query <tema>`) — todavía no existe.
-- Orquestador del pipeline completo (detectado→analizado→guardado,
-  incluida la máquina de estados y sus fallos) — todavía no existe; hoy
-  `captura`, `analisis` y `almacenamiento` son piezas probadas por
-  separado, no conectadas entre sí.
+- Sin comando que vigile `~/.codex/sessions/` en vivo (polling continuo,
+  como el prototipo original) — hoy `procesar_rollout` procesa un archivo
+  completo de una vez, se invoca a mano o por script externo.
 - Integración con escrubery (REQ-10) implementada en `analisis.py` pero
   sin probar contra el repo real todavía (requiere pasar
   `escrubery_script` explícitamente al llamar `analizar_turno`).
+- `qwen3:8b` con `think:false` responde en 1-7s con el modelo ya cargado
+  en memoria, pero Ollama lo descarga tras inactividad — la primera
+  llamada tras eso puede tardar hasta ~90s (medido). El timeout por
+  defecto (120s) lo cubre; considerar precargar el modelo si esto importa
+  para uso interactivo.

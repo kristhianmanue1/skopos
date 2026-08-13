@@ -83,6 +83,10 @@ def _llamar_ollama(
             "prompt": prompt,
             "format": _ESQUEMA_RESPUESTA,
             "stream": False,
+            # qwen3 activa "thinking" por defecto: para extracción
+            # estructurada simple eso multiplica la latencia sin aportar
+            # nada (medido: ~26s de razonamiento vs ~0.5s sin él).
+            "think": False,
         }
     ).encode("utf-8")
     peticion = urllib.request.Request(
@@ -129,7 +133,10 @@ def analizar_turno(
     dominio_config: dict | None = None,
     escrubery_script: str | None = None,
     escrubery_cli: str = "codex-cli",
-    timeout: float = 30.0,
+    # medido en el entorno real: ~90s si Ollama tuvo que recargar el
+    # modelo en memoria (descargado por inactividad o por otro proceso
+    # usando la GPU); ~1-7s con el modelo ya caliente.
+    timeout: float = 120.0,
     llamar_modelo: Callable[..., dict] | None = None,
 ) -> Analisis:
     """Produce un Analisis a partir de un Turno (SPEC-002)."""

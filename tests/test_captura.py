@@ -141,6 +141,16 @@ class ExtraerTurnosTests(unittest.TestCase):
         fragmento = contenido[turno.offset_inicio : turno.offset_fin]
         self.assertIn(b"t1", fragmento)
 
+    def test_acepta_ruta_como_string_no_solo_path(self):
+        self._escribir(
+            [
+                _mensaje("user", "hola"),
+                {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": "t1"}},
+            ]
+        )
+        turnos = extraer_turnos(str(self.path))
+        self.assertEqual(len(turnos), 1)
+
     def test_sin_eventos_de_cierre_no_produce_turnos(self):
         self._escribir([_mensaje("user", "hola, nadie cierra")])
         self.assertEqual(extraer_turnos(self.path), [])

@@ -84,8 +84,9 @@ def _turn_id_si_cierre(evento: object) -> str | None:
     return turn_id if isinstance(turn_id, str) and turn_id else None
 
 
-def extraer_turnos(path: Path) -> list[Turno]:
+def extraer_turnos(path: Path | str) -> list[Turno]:
     """Extrae los turnos cerrados de un rollout completo, en orden."""
+    path = Path(path)
     session_id = path.stem
     turnos: list[Turno] = []
     vistos: set[str] = set()
