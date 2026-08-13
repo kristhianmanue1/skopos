@@ -77,9 +77,14 @@ python3 -m unittest discover -s tests
 
 ## Pendientes conocidos
 
-- Sin comando que vigile `~/.codex/sessions/` en vivo (polling continuo,
-  como el prototipo original) — hoy `procesar_rollout` procesa un archivo
-  completo de una vez, se invoca a mano o por script externo.
+- **Primer arranque del vigilante = backfill completo, sin aviso previo.**
+  `skopos watch` no distingue turnos históricos de turnos nuevos: la
+  primera vez que corre contra `~/.codex/sessions/` real, analiza (con
+  Ollama, uno por uno) todo lo que nunca se guardó, sin feedback hasta
+  terminar el ciclo completo — puede ser mucho volumen y mucho tiempo si
+  hay historial acumulado. Confirmado al probarlo: lo detuve manualmente
+  en vez de dejarlo terminar. Falta decidir (F1, con el humano): ¿arranca
+  sólo "desde ahora" por defecto y el backfill es opt-in explícito?
 - Integración con escrubery (REQ-10) implementada en `analisis.py` pero
   sin probar contra el repo real todavía (requiere pasar
   `escrubery_script` explícitamente al llamar `analizar_turno`).

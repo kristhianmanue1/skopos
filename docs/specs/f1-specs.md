@@ -129,3 +129,33 @@ Casos:
 
 Invariantes: la salida en stdout es siempre JSON válido cuando el exit
 code es 0; los errores van a stderr, nunca mezclados con stdout.
+
+## SPEC-005 [cubre: REQ-1, REQ-6]
+
+Comportamiento: `skopos.vigilante` recorre periódicamente los rollouts de
+Codex y procesa los turnos nuevos, sin repetir los ya guardados
+(ADR-005).
+
+Entradas: directorio de sesiones (por defecto `~/.codex/sessions/`),
+intervalo entre ciclos.
+
+Salidas: por cada ciclo, la lista de `ResultadoTurno` (SPEC-002/SPEC-003)
+de todos los rollouts encontrados — `guardado`, `fallido` u `omitido`.
+
+Errores: un rollout individual que falle (turno con análisis o
+persistencia fallidos) no detiene el ciclo ni afecta a los demás rollouts
+o turnos.
+
+Casos:
+  - DADO un rollout con un turno nuevo (turn_id no guardado) CUANDO corre
+    un ciclo ENTONCES ese turno queda `guardado` o `fallido`, nunca
+    `omitido`.
+  - DADO un rollout con un turno ya guardado en un ciclo anterior CUANDO
+    corre un ciclo nuevo ENTONCES ese turno queda `omitido`, sin llamar
+    de nuevo al modelo de análisis.
+  - DADO que `sessions_dir` no existe CUANDO corre un ciclo ENTONCES no
+    hay rollouts que procesar y el ciclo termina sin error.
+
+Invariantes: un mismo `turn_id` nunca se analiza dos veces mientras su
+documento siga existiendo en Mongo; SIGTERM/SIGINT detienen el vigilante
+entre ciclos, nunca a mitad de procesar un turno.

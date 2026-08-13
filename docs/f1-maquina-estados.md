@@ -4,9 +4,10 @@ Un turno detectado por SPEC-001 tiene ciclo de vida propio: puede fallar
 en el análisis o en la persistencia, y ese fallo debe quedar explícito.
 
 ```text
-ESTADOS: detectado, analizado, guardado, fallido
+ESTADOS: detectado, analizado, guardado, fallido, omitido
 
 TRANSICIONES:
+  detectado --ya_guardado--> omitido
   detectado --analisis_ok--> analizado
   detectado --analisis_falla--> fallido
   analizado --persistencia_ok--> guardado
@@ -19,5 +20,8 @@ INVARIANTES:
     en su estado previo;
   - un timeout de análisis (SPEC-002) o de persistencia (SPEC-003)
     produce "fallido" explícito; "guardado" nunca se infiere por ausencia
-    de error.
+    de error;
+  - "omitido" existe para el vigilante en vivo (docs/adr/ADR-005): un
+    turno con turn_id ya guardado en Mongo no se vuelve a analizar ni a
+    persistir en un ciclo posterior.
 ```

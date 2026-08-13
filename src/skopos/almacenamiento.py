@@ -54,6 +54,11 @@ def buscar_por_tema(tema: str, *, coleccion: Collection) -> list[dict]:
     return list(coleccion.find({"tema": tema}))
 
 
+def existe_turn_id(turn_id: str, *, coleccion: Collection) -> bool:
+    """True si ya hay un documento guardado para ese turn_id (ADR-005)."""
+    return coleccion.find_one({"turn_id": turn_id}, {"_id": 1}) is not None
+
+
 def coleccion_local(
     *,
     uri: str = "mongodb://localhost:27017",

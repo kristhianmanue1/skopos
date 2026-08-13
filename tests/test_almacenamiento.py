@@ -11,7 +11,12 @@ import unittest
 
 import pymongo
 
-from skopos.almacenamiento import buscar_por_tema, coleccion_local, guardar_analisis
+from skopos.almacenamiento import (
+    buscar_por_tema,
+    coleccion_local,
+    existe_turn_id,
+    guardar_analisis,
+)
 from skopos.analisis import Analisis
 
 DB_DE_PRUEBA = "skopos_test"
@@ -92,6 +97,12 @@ class AlmacenamientoTests(unittest.TestCase):
         documento = buscar_por_tema("bases de datos", coleccion=self.coleccion)[0]
         for campo in ("ruta_origen", "offset_inicio", "offset_fin"):
             self.assertIn(campo, documento)
+
+    def test_existe_turn_id_antes_y_despues_de_guardar(self):
+        self.assertFalse(existe_turn_id("t1", coleccion=self.coleccion))
+        guardar_analisis(_analisis_ejemplo(turn_id="t1"), coleccion=self.coleccion)
+        self.assertTrue(existe_turn_id("t1", coleccion=self.coleccion))
+        self.assertFalse(existe_turn_id("otro-turno", coleccion=self.coleccion))
 
 
 if __name__ == "__main__":

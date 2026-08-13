@@ -29,6 +29,10 @@ def _cierre(turn_id: str) -> dict:
     return {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": turn_id}}
 
 
+def _nunca_visto(turn_id, *, coleccion):
+    return False
+
+
 class ProcesarRolloutTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -56,7 +60,8 @@ class ProcesarRolloutTests(unittest.TestCase):
             return {}
 
         resultados = procesar_rollout(
-            self.path, coleccion=object(), analizar=analizar_fake, guardar=guardar_fake
+            self.path, coleccion=object(), analizar=analizar_fake, guardar=guardar_fake,
+            ya_guardado=_nunca_visto,
         )
         self.assertEqual(len(resultados), 1)
         self.assertEqual(resultados[0].estado, "guardado")
@@ -75,7 +80,8 @@ class ProcesarRolloutTests(unittest.TestCase):
             return {}
 
         resultados = procesar_rollout(
-            self.path, coleccion=object(), analizar=analizar_falla, guardar=guardar_fake
+            self.path, coleccion=object(), analizar=analizar_falla, guardar=guardar_fake,
+            ya_guardado=_nunca_visto,
         )
         self.assertEqual(resultados[0].estado, "fallido")
         self.assertIn("modelo no respondió", resultados[0].motivo)
@@ -95,14 +101,15 @@ class ProcesarRolloutTests(unittest.TestCase):
             raise PyMongoError("conexión rechazada")
 
         resultados = procesar_rollout(
-            self.path, coleccion=object(), analizar=analizar_fake, guardar=guardar_que_falla
+            self.path, coleccion=object(), analizar=analizar_fake, guardar=guardar_que_falla,
+            ya_guardado=_nunca_visto,
         )
         self.assertEqual(resultados[0].estado, "fallido")
         self.assertIn("conexión rechazada", resultados[0].motivo)
 
     def test_sin_turnos_devuelve_lista_vacia(self):
         self._escribir([_mensaje("user", "nadie cierra este turno")])
-        resultados = procesar_rollout(self.path, coleccion=object())
+        resultados = procesar_rollout(self.path, coleccion=object(), ya_guardado=_nunca_visto)
         self.assertEqual(resultados, [])
 
     def test_varios_turnos_se_procesan_independientemente(self):
@@ -126,10 +133,39 @@ class ProcesarRolloutTests(unittest.TestCase):
             )
 
         resultados = procesar_rollout(
-            self.path, coleccion=object(), analizar=analizar_mixto, guardar=lambda a, *, coleccion: {}
+            self.path, coleccion=object(), analizar=analizar_mixto, guardar=lambda a, *, coleccion: {},
+            ya_guardado=_nunca_visto,
         )
         estados = {r.turn_id: r.estado for r in resultados}
         self.assertEqual(estados, {"t1": "fallido", "t2": "guardado"})
+
+    def test_turno_ya_guardado_se_omite_sin_analizar_ni_guardar(self):
+        self._escribir([_mensaje("user", "hola"), _cierre("t1")])
+        analizar_llamado = []
+        guardar_llamado = []
+
+        def analizar_fake(turno, **_):
+            analizar_llamado.append(turno.turn_id)
+            return Analisis(
+                tema="x", resumen="y", turn_id=turno.turn_id, session_id=turno.session_id,
+                ruta_origen=turno.ruta_origen, offset_inicio=turno.offset_inicio,
+                offset_fin=turno.offset_fin,
+            )
+
+        def guardar_fake(analisis, *, coleccion):
+            guardar_llamado.append(analisis)
+            return {}
+
+        resultados = procesar_rollout(
+            self.path,
+            coleccion=object(),
+            analizar=analizar_fake,
+            guardar=guardar_fake,
+            ya_guardado=lambda turn_id, *, coleccion: True,
+        )
+        self.assertEqual(resultados[0].estado, "omitido")
+        self.assertEqual(analizar_llamado, [])
+        self.assertEqual(guardar_llamado, [])
 
 
 if __name__ == "__main__":

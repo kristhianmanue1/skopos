@@ -15,17 +15,17 @@ from typing import Callable
 from pymongo.collection import Collection
 from pymongo.errors import PyMongoError
 
-from skopos.almacenamiento import guardar_analisis
+from skopos.almacenamiento import existe_turn_id, guardar_analisis
 from skopos.analisis import Analisis, AnalisisFallido, analizar_turno
 from skopos.captura import extraer_turnos
 
-ESTADOS_TERMINALES = {"guardado", "fallido"}
+ESTADOS_TERMINALES = {"guardado", "fallido", "omitido"}
 
 
 @dataclass(frozen=True)
 class ResultadoTurno:
     turn_id: str
-    estado: str  # "guardado" | "fallido"
+    estado: str  # "guardado" | "fallido" | "omitido"
     motivo: str | None = None
 
 
@@ -35,11 +35,16 @@ def procesar_rollout(
     coleccion: Collection,
     analizar: Callable[..., Analisis] = analizar_turno,
     guardar: Callable[..., dict] = guardar_analisis,
+    ya_guardado: Callable[..., bool] = existe_turn_id,
     **kwargs_analisis,
 ) -> list[ResultadoTurno]:
     """Procesa todos los turnos cerrados de un rollout, uno por uno."""
     resultados: list[ResultadoTurno] = []
     for turno in extraer_turnos(path):
+        if ya_guardado(turno.turn_id, coleccion=coleccion):
+            resultados.append(ResultadoTurno(turno.turn_id, "omitido"))
+            continue
+
         try:
             analisis = analizar(turno, **kwargs_analisis)
         except AnalisisFallido as exc:
