@@ -48,7 +48,7 @@ No asumas el contenido de un documento que no leíste — si vas a tocar
 ```bash
 brew services start mongodb/brew/mongodb-community   # si no está corriendo
 ollama list                                            # confirma qwen3:8b
-cd /Users/krisnova/www/aria/Skopos
+cd /Users/krisnova/www/aria/skopos
 source .venv/bin/activate
 python3 -m unittest discover -s tests   # 53 tests, ~5s si Mongo/Ollama están arriba
 python3 -m skopos                        # ayuda + comandos

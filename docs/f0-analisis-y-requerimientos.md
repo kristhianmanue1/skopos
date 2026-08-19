@@ -157,7 +157,7 @@ Opciones: se decide en F1.
 
 ```text
 EV-1: Skopos no existía como repo antes de este análisis |
-`ls -la /Users/krisnova/www/aria/Skopos` (previo) → sólo .DS_Store, sin git
+`ls -la /Users/krisnova/www/aria/skopos` (previo) → sólo .DS_Store, sin git
 
 EV-2: existe un prototipo de captura, sin persistencia de texto |
 lectura de
