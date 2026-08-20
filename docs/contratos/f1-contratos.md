@@ -26,6 +26,16 @@ Invariantes:
     2026-08-13) — si el volumen de rollouts hace que releer archivos
     completos sea un problema medido, eso es un ADR nuevo, no un ajuste
     silencioso aquí.
+  - [C-9, 2026-08-20] el evento `turn_context` es fuente del campo
+    `proyecto`: `basename(cwd)` cuando `cwd` tiene al menos dos niveles
+    bajo `$HOME`; ausente en cualquier otro caso (regla completa y
+    muestreo en `docs/evidencia/muestreo-cwd-c9-2026-08-20.md`).
+    `workspace_roots` NO se usa: arrastra rutas de visualización de
+    Codex ajenas al proyecto (contaminación medida). Un turno sin
+    `turn_context` previo produce `proyecto` ausente, no vacío. Un
+    `turn_context` cuyo cwd no deriva proyecto resetea el valor —
+    nunca se hereda el proyecto de un `turn_context` anterior (H1,
+    ronda adversarial de Fase 1, 2026-08-20).
 
 Compatibilidad: el formato de los rollouts es externo, de Codex, y no
 versionado por Skopos. Un cambio de Codex que rompa el parseo se detecta
@@ -50,6 +60,12 @@ Entrada (esquema del documento insertado en la colección):
   `ocurrido_en`: string (ISO 8601) [opcional] — cuándo pasó la
   conversación de verdad (del evento `task_complete` original), NO cuándo
   Skopos la procesó; puede faltar si el CLI de origen no trae timestamp
+  `proyecto`: string [opcional, C-9 2026-08-20] — nombre del proyecto
+  derivado de `turn_context.cwd` (regla en el CONTRATO
+  rollout-jsonl-de-codex); **ausente = desconocido**: documentos
+  pre-C-9 y turnos cuyo `cwd` no identifica proyecto. Nunca se
+  falsifica un valor para los ya guardados (el store es insert-only
+  hasta que C-8 decida lo contrario)
   `dominio`: string [opcional] — presente si se usó configuración de
   dominio (ADR-003)
   `creado_en`: string (ISO 8601) [obligatorio] — cuándo Skopos guardó el
@@ -68,6 +84,11 @@ Errores:
   `turn_id` duplicado (dos escrituras concurrentes para el mismo turno):
   rechazada por el índice único de Mongo (`DuplicateKeyError`), el
   orquestador lo trata como "omitido", no como fallo
+
+Índices (además del único sobre `turn_id` y el de texto sobre
+`tema`+`resumen`, ambos existentes): `proyecto`, `cli`, `ocurrido_en`
+[C-9, 2026-08-20] — consultas por proyecto/CLI/fecha sin collection
+scan; `ocurrido_en` prepara el `skopos read` diferido.
 
 Invariantes:
   - todo documento es resoluble a un fragmento real vía `ruta_origen` +
@@ -133,10 +154,16 @@ Entrada:
   corregido en la ronda adversarial 2026-08-13: la igualdad exacta
   fallaba contra temas que el LLM redacta con palabras distintas para
   la misma idea (verificado con datos reales)
+  `--proyecto`: string [opcional, C-9 2026-08-20] — filtra los
+  resultados por el campo `proyecto` del documento; los documentos sin
+  `proyecto` (pre-C-9 o desconocido) quedan fuera cuando el filtro está
+  presente, nunca se inventa una coincidencia para ellos
 
 Salida (JSON a stdout):
   `resultados`: lista de objetos `{tema, resumen, turn_id, ruta_origen,
-  fragmento_completo}`, ordenados por relevancia de texto (`textScore`)
+  proyecto, fragmento_completo}` — `proyecto` añadido por C-9
+  (2026-08-20): valor del campo del documento o `null` si no lo tiene —
+  ordenados por relevancia de texto (`textScore`)
 
 Errores:
   tema sin resultados: exit 0, `{"resultados": []}`

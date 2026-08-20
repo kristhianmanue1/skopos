@@ -209,5 +209,122 @@ class ExtraerTurnosTests(unittest.TestCase):
         self.assertEqual(turno.texto_agente, "")
 
 
+def _turn_context(cwd: str, turn_id: str = "tctx") -> dict:
+    return {"type": "turn_context", "payload": {"turn_id": turn_id, "cwd": cwd}}
+
+
+def _cierre(turn_id: str) -> dict:
+    return {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": turn_id}}
+
+
+class ProyectoTests(unittest.TestCase):
+    """C-9 (2026-08-20): derivación de `proyecto` desde turn_context.cwd.
+
+    Regla: basename(cwd) sólo si cwd tiene ≥2 niveles bajo $HOME; None en
+    cualquier otro caso (docs/evidencia/muestreo-cwd-c9-2026-08-20.md).
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = Path(self.tmp.name) / "rollout-test.jsonl"
+
+    def _escribir(self, eventos: list[dict]) -> None:
+        self.path.write_text(
+            "\n".join(_linea(e) for e in eventos) + "\n", encoding="utf-8"
+        )
+
+    def test_cwd_con_dos_niveles_deriva_proyecto(self):
+        self._escribir(
+            [
+                _turn_context(str(Path.home() / "www" / "skopos")),
+                _mensaje("user", "hola"),
+                _cierre("t1"),
+            ]
+        )
+        turno = extraer_turnos(self.path)[0]
+        self.assertEqual(turno.proyecto, "skopos")
+
+    def test_cwd_de_un_nivel_deja_proyecto_ausente(self):
+        # caso medido: /Users/krisnova/www no identifica proyecto
+        self._escribir(
+            [
+                _turn_context(str(Path.home() / "www")),
+                _mensaje("user", "hola"),
+                _cierre("t1"),
+            ]
+        )
+        turno = extraer_turnos(self.path)[0]
+        self.assertIsNone(turno.proyecto)
+
+    def test_home_y_cwd_ausente_dejan_proyecto_ausente(self):
+        for eventos in (
+            [_turn_context(str(Path.home())), _mensaje("user", "x"), _cierre("t1")],
+            [_mensaje("user", "x"), _cierre("t1")],  # sin turn_context
+        ):
+            with self.subTest(eventos=eventos[:1]):
+                self._escribir(eventos)
+                turno = extraer_turnos(self.path)[0]
+                self.assertIsNone(turno.proyecto)
+
+    def test_cwd_fuera_de_home_deja_proyecto_ausente(self):
+        self._escribir(
+            [
+                _turn_context("/Volumes/ProEx/proyectos/audio"),
+                _mensaje("user", "x"),
+                _cierre("t1"),
+            ]
+        )
+        turno = extraer_turnos(self.path)[0]
+        self.assertIsNone(turno.proyecto)
+
+    def test_turn_context_por_turno_prevalece_sobre_el_anterior(self):
+        # el proyecto puede cambiar a mitad de sesión: cada cierre usa el
+        # turn_context vigente, no una constante de archivo
+        self._escribir(
+            [
+                _turn_context(str(Path.home() / "www" / "skopos")),
+                _mensaje("user", "uno"),
+                _cierre("t1"),
+                _turn_context(str(Path.home() / "aria" / "ektel")),
+                _mensaje("user", "dos"),
+                _cierre("t2"),
+            ]
+        )
+        turnos = extraer_turnos(self.path)
+        self.assertEqual(turnos[0].proyecto, "skopos")
+        self.assertEqual(turnos[1].proyecto, "ektel")
+
+    def test_turn_context_generico_resetea_el_proyecto_heredado(self):
+        # H1 (ronda adversarial de Fase 1): un turn_context cuyo cwd no
+        # deriva proyecto resetea — nunca hereda el del turno anterior
+        self._escribir(
+            [
+                _turn_context(str(Path.home() / "www" / "skopos")),
+                _mensaje("user", "uno"),
+                _cierre("t1"),
+                _turn_context(str(Path.home() / "www")),
+                _mensaje("user", "dos"),
+                _cierre("t2"),
+            ]
+        )
+        turnos = extraer_turnos(self.path)
+        self.assertEqual(turnos[0].proyecto, "skopos")
+        self.assertIsNone(turnos[1].proyecto)
+
+    def test_basename_degenerado_no_deriva_proyecto(self):
+        # H4: la derivación es léxica — un cwd que termina en ".." o "."
+        # produce None, no un valor absurdo persistible
+        for cwd in (
+            str(Path.home() / "www" / "skopos" / ".."),
+            str(Path.home() / "www" / "."),
+        ):
+            with self.subTest(cwd=cwd):
+                self._escribir(
+                    [_turn_context(cwd), _mensaje("user", "x"), _cierre("t1")]
+                )
+                self.assertIsNone(extraer_turnos(self.path)[0].proyecto)
+
+
 if __name__ == "__main__":
     unittest.main()

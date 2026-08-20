@@ -10,6 +10,7 @@ visto antes, con el texto real de usuario y agente de ese turno.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
@@ -29,6 +30,47 @@ class Turno:
     offset_inicio: int
     offset_fin: int
     cli: str = CLI_ORIGEN
+    proyecto: str | None = None
+
+
+def _proyecto_de_cwd(cwd: str) -> str | None:
+    """basename(cwd) sólo si cwd identifica un subdirectorio de trabajo.
+
+    Regla C-9 con muestreo del corpus real detrás
+    (docs/evidencia/muestreo-cwd-c9-2026-08-20.md): un cwd genérico
+    (~/www, ~/Documents, $HOME) o fuera de $HOME produce None — para el
+    filtro por proyecto, un valor presente sin significado es peor que
+    ninguno.
+    """
+    if not cwd:
+        return None
+    home = os.path.expanduser("~")
+    try:
+        rel = Path(cwd).relative_to(home)
+    except ValueError:
+        return None
+    partes = rel.parts
+    if len(partes) < 2 or partes[-1] in {".", ".."}:
+        return None
+    return partes[-1]
+
+
+def _proyecto_de_turn_context(evento: object) -> str | None | type(...) :
+    """Deriva el proyecto del turn_context; (...) si el evento no es
+    turn_context (para no resetear el proyecto heredado en ese caso) y
+    None si es turn_context cuyo cwd no deriva proyecto (reset explícito
+    — ronda adversarial de Fase 1, hallazgo H1: un cwd que deja de
+    identificar proyecto nunca hereda el del turno anterior).
+    """
+    if not isinstance(evento, dict) or evento.get("type") != "turn_context":
+        return ...
+    payload = evento.get("payload")
+    if not isinstance(payload, dict):
+        return None
+    cwd = payload.get("cwd")
+    if not isinstance(cwd, str):
+        return None
+    return _proyecto_de_cwd(cwd)
 
 
 def _iter_eventos_con_offsets(path: Path) -> Iterator[tuple[object, int, int]]:
@@ -97,8 +139,16 @@ def extraer_turnos(path: Path | str) -> list[Turno]:
     texto_usuario_partes: list[str] = []
     texto_agente_partes: list[str] = []
     offset_inicio_turno = 0
+    proyecto: str | None = None
 
     for evento, inicio, fin in _iter_eventos_con_offsets(path):
+        nuevo_proyecto = _proyecto_de_turn_context(evento)
+        if nuevo_proyecto is not ...:
+            # turn_context: asigna (incluido None explícito = reset — el
+            # cwd dejó de identificar proyecto, no se hereda el anterior)
+            proyecto = nuevo_proyecto
+            continue
+
         texto = _texto_de_response_item(evento)
         if texto is not None:
             rol, contenido = texto
@@ -130,6 +180,7 @@ def extraer_turnos(path: Path | str) -> list[Turno]:
                 ruta_origen=str(path),
                 offset_inicio=offset_inicio_turno,
                 offset_fin=fin,
+                proyecto=proyecto,
             )
         )
         texto_usuario_partes = []

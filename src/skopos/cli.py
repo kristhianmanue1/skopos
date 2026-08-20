@@ -26,15 +26,16 @@ def _fragmento_completo(ruta_origen: str, offset_inicio: int, offset_fin: int) -
         return None
 
 
-def query(tema: str, *, coleccion: Collection) -> dict:
+def query(tema: str, *, coleccion: Collection, proyecto: str | None = None) -> dict:
     """Devuelve el objeto {resultados: [...]} del CONTRATO cli-skopos-query v1."""
-    documentos = buscar_por_tema(tema, coleccion=coleccion)
+    documentos = buscar_por_tema(tema, coleccion=coleccion, proyecto=proyecto)
     resultados = [
         {
             "tema": doc["tema"],
             "resumen": doc["resumen"],
             "turn_id": doc["turn_id"],
             "ruta_origen": doc["ruta_origen"],
+            "proyecto": doc.get("proyecto"),
             "fragmento_completo": _fragmento_completo(
                 doc["ruta_origen"], doc["offset_inicio"], doc["offset_fin"]
             ),
@@ -47,11 +48,18 @@ def query(tema: str, *, coleccion: Collection) -> dict:
 def query_command(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="skopos query")
     parser.add_argument("tema")
+    parser.add_argument(
+        "--proyecto",
+        default=None,
+        help="filtra por el campo proyecto (los documentos sin el campo quedan fuera)",
+    )
     args = parser.parse_args(argv)
 
     try:
         coleccion = coleccion_local()
-        salida = query(args.tema, coleccion=coleccion)
+        salida = query(
+            args.tema, coleccion=coleccion, proyecto=args.proyecto
+        )
     except PyMongoError as exc:
         print(f"error: MongoDB no disponible: {exc}", file=sys.stderr)
         return 1

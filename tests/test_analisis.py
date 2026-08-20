@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import unittest
 import urllib.error
 import urllib.request
+from unittest import mock
 
 from skopos.analisis import Analisis, AnalisisFallido, analizar_turno
 from skopos.captura import Turno
@@ -164,6 +166,26 @@ class AnalizarTurnoTests(unittest.TestCase):
             TURNO_EJEMPLO, llamar_modelo=_modelo_falso({"tema": "x", "resumen": "y"})
         )
         self.assertIsNone(analisis.metadata_cli)
+
+    def test_ficha_escrubery_se_pide_para_el_cli_del_turno(self):
+        # C-9 / EV-4 de P-002: sin escrubery_cli explícito, la ficha se
+        # pide para turno.cli — el default hardcodeado "codex-cli" murió
+        # con el eje CLI real (hallazgo H6 de la ronda de Fase 1)
+        turno = dataclasses.replace(TURNO_EJEMPLO, cli="kimi-cli")
+        visto: list[str] = []
+
+        def _ficha_falsa(cli, *, script, timeout):
+            visto.append(cli)
+            return {"cli": cli}
+
+        with mock.patch("skopos.analisis._ficha_escrubery", _ficha_falsa):
+            analisis = analizar_turno(
+                turno,
+                escrubery_script="/no/importa/consultar",
+                llamar_modelo=_modelo_falso({"tema": "x", "resumen": "y"}),
+            )
+        self.assertEqual(visto, ["kimi-cli"])
+        self.assertEqual(analisis.metadata_cli, {"cli": "kimi-cli"})
 
 
 def _ollama_disponible() -> bool:

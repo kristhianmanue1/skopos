@@ -7,13 +7,16 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from io import StringIO
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 import pymongo
 
 from skopos.almacenamiento import coleccion_local, guardar_analisis
 from skopos.analisis import Analisis
-from skopos.cli import query
+from skopos.cli import query, query_command
 
 DB_DE_PRUEBA = "skopos_test_cli"
 
@@ -82,6 +85,108 @@ class QueryTests(unittest.TestCase):
         )
         salida = query("x", coleccion=self.coleccion)
         self.assertIsNone(salida["resultados"][0]["fragmento_completo"])
+
+    def test_filtro_proyecto_deja_solo_los_de_ese_proyecto(self):
+        # C-9: dos documentos con el mismo tema, proyectos distintos
+        for turn_id, proyecto in (("t3", "skopos"), ("t4", "ektel")):
+            guardar_analisis(
+                Analisis(
+                    tema="arquitectura de memoria",
+                    resumen="resumen sobre memoria",
+                    turn_id=turn_id,
+                    session_id="s1",
+                    ruta_origen="/no/existe/rollout.jsonl",
+                    offset_inicio=0,
+                    offset_fin=10,
+                    cli="codex-cli", modelo_analisis="test-modelo",
+                    proyecto=proyecto,
+                ),
+                coleccion=self.coleccion,
+            )
+        salida = query(
+            "arquitectura de memoria", coleccion=self.coleccion, proyecto="skopos"
+        )
+        self.assertEqual([r["turn_id"] for r in salida["resultados"]], ["t3"])
+        self.assertEqual(salida["resultados"][0]["proyecto"], "skopos")
+
+    def test_filtro_proyecto_excluye_documentos_sin_proyecto(self):
+        # pre-C-9 / desconocido: sin el campo, fuera del filtro — nunca
+        # se inventa una coincidencia para ellos
+        guardar_analisis(
+            Analisis(
+                tema="arquitectura de memoria",
+                resumen="documento legado sin eje de proyecto",
+                turn_id="t5",
+                session_id="s1",
+                ruta_origen="/no/existe/rollout.jsonl",
+                offset_inicio=0,
+                offset_fin=10,
+                cli="codex-cli", modelo_analisis="test-modelo",
+            ),
+            coleccion=self.coleccion,
+        )
+        salida = query(
+            "arquitectura de memoria", coleccion=self.coleccion, proyecto="skopos"
+        )
+        self.assertEqual(salida, {"resultados": []})
+
+    def test_sin_filtro_devuelve_documentos_con_y_sin_proyecto(self):
+        for turn_id, proyecto in (("t6", "skopos"), ("t7", None)):
+            guardar_analisis(
+                Analisis(
+                    tema="consultas federadas",
+                    resumen="sobre consultas federadas",
+                    turn_id=turn_id,
+                    session_id="s1",
+                    ruta_origen="/no/existe/rollout.jsonl",
+                    offset_inicio=0,
+                    offset_fin=10,
+                    cli="codex-cli", modelo_analisis="test-modelo",
+                    proyecto=proyecto,
+                ),
+                coleccion=self.coleccion,
+            )
+        salida = query("consultas federadas", coleccion=self.coleccion)
+        self.assertEqual(len(salida["resultados"]), 2)
+
+    def test_coleccion_local_crea_indices_de_eje(self):
+        # H3 (ronda adversarial de Fase 1): los índices de proyecto/cli/
+        # ocurrido_en no quedan sin cobertura
+        nombres = {i["name"] for i in self.coleccion.list_indexes()}
+        self.assertIn("proyecto_1", nombres)
+        self.assertIn("cli_1", nombres)
+        self.assertIn("ocurrido_en_1", nombres)
+        self.assertIn("turn_id_1", nombres)
+
+    def test_query_command_con_flag_proyecto_filtra(self):
+        # H5: el cableado argparse del flag, no sólo la función query.
+        # query_command conecta solo a la DB por defecto: se parchea el
+        # punto de conexión hacia la colección de prueba.
+        guardar_analisis(
+            Analisis(
+                tema="arquitectura de memoria",
+                resumen="resumen sobre memoria",
+                turn_id="t8",
+                session_id="s1",
+                ruta_origen="/no/existe/rollout.jsonl",
+                offset_inicio=0,
+                offset_fin=10,
+                cli="codex-cli", modelo_analisis="test-modelo",
+                proyecto="skopos",
+            ),
+            coleccion=self.coleccion,
+        )
+        import json as _json
+
+        with mock.patch("skopos.cli.coleccion_local", return_value=self.coleccion):
+            buffer = StringIO()
+            with redirect_stdout(buffer):
+                exit_code = query_command(
+                    ["arquitectura de memoria", "--proyecto", "skopos"]
+                )
+        self.assertEqual(exit_code, 0)
+        salida = _json.loads(buffer.getvalue())
+        self.assertEqual([r["turn_id"] for r in salida["resultados"]], ["t8"])
 
 
 if __name__ == "__main__":

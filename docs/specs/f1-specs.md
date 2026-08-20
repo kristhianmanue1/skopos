@@ -13,7 +13,10 @@ Mongo (ADR-005), corregido en la ronda adversarial 2026-08-13.
 Salidas: un objeto `Turno` con: `turn_id`, `session_id`, `texto_usuario`,
 `texto_agente`, `timestamp_cierre`, `ruta_origen`, `offset_inicio`,
 `offset_fin` (estos dos últimos permiten recuperar el fragmento exacto
-después, sin releer todo el archivo).
+después, sin releer todo el archivo) y `proyecto` [C-9, 2026-08-20:
+`basename(cwd)` del `turn_context` del turno cuando `cwd` tiene al menos
+dos niveles bajo `$HOME`; `None` en caso contrario — regla y muestreo en
+`docs/evidencia/muestreo-cwd-c9-2026-08-20.md`].
 
 Errores:
   - archivo no encontrado en un ciclo de poll: no es fatal, se reintenta
@@ -35,7 +38,11 @@ Casos:
 
 Invariantes: un `turn_id` ya emitido nunca se vuelve a emitir (dentro del
 límite de deduplicación acotada); el offset de lectura nunca retrocede
-salvo que el archivo se trunque.
+salvo que el archivo se trunque; un turno cuyo `cwd` no identifica
+proyecto produce `proyecto=None`, nunca un valor presente sin significado
+— incluido el caso en que un `turn_context` genérico llega **después**
+de uno válido: el proyecto se resetea, no se hereda (hallazgo H1 de la
+ronda adversarial de Fase 1).
 
 ## SPEC-002 [cubre: REQ-2, REQ-5, REQ-10]
 
@@ -115,7 +122,9 @@ Entradas: `Analisis` (SPEC-002) + `Turno` (SPEC-001, para el fragmento
 completo).
 
 Salidas: un documento insertado en la colección Mongo (esquema en
-`docs/contratos/f1-contratos.md`).
+`docs/contratos/f1-contratos.md`), incluyendo `proyecto` cuando el
+`Turno` lo trae [C-9, 2026-08-20] e índices sobre `proyecto`, `cli` y
+`ocurrido_en` además de los existentes.
 
 Errores: si Mongo no está disponible (conexión rechazada), la operación
 falla explícitamente; el turno no se descarta silenciosamente (mecanismo
@@ -150,10 +159,14 @@ con los registros relevantes guardados (búsqueda de texto completo sobre
 2026-08-13, ver CONTRATO cli-skopos-query v1), cada uno con acceso al
 fragmento completo de origen.
 
-Entradas: `tema` (string, argumento posicional de línea de comandos).
+Entradas: `tema` (string, argumento posicional de línea de comandos);
+`--proyecto` (opcional, C-9 2026-08-20 — filtra por el campo `proyecto`;
+los documentos sin el campo quedan fuera cuando el filtro está
+presente).
 
 Salidas: JSON a stdout — lista de resultados, cada uno con `tema`,
-`resumen`, `turn_id`, `ruta_origen`, `fragmento_completo`.
+`resumen`, `turn_id`, `ruta_origen`, `proyecto` (o `null` si el
+documento no lo tiene — C-9, 2026-08-20) y `fragmento_completo`.
 
 Errores:
   - tema sin resultados: JSON con lista vacía, exit code 0 (no es error);
@@ -167,6 +180,10 @@ Casos:
     accesible.
   - DADO un tema sin coincidencias CUANDO se consulta ENTONCES la salida
     es JSON con lista vacía y exit code 0.
+  - DADO documentos de varios proyectos y el filtro `--proyecto X`
+    CUANDO se consulta ENTONCES la salida incluye sólo los de `X`;
+    documentos sin `proyecto` (pre-C-9 o desconocido) nunca aparecen
+    bajo un filtro por proyecto.
 
 Invariantes: la salida en stdout es siempre JSON válido cuando el exit
 code es 0; los errores van a stderr, nunca mezclados con stdout.

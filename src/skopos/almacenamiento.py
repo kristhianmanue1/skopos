@@ -38,6 +38,8 @@ def _documento(analisis: Analisis) -> dict:
     }
     if analisis.ocurrido_en:
         documento["ocurrido_en"] = analisis.ocurrido_en
+    if analisis.proyecto:
+        documento["proyecto"] = analisis.proyecto
     if analisis.entidades:
         documento["entidades"] = analisis.entidades
     if analisis.dominio:
@@ -67,7 +69,9 @@ def guardar_analisis(
     return documento
 
 
-def buscar_por_tema(tema: str, *, coleccion: Collection) -> list[dict]:
+def buscar_por_tema(
+    tema: str, *, coleccion: Collection, proyecto: str | None = None
+) -> list[dict]:
     """Devuelve documentos relacionados con el tema, por texto completo.
 
     Antes usaba igualdad exacta de string, lo que fallaba contra temas
@@ -75,9 +79,16 @@ def buscar_por_tema(tema: str, *, coleccion: Collection) -> list[dict]:
     distintas (ronda adversarial 2026-08-13). $text sobre tema+resumen es
     la mejora mínima: coincide por palabra, no por frase exacta. Búsqueda
     semántica real (embeddings) queda para un ADR futuro si hace falta.
+
+    C-9 (2026-08-20): `proyecto`, si está presente, filtra por el campo
+    homónimo — los documentos sin el campo (pre-C-9 o desconocido)
+    quedan fuera, nunca se les inventa una coincidencia.
     """
+    filtro: dict = {"$text": {"$search": tema}}
+    if proyecto is not None:
+        filtro["proyecto"] = proyecto
     cursor = coleccion.find(
-        {"$text": {"$search": tema}}, {"score": {"$meta": "textScore"}}
+        filtro, {"score": {"$meta": "textScore"}}
     ).sort([("score", {"$meta": "textScore"})])
     return list(cursor)
 
@@ -97,12 +108,17 @@ def coleccion_local(
     """Conecta a la instancia local de Mongo (REQ-8) y devuelve la colección.
 
     Asegura los índices que el resto del módulo asume: turn_id único
-    (cierra la condición de carrera entre existe_turn_id e insert_one) y
-    texto completo sobre tema+resumen (para buscar_por_tema).
+    (cierra la condición de carrera entre existe_turn_id e insert_one),
+    texto completo sobre tema+resumen (para buscar_por_tema) y, desde
+    C-9 (2026-08-20), proyecto/cli/ocurrido_en para consultas por eje
+    sin collection scan (ocurrido_en prepara el `skopos read` diferido).
     create_index es idempotente — no falla si el índice ya existe.
     """
     cliente = pymongo.MongoClient(uri, serverSelectionTimeoutMS=timeout_ms)
     coleccion = cliente[db][nombre]
     coleccion.create_index("turn_id", unique=True)
     coleccion.create_index([("tema", "text"), ("resumen", "text")])
+    coleccion.create_index("proyecto")
+    coleccion.create_index("cli")
+    coleccion.create_index("ocurrido_en")
     return coleccion

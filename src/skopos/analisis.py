@@ -67,6 +67,7 @@ class Analisis:
     entidades: list[str] = field(default_factory=list)
     dominio: str | None = None
     metadata_cli: dict | None = None
+    proyecto: str | None = None
 
 
 class AnalisisFallido(Exception):
@@ -169,7 +170,7 @@ def analizar_turno(
     base_url: str = URL_OLLAMA_POR_DEFECTO,
     dominio_config: dict | None = None,
     escrubery_script: str | None = None,
-    escrubery_cli: str = "codex-cli",
+    escrubery_cli: str | None = None,  # C-9: por defecto, turno.cli
     # medido en el entorno real: ~90s si Ollama tuvo que recargar el
     # modelo en memoria (descargado por inactividad o por otro proceso
     # usando la GPU); ~1-7s con el modelo ya caliente.
@@ -193,7 +194,7 @@ def analizar_turno(
     metadata_cli = None
     if escrubery_script:
         metadata_cli = _ficha_escrubery(
-            escrubery_cli, script=escrubery_script, timeout=timeout
+            escrubery_cli or turno.cli, script=escrubery_script, timeout=timeout
         )
 
     entidades_crudas = resultado.get("entidades")
@@ -219,4 +220,5 @@ def analizar_turno(
         ocurrido_en=turno.timestamp_cierre,
         dominio=(dominio_config or {}).get("domain"),
         metadata_cli=metadata_cli,
+        proyecto=turno.proyecto,
     )
