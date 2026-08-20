@@ -73,6 +73,10 @@ F6→Hito 10 · F7→Hito 12.
 
 Hecho: dueño confirmó multi-CLI en canal; P-001 anotada como superada;
 `hoja-de-ruta.md` y `README.md` sincronizados; P-002 escrita.
+Trazabilidad entre sesiones: estado del ciclo guardado en AN-KLA local
+(`.an-kla/`, gitignorado — patrón de ektel) el 2026-08-20, transacción
+`7ba725a4`, hecho `f-ciclo-multi-cli-2026-08-20`; recuperable con
+`retrieve --query "ciclo multi-CLI"`.
 
 ## Fase 1 · C-9 — eje de proyecto y eje CLI real (Hito 13)
 
