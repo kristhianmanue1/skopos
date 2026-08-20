@@ -47,6 +47,8 @@ descargado y probado end-to-end). MongoDB local instalado vía Homebrew
 - `docs/contratos/f1-contratos.md` — fronteras: formato de Codex, esquema
   de Mongo, config de dominio, CLI de consulta, consulta a escrubery.
 - `docs/f1-maquina-estados.md` — ciclo de vida de un turno.
+- `docs/propuestas/` — análisis abiertos, sin decidir (P-001:
+  integración con AN-KLA Memory).
 
 ## Construcción
 
