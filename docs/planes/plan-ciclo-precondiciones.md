@@ -226,7 +226,7 @@ Fase 0 ✅
 |---|---|---|---|
 | 0 · Acto 0 | ✅ Cerrada | ronda 0 (sobre el plan, 2026-08-20, acta en `docs/rondas/2026-08-20-ronda-0-plan.md`) | apertura del ciclo (2026-08-20) |
 | 1 · C-9 | ✅ Cerrada | ronda 1 (2026-08-20, 6 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-1-fase1-c9.md`) | `811e58c` |
-| 2 · C-8 | Pendiente 🔒 | — | — |
+| 2 · C-8 | ✅ Cerrada | ronda 2 (ADR, pre-decisión) + ronda 3 (implementación; 10 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-3-fase2-c8.md`) | `f0f6134` |
 | 3 · C-10 | Pendiente 🔒 (a); (b) por evidencia | — | — |
 | 4 · C-6 | Pendiente 🔒 | — | — |
 | 5 · C-5 | Pendiente (requiere 3a) | — | — |
