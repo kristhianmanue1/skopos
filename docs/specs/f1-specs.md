@@ -116,23 +116,29 @@ en claro.
 ## SPEC-003 [cubre: REQ-3]
 
 Comportamiento: el `Analisis` de un turno se persiste en MongoDB local,
-con una referencia recuperable al fragmento completo original.
+con una referencia recuperable al fragmento completo original. Desde
+ADR-007 (2026-08-20, decisión 🔒 alternativa B): los documentos son
+versionados — primera versión 1, la vigente es la de número mayor, y
+existe la operación de supersede (inserción de versión nueva con
+reintento; la versión vieja nunca se modifica ni borra).
 
 Entradas: `Analisis` (SPEC-002) + `Turno` (SPEC-001, para el fragmento
 completo).
 
-Salidas: un documento insertado en la colección Mongo (esquema en
-`docs/contratos/f1-contratos.md`), incluyendo `proyecto` cuando el
-`Turno` lo trae [C-9, 2026-08-20] e índices sobre `proyecto`, `cli` y
-`ocurrido_en` además de los existentes.
+Salidas: un documento insertado en la colección Mongo (esquema v2 en
+`docs/contratos/f1-contratos.md`), incluyendo `version` [v2],
+`proyecto` cuando el `Turno` lo trae [C-9] e índices sobre
+`(turn_id, version)` único, `proyecto`, `cli` y `ocurrido_en`.
 
 Errores: si Mongo no está disponible (conexión rechazada), la operación
 falla explícitamente; el turno no se descarta silenciosamente (mecanismo
 de reintento/cola se define en implementación, no en F1). Un `Analisis`
 sin `turn_id` o sin `ruta_origen` se rechaza en el borde
-(`DocumentoInvalido`), no se persiste. Un `turn_id` duplicado (dos
-escrituras concurrentes) se rechaza por índice único; el orquestador lo
-trata como "omitido", no como fallo.
+(`DocumentoInvalido`), no se persiste. Una `(turn_id, version)`
+duplicada (dos escrituras concurrentes de la misma versión) se rechaza
+por el índice único compuesto [v2]; en ingesta el orquestador la trata
+como "omitido", en supersede explícito se reintenta con re-cómputo de
+versión.
 
 Casos:
   - DADO un `Analisis` válido con su `Turno` CUANDO se persiste ENTONCES
@@ -143,13 +149,27 @@ Casos:
     silencio.
   - DADO un `Analisis` con `turn_id` vacío CUANDO se intenta persistir
     ENTONCES se rechaza con `DocumentoInvalido`, no se inserta.
-  - DADO que dos llamadas intentan guardar el mismo `turn_id` CUANDO la
-    segunda llega tras la primera ENTONCES la segunda falla con
-    `DuplicateKeyError`, nunca hay dos documentos para el mismo turno.
+  - DADO que dos llamadas intentan guardar el mismo `turn_id` (versión 1)
+    CUANDO la segunda llega tras la primera ENTONCES la segunda falla con
+    `DuplicateKeyError`, nunca hay dos documentos para la misma versión.
+  - DADO un turno con versión vigente N CUANDO se ejecuta
+    `superseder_documento(turn_id, cambios)` ENTONCES existe versión N+1
+    con los campos de `cambios` sustituidos y el resto copiado, y N no
+    cambió [v2].
+  - DADO dos supersede concurrentes que toman la misma versión N+1
+    CUANDO uno gana ENTONCES el otro re-computa max(versión) y reintenta
+    — nunca falla en silencio [v2, H2].
+  - DADO un documento vigente con un patrón de secreto en claro CUANDO se
+    ejecuta `skopos reanalizar <turn_id> --solo-redaccion` ENTONCES la
+    nueva vigente lo sirve redactado y la versión vieja permanece como
+    auditoría [v2].
+  - DADO documentos con dos versiones del mismo `turn_id` CUANDO se
+    consulta por tema ENTONCES sólo se sirve la vigente [v2].
 
 Invariantes: todo documento guardado tiene una `referencia_origen`
-resoluble a un fragmento real, nunca huérfana; `turn_id` es único en la
-colección.
+resoluble a un fragmento real, nunca huérfana; `(turn_id, version)` es
+único en la colección; ninguna versión existente se modifica ni borra;
+las lecturas que sirven datos devuelven sólo la versión vigente.
 
 ## SPEC-004 [cubre: REQ-4]
 

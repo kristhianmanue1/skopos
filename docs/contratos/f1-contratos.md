@@ -42,12 +42,21 @@ versionado por Skopos. Un cambio de Codex que rompa el parseo se detecta
 como fallo de extracción (SPEC-001), no como una versión propia de este
 contrato — Skopos no controla esa frontera, sólo la observa.
 
-## CONTRATO: documento-analisis-mongo v1
+## CONTRATO: documento-analisis-mongo v2
+
+> v2 (2026-08-20, ADR-007, decisión 🔒 del dueño — alternativa B): el
+> documento gana `version`; la unicidad pasa de `turn_id` a
+> `(turn_id, version)`; la versión vigente de un turno es la de número
+> mayor y es la única que se sirve; existe la operación de supersede
+> (inserción de versión nueva, con reintento). v1 queda sustituida; los
+> cambios están marcados [v2].
 
 Entrada (esquema del documento insertado en la colección):
   `tema`: string [obligatorio]
   `resumen`: string [obligatorio]
   `turn_id`: string [obligatorio]
+  `version`: int [obligatorio, v2] — primera versión = 1; la vigente es
+  la de número mayor
   `session_id`: string [obligatorio]
   `ruta_origen`: string [obligatorio] — ruta al `rollout-*.jsonl` de origen
   `offset_inicio`: int [obligatorio]
@@ -62,18 +71,22 @@ Entrada (esquema del documento insertado en la colección):
   Skopos la procesó; puede faltar si el CLI de origen no trae timestamp
   `proyecto`: string [opcional, C-9 2026-08-20] — nombre del proyecto
   derivado de `turn_context.cwd` (regla en el CONTRATO
-  rollout-jsonl-de-codex); **ausente = desconocido**: documentos
-  pre-C-9 y turnos cuyo `cwd` no identifica proyecto. Nunca se
-  falsifica un valor para los ya guardados (el store es insert-only
-  hasta que C-8 decida lo contrario)
+  rollout-jsonl-de-codex); ausente = desconocido. Con supersede [v2], un
+  documento vigente sin `proyecto` puede completarse insertando versión
+  nueva que lo traiga — la vieja no se toca
   `dominio`: string [opcional] — presente si se usó configuración de
   dominio (ADR-003)
+  `entidades`: lista de string [opcional, saldado en v2 — siempre se
+  escribieron cuando el análisis las trajo, sin estar listadas aquí]
   `creado_en`: string (ISO 8601) [obligatorio] — cuándo Skopos guardó el
-  documento (puede ser mucho después de `ocurrido_en` si hubo backfill)
+  documento (puede ser mucho después de `ocurrido_en` si hubo backfill);
+  cada versión lleva su propio `creado_en`
 
-Salida: el mismo documento, recuperable mediante búsqueda de texto sobre
-`tema`/`resumen` (ver CONTRATO cli-skopos-query v1 — cambió de igualdad
-exacta a `$text` en la ronda adversarial 2026-08-13).
+Salida: la **versión vigente** del documento, recuperable mediante
+búsqueda de texto sobre `tema`/`resumen` (ver CONTRATO cli-skopos-query
+v1 — cambió de igualdad exacta a `$text` en la ronda adversarial
+2026-08-13). Versiones superseded no se sirven por las lecturas
+públicas, pero permanecen en la colección como auditoría.
 
 Errores:
   inserción sin `turn_id` o sin `ruta_origen`: rechazada explícitamente
@@ -81,24 +94,40 @@ Errores:
   aplicado en el borde desde la ronda adversarial 2026-08-13; antes de
   eso la garantía era sólo "por construcción" del resto del pipeline, no
   una barrera real
-  `turn_id` duplicado (dos escrituras concurrentes para el mismo turno):
-  rechazada por el índice único de Mongo (`DuplicateKeyError`), el
-  orquestador lo trata como "omitido", no como fallo
+  `(turn_id, version)` duplicado (dos escrituras concurrentes de la
+  MISMA versión): rechazada por el índice único compuesto. En ingesta
+  (versión 1), el orquestador la trata como "omitido", no como fallo; en
+  supersede explícito, se re-computa max(versión) y se reintenta —
+  nunca se omite en silencio [v2, H2 de la ronda 2 del ADR-007]
 
-Índices (además del único sobre `turn_id` y el de texto sobre
-`tema`+`resumen`, ambos existentes): `proyecto`, `cli`, `ocurrido_en`
-[C-9, 2026-08-20] — consultas por proyecto/CLI/fecha sin collection
-scan; `ocurrido_en` prepara el `skopos read` diferido.
+Operación de supersede [v2]: `superseder_documento(turn_id, cambios)`
+copia la versión vigente completa y sustituye sólo los campos de
+`cambios`, insertando `version = max + 1`. Disparadores: comando
+`skopos reanalizar <turn_id>` (re-análisis completo) o
+`skopos reanalizar <turn_id> --solo-redaccion` (re-aplicar patrones de
+secretos vigentes, sin Ollama). El vigilante jamás dispara supersede.
+
+Índices: único compuesto `(turn_id, version)` [v2 — sustituye al único
+simple de `turn_id`, que el bootstrap debe retirar]; texto sobre
+`tema`+`resumen`; `proyecto`, `cli`, `ocurrido_en` [C-9, 2026-08-20].
 
 Invariantes:
   - todo documento es resoluble a un fragmento real vía `ruta_origen` +
-    `offset_inicio` + `offset_fin`
-  - `turn_id` es único en la colección (índice único, cierra la
-    condición de carrera entre `existe_turn_id` e `insert_one`)
+    `offset_inicio` + `offset_fin`, en cualquier versión
+  - `(turn_id, version)` es único en la colección (índice único
+    compuesto); un mismo `turn_id` puede tener N versiones
+  - ninguna versión existente se modifica ni se borra: insert-only
+    físico (ADR-007); "reemplazado" es implícito (existe versión mayor)
+  - las lecturas que sirven datos devuelven sólo la vigente; el filtro
+    de vigencia es una **carga de seguridad** (una lectura que lo
+    olvide sirve, p.ej., secretos pre-redacción — H1 de la ronda 2 del
+    ADR-007)
 
-Compatibilidad: agregar campos opcionales es compatible hacia atrás;
-quitar o renombrar `tema`, `resumen`, `turn_id`, `ruta_origen`,
-`offset_inicio` u `offset_fin` exige v2 y un ADR que sustituya a éste.
+Compatibilidad: documentos v1 (sin `version`) legibles como legado;
+toda escritura nueva produce v2. Con 0 documentos al momento del cambio
+(verificado 2026-08-20), no hay migración de datos — sí del índice
+(retirar el único simple), con el riesgo documentado de que un proceso
+con código viejo lo resucite.
 
 ## CONTRATO: config-dominio v1
 
@@ -176,5 +205,45 @@ Invariantes:
     reformulaciones sin palabras en común no se recuperan (búsqueda por
     embeddings queda para un ADR futuro si la evidencia lo justifica)
 
-Compatibilidad: agregar campos al objeto de resultado es compatible;
-quitar o renombrar campos exige v2.
+Compatibilidad: agregar campos opcionales es compatible hacia atrás;
+en el resultado de `skopos query`, quitar o renombrar campos exige v2.
+
+## CONTRATO: cli-skopos-reanalizar v1
+
+> v1 (2026-08-20, ADR-007, ronda 3 F5): superficie del supersede
+> explícito — salida JSON, exit codes y el no-op `cambiado: false`
+> quedan prometidos aquí, no sólo viviendo en el código.
+
+Entrada:
+  `turn_id`: string [obligatorio] — argumento posicional de
+  `skopos reanalizar <turn_id>`
+  `--solo-redaccion`: flag [opcional] — re-aplicar los patrones de
+  secretos vigentes (SPEC-002) a la versión actual, sin llamar a Ollama
+
+Salida (JSON a stdout, exit 0):
+  éxito: `{"turn_id", "cambiado": true, "version_anterior",
+  "version_nueva"}` — se insertó una versión nueva (la vieja permanece
+  como auditoría)
+  no-op: `{"turn_id", "cambiado": false, "motivo"}` — p.ej.
+  `--solo-redaccion` sin patrones nuevos que redactar; **no se inserta
+  versión**
+
+Errores (exit distinto de cero, mensaje a stderr, nada en stdout):
+  turn_id sin ninguna versión guardada; rollout de origen ilegible o sin
+  el turno (lección Y-5: nunca supersede a ciegas desde una referencia
+  rota); `AnalisisFallido` del modelo (Ollama caído o respuesta inválida,
+  ronda 3 F1); Mongo no disponible
+
+Invariantes:
+  - el vigilante jamás dispara supersede: sólo este comando o la API
+    programática (`superseder_documento`)
+  - modo completo recomputa las referencias de origen desde el `Turno`
+    re-extraído (offsets, `ocurrido_en`, `proyecto`); `ruta_origen` no
+    se toca (misma ruta por construcción)
+  - `--solo-redaccion` redacta exactamente `tema`/`resumen`/`entidades`
+    (lo que SPEC-002 redacta, ni más ni menos)
+  - las claves de identidad (`turn_id`, `version`, `_id`,
+    `ruta_origen`) nunca viajan en los cambios (validado en el borde)
+
+Compatibilidad: agregar campos a la salida es compatible; quitar o
+renombrar exige v2.

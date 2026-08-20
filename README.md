@@ -22,6 +22,7 @@ no sólo fixtures sintéticos.
 ```bash
 python3 -m skopos query "<tema>"
 python3 -m skopos watch [--sessions-dir DIR] [--intervalo SEGUNDOS]
+python3 -m skopos reanalizar <turn_id> [--solo-redaccion]   # supersede (ADR-007)
 ```
 
 **Prueba de escala real** (sesión de hoy, 28 turnos, 1.2MB): 42,958

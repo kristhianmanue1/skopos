@@ -38,6 +38,12 @@ def _redactar_secretos(texto: str) -> str:
         texto = patron.sub("[REDACTADO]", texto)
     return texto
 
+
+# superficie pública para el CLI (skopos reanalizar --solo-redaccion):
+# el mecanismo de la carga de seguridad H1 no debe vivir como símbolo
+# privado alcanzado desde otro módulo (ronda 3, F8)
+redactar_secretos = _redactar_secretos
+
 MODELO_POR_DEFECTO = "qwen3:8b"
 URL_OLLAMA_POR_DEFECTO = "http://localhost:11434"
 

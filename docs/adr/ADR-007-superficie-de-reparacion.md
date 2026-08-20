@@ -1,8 +1,10 @@
 # ADR-007: superficie de reparación del almacén de Skopos
 
-Estado: **propuesto — decisión 🔒 pendiente del dueño** (Fase 2 / C-8 del
-ciclo P-002, 2026-08-20). Al decidir el dueño, se completa la firma, el
-estado pasa a aceptado y la alternativa elegida queda registrada.
+Estado: **aceptado — alternativa B (supersede con versiones)**. Decisión
+🔒 del dueño en canal, 2026-08-20 (Fase 2 / C-8 del ciclo P-002).
+Sometido a ronda adversarial pre-decisión (ronda 2,
+`docs/rondas/2026-08-20-ronda-2-adr007.md`): 9 hallazgos incorporados
+antes de la firma.
 
 ## Contexto
 
@@ -135,4 +137,24 @@ Alternativas descartadas:
 
 ## Firma de decisión
 
-- Dueño: ______ · Fecha: ______ · Alternativa elegida: ____
+- Dueño: confirmación en canal del agente (opencode) · Fecha:
+  2026-08-20 · Alternativa elegida: **B — supersede con versiones, por
+  inserción**
+
+## Decisiones de implementación (cerradas al implementar, 2026-08-20)
+
+Los puntos que el ADR dejó diferidos, resueltos:
+
+- **Campo de versión:** `version` (int, primera versión = 1, obligatorio
+  en todo documento nuevo desde v2 del contrato).
+- **Disparador del supersede:** comando `skopos reanalizar <turn_id>`
+  con dos modos: completo (re-extrae el turno de `ruta_origen` y
+  re-analiza con Ollama) y `--solo-redaccion` (re-aplica los patrones
+  de secretos vigentes a la versión actual, sin Ollama — primer
+  consumidor de la necesidad 2). El vigilante jamás dispara supersede.
+- **Copia hacia adelante:** el supersede copia el documento vigente
+  completo y sustituye sólo los campos provistos — las referencias de
+  origen no se recomputan salvo en modo completo.
+- **Reintento (H2 de la ronda 2):** `DuplicateKeyError` en supersede →
+  re-computar max(versión) y reintentar, con tope; nunca omitido en
+  silencio.

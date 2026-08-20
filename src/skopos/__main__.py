@@ -5,10 +5,11 @@ from __future__ import annotations
 import sys
 
 from skopos import __version__
-from skopos.cli import query_command
+from skopos.cli import query_command, reanalizar_command
 from skopos.vigilante import watch_command
 
-COMANDOS = {"query": query_command, "watch": watch_command}
+COMANDOS = {"query": query_command, "watch": watch_command,
+            "reanalizar": reanalizar_command}
 
 _AYUDA = f"""skopos {__version__}
 
@@ -16,6 +17,9 @@ Comandos:
   query <tema>              busca por tema en lo ya analizado (SPEC-004)
   watch [--sessions-dir DIR] [--intervalo SEGUNDOS]
                              vigila y procesa turnos nuevos (SPEC-005)
+  reanalizar <turn_id> [--solo-redaccion]
+                             supersede explícito: nueva versión del
+                             análisis (SPEC-003 v2, ADR-007)
 
 `skopos <comando> --help` muestra los argumentos de cada uno."""
 
