@@ -212,10 +212,13 @@ code es 0; los errores van a stderr, nunca mezclados con stdout.
 
 Comportamiento: `skopos.vigilante` recorre periódicamente los rollouts de
 Codex y procesa los turnos nuevos, sin repetir los ya guardados
-(ADR-005).
+(ADR-005). Desde ADR-008 (decisión 8, 🔒 2026-08-20): **arranca "desde
+ahora" por defecto** — sólo procesa turnos cerrados a partir del
+instante de arranque (`t0`); el histórico exige `--backfill` explícito,
+que restaura el comportamiento previo (todo turno no guardado).
 
 Entradas: directorio de sesiones (por defecto `~/.codex/sessions/`),
-intervalo entre ciclos.
+intervalo entre ciclos, `--backfill` (opt-in, default off).
 
 Salidas: por cada ciclo, la lista de `ResultadoTurno` (SPEC-002/SPEC-003)
 de todos los rollouts encontrados — `guardado`, `fallido` u `omitido`.
@@ -225,15 +228,25 @@ persistencia fallidos) no detiene el ciclo ni afecta a los demás rollouts
 o turnos.
 
 Casos:
-  - DADO un rollout con un turno nuevo (turn_id no guardado) CUANDO corre
-    un ciclo ENTONCES ese turno queda `guardado` o `fallido`, nunca
-    `omitido`.
+  - DADO un rollout con un turno nuevo (turn_id no guardado) cerrado
+    después del arranque CUANDO corre un ciclo ENTONCES ese turno queda
+    `guardado` o `fallido`, nunca `omitido`.
   - DADO un rollout con un turno ya guardado en un ciclo anterior CUANDO
     corre un ciclo nuevo ENTONCES ese turno queda `omitido`, sin llamar
     de nuevo al modelo de análisis.
+  - DADO un turno cerrado ANTES del arranque CUANDO corre un ciclo sin
+    `--backfill` ENTONCES no se procesa ni se reporta — es histórico no
+    invitado, no un `omitido` [ADR-008].
+  - DADO un turno sin `timestamp_cierre` CUANDO corre un ciclo sin
+    `--backfill` ENTONCES se trata como histórico (no se procesa);
+    con `--backfill` se procesa [ADR-008: conservador].
+  - DADO `--backfill` CUANDO corre un ciclo ENTONCES todo turno no
+    guardado se procesa, sin distinción histórica [ADR-008].
   - DADO que `sessions_dir` no existe CUANDO corre un ciclo ENTONCES no
     hay rollouts que procesar y el ciclo termina sin error.
 
 Invariantes: un mismo `turn_id` nunca se analiza dos veces mientras su
-documento siga existiendo en Mongo; SIGTERM/SIGINT detienen el vigilante
+documento siga existiendo en Mongo (la dedup vive en Mongo — ADR-005; el
+corte `t0` de ADR-008 es un filtro de descubrimiento, nunca una segunda
+autoridad de "ya procesado"); SIGTERM/SIGINT detienen el vigilante
 entre ciclos, nunca a mitad de procesar un turno.

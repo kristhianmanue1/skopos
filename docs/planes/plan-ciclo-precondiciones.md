@@ -164,6 +164,14 @@ aceptación del dueño.
 Cada piloto publica su snapshot fechado. No se decide 40–100 h
 (snapshot 2026-08-19) de una vez.
 
+**Riesgo conocido para 3c/5 (exigencia 1 de la firma del ADR-008,
+2026-08-20):** el timeout de análisis de 120 s quedó marginal — 2 de 7
+llamadas reales del snapshot 2026-08-20 cayeron en él con el entorno
+bajo carga (`docs/evidencia/remedicion-ciclo-c10-2026-08-20.md`,
+lectura 3). Antes de correr cualquier piloto de backfill se decide si
+se sube el timeout o se troza el trabajo; no se lanza un piloto con el
+timeout marginal sin tratar.
+
 ## Fase 4 · C-6 — `fragmento_completo` (Hito 16) 🔒
 
 1. Brief de decisión con las **cinco** palancas de P-002 §3.4 (servir /
@@ -227,7 +235,7 @@ Fase 0 ✅
 | 0 · Acto 0 | ✅ Cerrada | ronda 0 (sobre el plan, 2026-08-20, acta en `docs/rondas/2026-08-20-ronda-0-plan.md`) | apertura del ciclo (2026-08-20) |
 | 1 · C-9 | ✅ Cerrada | ronda 1 (2026-08-20, 6 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-1-fase1-c9.md`) | `811e58c` |
 | 2 · C-8 | ✅ Cerrada | ronda 2 (ADR, pre-decisión) + ronda 3 (implementación; 10 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-3-fase2-c8.md`) | `f0f6134` |
-| 3 · C-10 | Pendiente 🔒 (a); (b) por evidencia | — | — |
+| 3 · C-10 | 3(a) ✅ Cerrada — decisión 8 🔒 firmada 2026-08-20 (ADR-008, tras revisión aprobatoria de Pinax); ronda 5 sobre la implementación (4 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-5-fase3a-c10.md`). (b) gated a evidencia (remedición en `docs/evidencia/remedicion-ciclo-c10-2026-08-20.md`). (c) pilotos pendientes | 3a: ronda 5 / `—` |
 | 4 · C-6 | Pendiente 🔒 | — | — |
 | 5 · C-5 | Pendiente (requiere 3a) | — | — |
 | 6 · escrubery | Pendiente (paralela) | — | — |

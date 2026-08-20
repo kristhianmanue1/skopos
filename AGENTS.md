@@ -15,7 +15,7 @@ contradigas sin registrar un ADR nuevo que sustituya al anterior.
 python3 -m venv .venv && source .venv/bin/activate && pip install -e .   # build
 python3 -m skopos                                                        # ayuda + comandos disponibles
 python3 -m skopos query "<tema>"                                         # SPEC-004
-python3 -m skopos watch                                                  # SPEC-005
+python3 -m skopos watch [--backfill]                                               # SPEC-005
 python3 -m skopos reanalizar <turn_id> [--solo-redaccion]                # SPEC-003 v2
 python3 -m unittest discover -s tests                                    # test
 ```

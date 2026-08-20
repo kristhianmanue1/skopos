@@ -1,10 +1,13 @@
 # ADR-008: política de arranque del vigilante (decisión 8)
 
-Estado: **propuesto — decisión 🔒 pendiente del dueño** (Fase 3 / C-10(a),
-Hito 8; 2026-08-20). Sometido a ronda adversarial pre-decisión (ronda 4,
-`docs/rondas/2026-08-20-ronda-4-adr008.md`). Remedición fresca en
-`docs/evidencia/remedicion-ciclo-c10-2026-08-20.md` — la decisión se
-toma sobre datos del 2026-08-20, no del 2026-08-19.
+Estado: **aceptado** — decisión 8 🔒 firmada por el dueño el 2026-08-20
+(Fase 3 / C-10(a), Hito 8), tras revisión aprobatoria de Pinax contra
+código y corpus (conteo independiente bit a bit: 612/2,281,708,113;
+intervalo 5.0 y timeout 120 s verificados; restricción Python ≥3.9
+confirmada). Sometido a ronda adversarial pre-decisión (ronda 4,
+`docs/rondas/2026-08-20-ronda-4-adr008.md`): 12 hallazgos incorporados
+antes de la firma. Remedición fresca en
+`docs/evidencia/remedicion-ciclo-c10-2026-08-20.md`.
 
 ## Contexto
 
@@ -119,4 +122,29 @@ releer archivos completos por ciclo.
 
 ## Firma de decisión
 
-- Dueño: ______ · Fecha: ______ · (a firma tras revisión de Pinax)
+- Dueño: firma 🔒 comunicada en canal del agente y confirmada con
+  revisión aprobatoria de Pinax (2026-08-20) · Alternativa: **"desde
+  ahora" por defecto + `--backfill` opt-in**
+- Exigencias de la firma, registradas: (1) la marginalidad del timeout
+  de 120 s (2/7 llamadas del snapshot 2026-08-20) queda como riesgo
+  conocido del plan para las Fases 3c/5 — fuera del alcance de este
+  ADR, no olvidada; (2) la nota de enmienda de ADR-005 va en este
+  mismo commit de aceptación, fechada, con puntero a esta firma.
+
+## Decisiones de implementación (cerradas al implementar, 2026-08-20)
+
+- **Filtro semántico por turno** en `procesar_rollout(desde=…)`
+  (`orquestador.py`): turnos cerrados antes de `desde` quedan fuera de
+  la ventana **sin producir resultado** (no son `omitido`: nunca se les
+  consultó a la dedup). Turno sin timestamp o no parseable → histórico.
+- **Prefiltro de archivo por mtime** en `vigilante.ciclo(t0=…)`:
+  archivo con `mtime < t0` no se parsea (optimización de descubrimiento;
+  skew mtime↔evento medido 0.0 s, ronda 4). `OSError` al hacer `stat`
+  → se salta el archivo en ese ciclo (mismo criterio que SPEC-001 para
+  archivo inexistente).
+- **`ciclo()` mantiene `t0=None` por defecto** (sin corte): la política
+  vive en `ejecutar`/`watch_command` (`t0 = now` al arrancar salvo
+  `backfill=True`), que es la frontera de SPEC-005; `ciclo` y
+  `procesar_rollout` quedan como primitivas explícitas.
+- **Timestamps `Z` en Python 3.9**: `_parsear_timestamp` sustituye `Z`
+  por `+00:00` antes de `fromisoformat` (nota de la ronda 4, H11).

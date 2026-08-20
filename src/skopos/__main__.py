@@ -15,8 +15,9 @@ _AYUDA = f"""skopos {__version__}
 
 Comandos:
   query <tema>              busca por tema en lo ya analizado (SPEC-004)
-  watch [--sessions-dir DIR] [--intervalo SEGUNDOS]
-                             vigila y procesa turnos nuevos (SPEC-005)
+  watch [--sessions-dir DIR] [--intervalo SEGUNDOS] [--backfill]
+                             vigila y procesa turnos nuevos (SPEC-005);
+                             por defecto sólo desde su arranque (ADR-008)
   reanalizar <turn_id> [--solo-redaccion]
                              supersede explícito: nueva versión del
                              análisis (SPEC-003 v2, ADR-007)

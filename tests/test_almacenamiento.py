@@ -173,7 +173,9 @@ class SupersedeTests(unittest.TestCase):
         # H5 de la ronda 2 del ADR-007: el bootstrap baja el índice viejo
         # si un despliegue pre-v2 lo dejó (se recrea a mano y se reconecta)
         self.coleccion.create_index("turn_id", unique=True)
-        coleccion_local(db=DB_DE_PRUEBA)
+        coleccion_retirada = coleccion_local(db=DB_DE_PRUEBA)
+        cliente_extra = coleccion_retirada.database.client
+        self.addCleanup(cliente_extra.close)
         nombres = {i["name"] for i in self.coleccion.list_indexes()}
         self.assertNotIn("turn_id_1", nombres)
 

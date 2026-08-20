@@ -8,6 +8,11 @@ prototipo detectaba el cierre y deliberadamente no leía el texto.
 La deduplicación entre ciclos vive en Mongo, no en un cursor local
 (ADR-005): cada ciclo relee los rollouts completos, pero
 `procesar_rollout` omite los turnos cuyo turn_id ya está guardado.
+
+Política de arranque (ADR-008, decisión 8, 🔒 2026-08-20): por defecto
+arranca "desde ahora" — sólo procesa turnos cerrados a partir del
+instante de arranque (`t0`); el histórico exige `--backfill` explícito.
+`t0` es un filtro de descubrimiento; la dedup sigue viviendo en Mongo.
 """
 
 from __future__ import annotations
@@ -16,6 +21,7 @@ import argparse
 import signal
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -39,12 +45,28 @@ def ciclo(
     *,
     coleccion: Collection,
     descubrir: Callable[[Path], set[Path]] = descubrir_rollouts,
+    t0: datetime | None = None,
     **kwargs_procesar,
 ) -> list[ResultadoTurno]:
-    """Un barrido completo: procesa los turnos nuevos de todos los rollouts."""
+    """Un barrido completo: procesa los turnos nuevos de todos los rollouts.
+
+    Con `t0` (ADR-008), los archivos sin actividad (mtime) posterior a
+    `t0` se saltan sin parsear — optimización de descubrimiento: un
+    archivo intacto desde antes de `t0` no puede contener turnos
+    cerrados después (skew mtime↔evento medido en 0.0 s, ronda 4). El
+    filtro semántivo por turno vive en `procesar_rollout(desde=…)`.
+    """
     resultados: list[ResultadoTurno] = []
     for path in sorted(descubrir(sessions_dir)):
-        resultados.extend(procesar_rollout(path, coleccion=coleccion, **kwargs_procesar))
+        if t0 is not None:
+            try:
+                if path.stat().st_mtime < t0.timestamp():
+                    continue
+            except OSError:
+                continue
+        resultados.extend(
+            procesar_rollout(path, coleccion=coleccion, desde=t0, **kwargs_procesar)
+        )
     return resultados
 
 
@@ -55,9 +77,16 @@ def ejecutar(
     intervalo: float = INTERVALO_POR_DEFECTO,
     on_ciclo: Callable[[list[ResultadoTurno]], None] | None = None,
     max_ciclos: int | None = None,
+    backfill: bool = False,
     **kwargs_procesar,
 ) -> None:
-    """Corre el vigilante hasta SIGTERM/SIGINT (o max_ciclos, para pruebas)."""
+    """Corre el vigilante hasta SIGTERM/SIGINT (o max_ciclos, para pruebas).
+
+    ADR-008: `backfill=False` (por defecto) arranca "desde ahora" — t0
+    es el instante de arranque; `backfill=True` restaura el comportamiento
+    previo (todo turno no guardado, sin distinción histórica).
+    """
+    t0 = None if backfill else datetime.now(timezone.utc)
     detener = False
 
     def _parar(_signum: int, _frame: object) -> None:
@@ -69,7 +98,9 @@ def ejecutar(
     try:
         ciclos = 0
         while not detener:
-            resultados = ciclo(sessions_dir, coleccion=coleccion, **kwargs_procesar)
+            resultados = ciclo(
+                sessions_dir, coleccion=coleccion, t0=t0, **kwargs_procesar
+            )
             if on_ciclo:
                 on_ciclo(resultados)
             ciclos += 1
@@ -95,12 +126,24 @@ def watch_command(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="skopos watch")
     parser.add_argument("--sessions-dir", type=Path, default=SESSIONS_DIR_POR_DEFECTO)
     parser.add_argument("--intervalo", type=float, default=INTERVALO_POR_DEFECTO)
+    parser.add_argument(
+        "--backfill",
+        action="store_true",
+        help="procesa también el histórico no guardado (por defecto: sólo turnos "
+        "cerrados desde el arranque — ADR-008)",
+    )
     args = parser.parse_args(argv)
 
     coleccion = coleccion_local()
+    modo = (
+        "backfill: procesará TODO turno no guardado"
+        if args.backfill
+        else "desde ahora: sólo turnos cerrados a partir de este arranque (ADR-008); "
+        "use --backfill para el histórico"
+    )
     print(
         f"skopos watch: vigilando {args.sessions_dir} cada {args.intervalo}s "
-        "(Ctrl+C para detener)",
+        f"— {modo} (Ctrl+C para detener)",
         file=sys.stderr,
     )
     ejecutar(
@@ -108,5 +151,6 @@ def watch_command(argv: list[str]) -> int:
         coleccion=coleccion,
         intervalo=args.intervalo,
         on_ciclo=_reportar_ciclo,
+        backfill=args.backfill,
     )
     return 0

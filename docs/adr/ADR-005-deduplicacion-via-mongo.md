@@ -2,6 +2,20 @@
 
 Estado: aceptado
 
+> **Enmienda 2026-08-20** (mecánica del ADR-008 §"Enmienda con acta",
+> registrada en su commit de aceptación): la decisión de este ADR se
+> mantiene íntegra — la deduplicación sigue viviendo en Mongo
+> (`existe_turn_id` es la única autoridad de "ya procesado"); no hay set
+> local de turn_ids ni cursor de offsets, y cada archivo descubierto se
+> sigue leyendo completo. Se **acota una consecuencia**, no la decisión:
+> "cada ciclo del vigilante vuelve a leer y parsear los archivos .jsonl
+> completos" queda acotado, desde ADR-008 (decisión 8 🔒 del dueño,
+> 2026-08-20), a los archivos con actividad (mtime) posterior al
+> arranque — un filtro de **descubrimiento** ortogonal a dónde vive la
+> dedup. El ADR de **lectura incremental** que este documento anticipa
+> abajo sigue siendo una pieza distinta y pendiente (Fase 3(b) del ciclo
+> P-002); ADR-008 no lo sustituye.
+
 Contexto: el vigilante en vivo (REQ-1, REQ-6) tiene que recorrer
 periódicamente `~/.codex/sessions/` sin volver a analizar (llamada cara a
 Ollama) ni volver a guardar un turno que ya se procesó en un ciclo

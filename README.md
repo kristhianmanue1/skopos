@@ -21,9 +21,13 @@ no sólo fixtures sintéticos.
 
 ```bash
 python3 -m skopos query "<tema>"
-python3 -m skopos watch [--sessions-dir DIR] [--intervalo SEGUNDOS]
+python3 -m skopos watch [--sessions-dir DIR] [--intervalo SEGUNDOS] [--backfill]
 python3 -m skopos reanalizar <turn_id> [--solo-redaccion]   # supersede (ADR-007)
 ```
+
+`watch` arranca "desde ahora" por defecto (ADR-008): sólo procesa turnos
+cerrados a partir de su arranque; el histórico exige `--backfill`
+explícito.
 
 **Prueba de escala real** (sesión de hoy, 28 turnos, 1.2MB): 42,958
 caracteres de conversación real (~13 min de conversación según
