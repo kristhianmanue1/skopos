@@ -225,7 +225,7 @@ Fase 0 ✅
 | Fase | Estado | Ronda | Commit |
 |---|---|---|---|
 | 0 · Acto 0 | ✅ Cerrada | ronda 0 (sobre el plan, 2026-08-20, acta en `docs/rondas/2026-08-20-ronda-0-plan.md`) | apertura del ciclo (2026-08-20) |
-| 1 · C-9 | Pendiente | — | — |
+| 1 · C-9 | ✅ Cerrada | ronda 1 (2026-08-20, 6 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-1-fase1-c9.md`) | `811e58c` |
 | 2 · C-8 | Pendiente 🔒 | — | — |
 | 3 · C-10 | Pendiente 🔒 (a); (b) por evidencia | — | — |
 | 4 · C-6 | Pendiente 🔒 | — | — |

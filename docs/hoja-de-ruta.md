@@ -21,7 +21,7 @@
 | 10 | Ensayo del canal escrubery contra el repo real (P-002 §3.6) | Pendiente | — |
 | 11 | Búsqueda semántica (embeddings) — condicional a que `$text` (ADR-006) resulte insuficiente en uso real | Futuro, no decidido | — |
 | 12 | Soporte multi-CLI (más allá de Codex) — confirmado por el dueño el 2026-08-20; gated tras C-9..C-5 de P-002, con contrato de parser por CLI | Decidido, gated | — |
-| 13 | C-9: eje de proyecto + eje CLI real + índices (P-002 §3.1) | Pendiente | — |
+| 13 | C-9: eje de proyecto + eje CLI real + índices (P-002 §3.1) | Cerrado | `811e58c` |
 | 14 | C-8: ADR superficie de mutación o retención (P-002 §3.2) 🔒 | Pendiente | — |
 | 15 | C-10: cursor de ingesta — decisión 8 + ADR de lectura incremental (P-002 §3.3) 🔒 | Pendiente | — |
 | 16 | C-6: decisión sobre `fragmento_completo`, cinco palancas (P-002 §3.4) 🔒 | Pendiente | — |
