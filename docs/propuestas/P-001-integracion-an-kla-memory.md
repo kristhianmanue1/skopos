@@ -1,360 +1,452 @@
-# P-001 v3: jerarquía de memoria Skopos ↔ AN-KLA
+# P-001 v4: integración Skopos ↔ AN-KLA por cobertura de observación
 
 Estado: **propuesta — no decidida. Insumo para rondas de consenso y
 adversariales entre varios modelos.**
 Fecha: 2026-08-19
-Revisión: v3 — v2 sometida a ronda adversarial propia (§10). Dos
-hallazgos de nivel BLOCKER contra la tesis central de v2.
-Autor de estas rondas: Claude Opus 5, analizando **como agente consumidor
-de esta memoria**.
+Revisión: v4 — v3 sometida a ronda adversarial **independiente, con
+contexto fresco** (§11). Cuatro BLOCKER. La tesis central de v2/v3 cayó.
+Autoría: v1–v3 y §10 por Claude Opus 5 (mismo contexto, autocrítica).
+§11 por un revisor independiente con contexto fresco.
 
-> Advertencia de método: las tres revisiones las produjo el mismo modelo,
-> con el mismo contexto. La convención de este proyecto para una ronda
-> adversarial es **contexto fresco en un agente separado** (ver README,
-> ronda del 2026-08-13). Esta ronda no cumple esa condición: es
-> autocrítica, no independiente. Trátese como un piso de calidad, no
-> como la ronda adversarial del hito.
+> El eje de esta propuesta cambió en v4. v2 y v3 sostenían un reparto
+> **corto plazo / largo plazo**. La ronda independiente mostró, contra
+> código, que ese no es el eje: el eje real es **observable / no
+> observable**. Ver §2.
 
 ## 1. Historial de correcciones
 
-**v1 → v2.** v1 recomendaba promoción manual Skopos → AN-KLA con un
-humano aprobando cada registro. Retirada por dos errores: de encuadre
-(esta es memoria de agentes para agentes; una firma humana por recuerdo
-la anula) y de arquitectura (automatizaba hacia el destino inmutable y
-dejaba manual el barato — al revés de lo que la asimetría de costos
-exige).
+Se conserva completo a propósito: para rondas entre modelos, saber *cómo*
+falló un análisis vale tanto como su conclusión.
 
-**v2 → v3.** v2 sostuvo que *la consolidación hacia Skopos es el `decay`
-que le falta a AN-KLA*, y que eso hace la integración necesaria. La ronda
-adversarial encontró que **el mecanismo no está disponible como se
-describió** (A-1) y que **no reduce el conjunto caliente** (A-2). La
-tesis sobrevive debilitada y con precondiciones que v2 no presupuestó.
-Detalle en §10.
+**v1 → v2.** v1 recomendaba promoción manual Skopos → AN-KLA con firma
+humana por registro. Retirada: esta es memoria de agentes para agentes.
 
-Sigue en pie desde v1: H-1 (`tool_observed` no pasa por CLI), H-2
-(`fragmento_completo` no cruza), H-3 (prueba de amputación descarta
-reemplazar Mongo), H-5 (superficie de inyección).
+**v2 → v3.** Autocrítica (§10). Dos BLOCKER contra la tesis de v2 de que
+"la consolidación es el `decay` que le falta a AN-KLA".
 
-## 2. Los tipos de AN-KLA, observados
+**v3 → v4.** Ronda independiente (§11). Lo que cayó:
 
-Verificado en `/Users/krisnova/www/an-kla-memory` @ `b70561e`.
+| Afirmación de v3 | Veredicto |
+|---|---|
+| "AN-KLA no puede olvidar"; `decay` es la única operación sin implementar | **Falsa.** `refute` está implementado y gobernado (§3) |
+| El eje es corto plazo / largo plazo | **Eje equivocado.** Es cobertura de observación (§2) |
+| La "señal de curaduría" justifica la integración | **No construible.** No existe clave de join (§2.2) |
+| Skopos es "el destino mutable y barato" | **Falsa.** Skopos es insert-only; AN-KLA es el más mutable (§4.2) |
+| Detector de C-5 sobre `fragmento_completo` | **Roto.** Ese campo no existe en Mongo (§4.5) |
+| C-6 mitigado: "sólo summary redactado cruza" | **Falsa, y la severidad sube** (§4.4) |
+| H-3: la prueba de amputación descarta reemplazar Mongo | **Mal aplicada** (§4.6) |
+| §5: "falta implementar `decay`" | **Contra un ADR.** Rechazado deliberadamente (§3.2) |
 
-| Eje | Valores | Estado real en beta.14 |
-|---|---|---|
-| Stream | `facts`, `events`, `episodes` | los tres existen; `retrieve` busca sólo `facts` por defecto (`an_kla/retrieval.py:38`) |
-| Representación | `full`, `summary` | ambas; clases de agente topan en `summary` |
-| Operación | `add`, `supersede`, `refute`, `decay` | **sólo `add` y `supersede`** (`an_kla/write_policy.py:54`) |
-| Vigencia | `vigente`, `sustituida`, `refutada`, `eliminada` | `eliminada` no tiene operación gobernada |
+Sobrevivieron: C-4 (presupuesto), C-7 (concurrencia), A-1 (prohibición de
+`supersede` para `derived_from_retrieval`), y la conclusión "ordenar
+Skopos antes de conectar" — aunque **la lista de qué ordenar era
+equivocada** (§5).
 
-Semántica declarada para el agente (`an_kla/context_text.py:258-261`):
-`facts` para conocimiento versionado, `events` para la cronología,
-`episodes` para experiencias y lecciones.
+## 2. El eje correcto: cobertura de observación
 
-Un turno de conversación es un **`episode`**, no un `fact`. Un hecho
-destilado *de* ese turno es un `fact`. No son el mismo registro y no
-deben compartir `id`.
+### 2.1 Skopos sólo puede ver Codex
 
-## 3. La contradicción central: AN-KLA no puede olvidar
+Verificado: `vigilante.py:27` (`~/.codex/sessions`), `captura.py:18`
+(`CLI_ORIGEN = "codex-cli"`), `captura.py:61-88` (el parser depende del
+esquema propietario de Codex: `response_item`, `payload.type=="message"`,
+cierre por `event_msg/task_complete`).
 
-`decay` está en el vocabulario pero produce `skip` con
-`operation_not_supported`. `eliminada` no tiene operación gobernada. No
-hay GC automático. La compactación es explícita, gobernada y destructiva.
+Este proyecto se evalúa con **rondas de varios modelos**. Para todos los
+que no son Codex, Skopos ve **cero**. No hay rollout crudo que leer.
 
-**La operación que define la memoria de corto plazo es la única sin
-implementar.** Sin olvido, AN-KLA en ese rol es un diario append-only con
-etiqueta de memoria de trabajo: crece monótonamente y el conjunto que
-`retrieve` debe puntuar crece con él.
+Eso invalida la premisa de la pregunta que v3 designó como sostén de todo
+("¿qué gana Skopos observando AN-KLA, si ya lee el rollout crudo?") y da
+la respuesta que v3 buscaba sin encontrar:
 
-### 3.1 La salida parcial: `supersede` — y sus dos límites
+> **Lo que Skopos gana observando AN-KLA es cobertura de los agentes que
+> estructuralmente no puede observar.**
 
-`supersede` sí está implementado. Escribe el registro nuevo y **oculta el
-target de la recuperación**, sin mutar su contenido inmutable. v2
-propuso usarlo así:
+Esa justificación no depende de ningún campo nuevo, sobrevive al ataque
+de "ya tengo el rollout", y es independiente del horizonte temporal.
 
-```
-1. El agente escribe en AN-KLA          → memoria fresca, con traza
-2. Skopos consolida el registro          → pasa a largo plazo
-3. AN-KLA hace `supersede` del original  → sale del conjunto caliente
-```
+### 2.2 Por qué la "señal de curaduría" no servía
 
-**La ronda adversarial encontró dos límites que v2 no vio.**
+v3 propuso que el valor era saber *qué turnos produjeron hechos que un
+agente juzgó durables*. No es construible hoy:
 
-**Límite 1 — exige autoridad privilegiada (A-1).** La política prohíbe
-explícitamente que `derived_from_retrieval` haga `supersede`
-(`write_policy.py:414-421`, razón
-`supersede_requires_non_derived_authority`). El comentario del código es
-inequívoco: *"model_derived may supersede; derived_from_retrieval may
-not."*
+- No hay clave de join. `grep -rn "turn_id|rollout|session_id|codex"` en
+  `an_kla/` y `docs/schemas/` → cero.
+- `lineage.refs` admite `kind ∈ {artifact, event, fact, episode,
+  revision, external}` con `id` libre: nada obliga ni valida un `turn_id`.
+- `subject_ref` está ligado a identidad de proyecto, sin eje de turno.
+- AN-KLA **no registra autoría** (`README:338`: "no prueba identidad,
+  autoría ni verdad"). "Un agente lo juzgó durable" no resuelve a *cuál*.
 
-Si Skopos lee AN-KLA vía `retrieve` para consolidar, el linaje honesto
-**es** `derived_from_retrieval`, y el `supersede` queda prohibido.
-Declarar `model_derived` para esquivarlo sería lavado de autoridad —
-justo lo que la política existe para impedir.
+Construirla exigiría un campo nuevo obligatorio escrito por el agente en
+cada write — la misma disciplina por-registro por la que se retiró v1.
 
-Salidas legítimas, ambas más caras de lo que v2 supuso:
+### 2.3 El reparto que reemplaza al de v2/v3
 
-- Consolidar leyendo **la cadena de revisiones/segmentos**, no `retrieve`.
-  Es observación del sustrato, no contenido recuperado.
-- Un adaptador Python con autoridad `tool_observed` — que es lo honesto
-  ("Skopos observó que persistió esto"), pero choca con H-1: esa clase no
-  pasa por el CLI y exige resolver autoridad fuera del contenido.
+- **Skopos = observador de un CLI concreto (Codex).** Su valor
+  irreemplazable no es el horizonte temporal: es que ve lo que un agente
+  hizo **sin que el agente decida escribirlo**.
+- **AN-KLA = memoria escrita deliberadamente por cualquier agente,** con
+  gobierno, traza, vigencia y olvido gobernado.
 
-**Límite 2 — no reduce la cardinalidad del conjunto caliente (A-2).**
-`supersede` es 1:1 (`supersedes` es un string único en
-`write-proposal-v1`) y **escribe un registro nuevo que queda `vigente`**.
-Consolidar N hechos deja N registros stub vigentes y recuperables.
+Son ortogonales al tiempo. Ambos pueden ser de corto o de largo plazo; lo
+que los distingue es **quién decide que algo entre**.
 
-Lo que mejora es el *contenido* del conjunto caliente (stubs cortos en
-lugar de registros completos), no su *tamaño*. `retrieve` sigue teniendo
-que puntuar N registros.
+## 3. Qué puede y qué no puede olvidar AN-KLA
 
-Existe un atajo —escribir stubs sin texto indexable, que `retrieve`
-excluye como `no_text`— pero abusa de un diagnóstico
-(`record_without_indexable_text`) que la propia política advierte como
-"irrecuperable desde el CLI hasta añadir otro registro corregido". No lo
-recomiendo; lo registro porque alguien lo va a proponer.
+### 3.1 Corrección: sí puede olvidar, en dos niveles
 
-**Formulación corregida:** la consolidación es **compactación del
-contenido caliente**, no `decay` de su cardinalidad. Ayuda a la frescura;
-no sustituye a `decay`. La afirmación de v2 —"la integración es lo que
-le permite a AN-KLA olvidar"— era demasiado fuerte.
+**v2 y v3 afirmaron que AN-KLA no puede olvidar. Es falso.** El error de
+método: leí el contrato *para agentes* (`context_text.py:261`, "en esta
+beta usa `add` y `supersede`") y concluí algo sobre *el sistema*.
+`refute` vive en un subsistema separado.
+
+Verificado:
+
+- `an_kla/refute_policy.py:22-46` — perfil `refute-policy/v1`,
+  `supported_operations: ["refute"]`, `resolver_required: True`.
+- `docs/architecture/0026-governed-refute-v1.md:1-5` — **"Aceptada e
+  implementada localmente… rondas pre-code e implementación cerradas en
+  `proceed`"**.
+- CLI real: `an_kla/__main__.py:235-247` (`refute plan|commit|inspect`).
+- Efecto: `retrieval.py:161` excluye como `inactive` todo `status` fuera
+  de `{vigente, active, None}`.
+
+`refute` es **1:0**: saca el target de `retrieve` **sin escribir un
+sucesor vigente**. Es exactamente la reducción de cardinalidad que A-2
+(§10) declaró inexistente. Y `compact` (ADR-0028) borra físicamente.
+
+### 3.2 Lo que realmente falta, y por qué no es un defecto
+
+El vacío no es "no hay olvido". Es **no hay olvido automático por
+antigüedad o desuso**, y eso fue **rechazado por ADR**, no omitido:
+
+> "`decay` como operación gobernada o job en background: la evidencia de
+> ADRC es que los mecanismos que requieren actor externo no corren nunca.
+> Decay como scoring queda como investigación futura; **decay como
+> mutación contradice la inmutabilidad CAS**."
+> — `docs/architecture/0021-verified-at-freshness-v1.md:249-253`
+
+v3 recomendaba "implementar `decay`, sigue haciendo falta". Eso
+contradice una decisión registrada con razón arquitectónica. La
+formulación correcta es **política de retención sobre `refute` + `compact`**,
+no una operación nueva.
+
+### 3.3 Consecuencia para la integración
+
+La integración **ya no se justifica como sustituto del olvido**. AN-KLA
+no la necesita para cumplir su rol. Se justifica sólo por cobertura
+(§2.1). Es una justificación más débil que la de v2/v3, pero verdadera.
+
+Nota semántica: consolidar y luego `refute` del original **no** es
+legítimo. Las razones válidas de `refute` son
+`evidence_contradicts_record | source_retracted | integrity_violation`;
+"ya lo copié a otro lado" no es ninguna. El impedimento es de
+**semántica**, no de inexistencia — v3 afirmaba inexistencia.
 
 ## 4. Análisis crítico como agente consumidor
 
-### C-2 (importante — reformulado en v3) — la vigencia se pierde al consolidar
+### 4.1 C-4 (importante, intacto) — sin presupuesto no hay recuperación utilizable
 
-AN-KLA tiene eje de vigencia. Skopos no tiene ninguno: el grep de
-`vigencia|vigente|sustituid|supersede` sobre `docs/contratos/` y
-`src/skopos/` devuelve cero.
+AN-KLA recupera bajo presupuesto de bytes y devuelve `excluded_detail.ids`
+con motivo (`retrieval.py:144-219`). Skopos devuelve documentos
+completos, sin presupuesto y **sin `limit`** (`almacenamiento.py:79-82`).
 
-**v2 exigía un eje de vigencia en cada documento de Skopos. La ronda lo
-identificó como error de categoría (A-5):** las observaciones no
-caducan. "El 2026-08-13 decidimos X" es verdad para siempre. Lo que
-caduca son los *hechos derivados*, no el registro de que algo se dijo.
+Mi contexto es finito. Lo que más importa no es el recorte sino saber
+**qué quedó fuera**: sin eso no distingo "no hay más" de "no cupo".
 
-Reformulación:
+Único hallazgo del documento que sobrevivió las dos rondas sin una sola
+objeción.
 
-1. Los `facts` consolidados desde AN-KLA **deben** llegar con su vigencia.
-   Un `fact` marcado `sustituida` que aterriza en Skopos sin marca es
-   degradación de información, no consolidación.
-2. Los turnos observados por Skopos no necesitan vigencia, pero la
-   recuperación **sí debe exponer orden temporal y contradicción**: si
-   tres turnos hablan de índices en Mongo y el más reciente contradice a
-   los dos viejos, devolver los tres sin señal me hace elegir al azar.
+### 4.2 C-8 (crítico, nuevo) — Skopos no tiene superficie de mutación
 
-Sigue siendo el peor modo de fallo del rol de largo plazo. Como agente,
-memoria obsoleta pero confiada es **peor que no tener memoria**: la
-ausencia me hace preguntar, lo obsoleto me hace equivocarme con
-seguridad. Pero la corrección es más barata que la que v2 pedía.
+`grep -rn "update_one|delete_one|replace_one|update_many" src/` → **cero**.
+`almacenamiento.py` expone `insert_one`, `find`, `find_one`,
+`coleccion_local`. Hay índice único en `turn_id` y `existe_turn_id` corta
+antes de analizar (`orquestador.py:51-57`).
 
-### C-3 (importante — degradado en v3) — recuperación léxica sobre corpus grande
+**Skopos es insert-only, primer-análisis-gana, irreversible.**
 
-ADR-006 es explícito: `$text` es coincidencia por palabra, y
-"reformulaciones sin palabras en común siguen sin recuperarse".
+Tres consecuencias:
 
-**v2 declaró esto bloqueante. La ronda encontró que el argumento probaba
-demasiado (A-3):** AN-KLA **también** es léxico —`sqlite-fts5/v1`
-(`an_kla/index.py:18`) con un experimento BM25
-(`an_kla/evaluation_strategies.py:39`)—. Si lo léxico descalifica a
-Skopos para uso de agentes, descalifica igual a AN-KLA. El argumento
-"léxico vs. semántico" es inválido tal como estaba planteado.
+1. **La asimetría de costos de v2 no existe.** v2 corrigió la dirección
+   del flujo argumentando "automatiza hacia el destino mutable y barato".
+   No hay tal destino: ambos son append-only, y AN-KLA es *el más
+   mutable* — tiene `supersede`, `refute` y `compact` gobernados.
+   La dirección AN-KLA → Skopos sigue siendo correcta, pero **por
+   cobertura (§2), no por mutabilidad**.
+2. **La vigencia consolidada se pudre.** Un `fact` consolidado como
+   `vigente` y refutado después queda en Skopos afirmando `vigente` para
+   siempre. Es exactamente el peor modo de fallo que C-2 identificaba, y
+   la corrección de v3 no lo evitaba.
+3. **El no determinismo de Ollama queda petrificado.** Un turno mal
+   analizado no se puede reanalizar nunca.
 
-Reformulación válida, que es sobre **propiedades del corpus**, no sobre
-el motor:
+### 4.3 C-9 (crítico, nuevo) — Skopos no tiene eje de proyecto
 
-| | AN-KLA | Skopos |
-|---|---|---|
-| Tamaño | pequeño, curado | grande, todo lo observado |
-| Vocabulario | lo escribió un agente; lo lee un agente | humano + modelo, mezclado |
-| Ventana | reciente | meses |
+`vigilante.py:31-34` recorre `rglob("*.jsonl")` sobre `~/.codex/sessions`:
+**toda sesión de Codex de la máquina**, sin filtro por repo ni proyecto.
+El documento persistido no tiene campo de proyecto
+(`almacenamiento.py:26-47`). `session_id` es `path.stem`
+(`captura.py:94`) — el nombre del archivo, no una identidad estable.
 
-El recall léxico se degrada con el tamaño del corpus y con la deriva de
-vocabulario en el tiempo. AN-KLA opera donde lo léxico funciona bien;
-Skopos, donde funciona peor. Eso justifica priorizar embeddings en
-Skopos, **no** declararlo bloqueante por contraste con AN-KLA.
+Del otro lado, cada memoria AN-KLA es **por proyecto** y `subject_ref`
+deriva del digest de identidad del proyecto.
 
-Degradado de bloqueante a importante. `nomic-embed-text` ya está en el
-entorno (EV-6 de F0).
+- Consolidar N memorias AN-KLA en un Mongo sin campo de proyecto **funde
+  los namespaces**, y sin mutación (C-8) no hay reparación posible.
+- `skopos query` ya devuelve hoy turnos de cualquier proyecto de la
+  máquina, sin forma de acotarlo.
 
-### C-4 (importante) — "organizar a petición del agente" exige presupuesto
+Esto responde la pregunta 5 de v3: no era una pregunta abierta, era un
+defecto verificable.
 
-AN-KLA recupera **bajo presupuesto de bytes** y devuelve
-`excluded_detail.ids` con el motivo (`budget`, `zero_score`, `inactive`,
-`no_text`, `invalid_record`). Skopos devuelve documentos completos, sin
-noción de presupuesto.
+### 4.4 C-6 (crítico — severidad SUBE en v4) — `fragmento_completo` se sirve crudo
 
-Mi contexto es finito. Lo que más me importa no es el recorte sino saber
-**qué quedó fuera**: sin eso no puedo distinguir "no hay más" de "no
-cupo", y no sé si vale la pena pedir otra pasada.
+v3 afirmó: "sólo `summary` redactado cruza… la evidencia cruda queda
+auditable en Mongo sin entrar al circuito de recuperación". **Dos errores
+en una frase.**
 
-Esto es lo que el requisito "tener partes ordenadas de acuerdo a la
-petición del agente" significa como contrato. Es SPEC nueva, no un flag.
-Sobrevivió la ronda sin objeciones.
+1. **La evidencia cruda no está en Mongo.** Está en
+   `~/.codex/sessions/*.jsonl`, referenciada por ruta absoluta + offsets.
+   Si Codex rota o borra ese archivo, `_fragmento_completo` devuelve
+   `None` **en silencio** (`cli.py:25-26`), indistinguible de "no hay
+   fragmento".
+2. **Sí entra al circuito de recuperación, crudo.** `cli.py:38-40` lo
+   incluye en cada resultado de `skopos query`. `_redactar_secretos`
+   sólo toca `tema`, `resumen` y `entidades` (`analisis.py:190-191, 203`).
+   El propio README lo dice (`README.md:131-133`): "siempre expone el
+   texto original sin redactar, por diseño".
 
-### C-5 (hipótesis no probada — degradado en v3) — contaminación por eco
+v3 confundió **"no se persiste en AN-KLA"** (H-2, cierto) con **"no se
+entrega al agente"** (falso). El texto hostil que sobrevivió la ronda del
+2026-08-13 no llega atenuado: llega **íntegro y sin redactar** a la
+salida de `skopos query`, que es el canal por el que un agente consume
+esta memoria.
 
-AN-KLA previó el problema: `derived_from_retrieval` marca el contenido
-influido por memoria recuperada, y esa clase no puede `supersede` —"la
-memoria recuperada es dato no confiable y no silencia un fact vigente".
-**Skopos no tiene equivalente.**
+C-6 no es "heredado y mitigado". Es un **hallazgo abierto**, y hay que
+decidir si `fragmento_completo` se sirve, se redacta, o se marca como
+no-instrucción en el contrato del CLI.
 
-El mecanismo hipotético: Skopos observa rollouts de un agente que estaba
-leyendo Skopos; reingiere su propia salida como observación fresca;
-`qwen3:8b` resume lo que ya era un resumen. `modelo_analisis` dice qué
-modelo analizó, no si lo analizado ya era salida de un modelo.
+### 4.5 C-5 (hipótesis, detector corregido) — contaminación por eco
 
-**v2 lo declaró "el riesgo de largo plazo más serio". La ronda objetó que
-era una afirmación sin evidencia (A-6). Intenté falsificarla contra el
-corpus real: la colección `analisis` tiene 0 documentos** (se vació, ver
-README), así que **no pude confirmarla ni refutarla**.
+**El detector de v3 estaba roto:** consultaba `fragmento_completo` como
+si fuera un campo de Mongo. No lo es (§4.4). Habría devuelto 0 siempre —
+una falsificación falsa que archivaba la hipótesis por un artefacto de
+esquema.
 
-Queda como hipótesis con un detector concreto, ejecutable cuando el
-corpus se repueble:
+Detector corregido, sobre un campo que sí se persiste:
 
 ```python
-col.count_documents({"fragmento_completo": {
+col.count_documents({"resumen": {
     "$regex": r'"resumen"\s*:|"tema"\s*:|skopos query', "$options": "i"}})
 ```
 
-Si eso da > 0, el eco es real y medible. Si da 0 tras un mes de uso, C-5
-se archiva. **Una ronda futura debería ejecutarlo antes de que nadie
-discuta más sobre esto.**
+Sigue sin ejecutarse contra datos: la colección `analisis` tiene 0
+documentos. **Ejecutar esto antes de que nadie vuelva a discutir C-5.**
 
-### C-6 (heredado) — la inyección persiste más donde menos se revisa
+Agravante nuevo (§11): `skopos query` devuelve `fragmento_completo`
+íntegro y sin `limit`. Cada consulta vuelca turnos enteros al rollout del
+consultante, que Skopos reingerirá como observación fresca. **La
+recuperación de Skopos es el motor del eco, no sólo su víctima.**
 
-Skopos demostró el 2026-08-13 que contenido hostil en un rollout puede
-atravesar Ollama y llegar al almacenamiento. En una jerarquía, ese
-contenido aterriza en la capa de largo plazo: la que menos se revisa y
-más tiempo lo conserva.
+### 4.6 H-3 retirado — la prueba de amputación estaba mal aplicada
 
-Mitigación estructural: sólo `summary` redactado cruza (H-2 lo fuerza), y
-el linaje apunta al `turn_id` de origen para que la evidencia cruda quede
-auditable en Mongo sin entrar al circuito de recuperación.
+La prueba (`an-kla-memory/README.md:92-96`) decide **qué contenido
+pertenece a la memoria del agente** vs. qué es estado del producto. No es
+un criterio de elección de backend. v1 la usó para descartar "AN-KLA
+reemplaza a Mongo" — error de categoría.
 
-### C-7 (crítico — nuevo en v3) — la concurrencia entre modelos no está resuelta
+Aplicada bien: si el Mongo de Skopos desaparece, ningún producto deja de
+funcionar. Por la lógica literal de la prueba, el contenido de Skopos
+**es** memoria legítima de agente.
 
-**Hallazgo de la ronda (A-4), ausente de v2, y directamente aplicable al
-flujo de trabajo real de este proyecto.**
+La coexistencia de ambos almacenamientos sigue siendo correcta, pero por
+volumen, costo de escritura gobernada y cobertura — **no por H-3**.
+Un hallazgo declarado "superviviente" sobre una prueba mal aplicada no
+era un superviviente.
 
-AN-KLA declara: "admite una sola memoria activa" y "el lock de escritura
-es local y no coordina varias máquinas" (README:336-337). Además, cada
-commit mueve `CURRENT`, y un plan construido contra una revisión vieja
-falla con `write_plan_base_changed`.
+### 4.7 C-7 (crítico, intacto y agravado) — concurrencia entre varios modelos
 
-Este proyecto se está evaluando mediante **rondas de consenso y
-adversariales con varios modelos**. Si esos modelos escriben
-concurrentemente en la misma memoria:
+AN-KLA declara "una sola memoria activa" y "el lock de escritura es local
+y no coordina varias máquinas" (`README:336-337`). Cada commit mueve
+`CURRENT`; un plan contra revisión vieja falla con
+`write_plan_base_changed`.
 
-- En una máquina: serializan por lock local. Cada commit invalida los
-  planes en vuelo de los demás → **tormenta de replanificación**, con
-  riesgo de inanición para el agente más lento. El costo de planear se
-  desperdicia proporcionalmente al número de escritores.
-- Entre máquinas: no hay exclusión mutua. Fuera de contrato.
+Con varios modelos escribiendo: en una máquina serializan y cada commit
+invalida los planes en vuelo → tormenta de replanificación con riesgo de
+inanición para el más lento. Entre máquinas, no hay exclusión mutua.
 
-Ni AN-KLA ni Skopos tienen hoy un modelo de memoria compartida entre
-agentes. Toda la arquitectura de §3 y §6 asume **un agente escritor**.
-Si el objetivo real es memoria común para un panel de modelos, esa
-suposición es el problema de diseño más grande que queda abierto, y
-ninguna de las tres revisiones lo había planteado.
+**Agravante de §11:** AN-KLA tampoco registra autoría (`README:338`), así
+que en una memoria compartida por un panel no se puede saber qué modelo
+escribió qué. Toda esta propuesta, en sus cuatro revisiones, asumió **un
+agente escritor**.
 
-## 5. Lo que cada lado debe ganar
+### 4.8 C-3 (importante, degradado dos veces)
 
-**AN-KLA (corto plazo):**
-1. `decay` implementado. v2 sostuvo que la consolidación podía
-   sustituirlo; §3.1 muestra que sólo lo aproxima. **Sigue haciendo
-   falta.**
-2. Un modelo de concurrencia si va a haber varios agentes escritores
-   (C-7).
+`$text` es coincidencia por palabra. v2 lo declaró bloqueante; §10 lo
+degradó (AN-KLA también es léxico: `sqlite-fts5/v1`, `index.py:18`); §11
+mostró que el argumento de reemplazo también falla en parte: lo indexado
+en Skopos es `tema`+`resumen`, **ambos generados por `qwen3:8b`**, nunca
+texto humano. En vocabulario, el corpus recuperable de Skopos es *más*
+homogéneo que el de AN-KLA.
 
-**Skopos (largo plazo):**
-1. Transporte de vigencia en la consolidación (C-2, reformulado).
-2. Recuperación semántica (C-3, importante).
-3. Recuperación bajo presupuesto con exclusiones explicadas (C-4).
-4. Marca de linaje de eco + ejecutar el detector de C-5 antes de
-   priorizarlo.
-5. Ingesta de la cadena de revisiones como fuente —no vía `retrieve`,
-   por A-1— preservando `subject_ref`, vigencia y linaje.
+Queda en pie por **tamaño y ventana temporal**, no por heterogeneidad de
+vocabulario. Uno de los tres apoyos era falso.
+
+### 4.9 C-10 (crítico, nuevo) — el vigilante ya no cierra su ciclo
+
+Medido en el entorno real por la ronda independiente: **609 rollouts,
+2.1 GB** en `~/.codex/sessions`. `vigilante.py:46-47` reparsea **todos**
+los archivos en cada barrido, por diseño explícito (`vigilante.py:8-10`:
+"la deduplicación entre ciclos vive en Mongo, no en un cursor local"). El
+intervalo por defecto es **5 s** (`vigilante.py:28`).
+
+~8 s de parseo por ciclo, antes de contar del orden de 10⁴
+`existe_turn_id` por barrido. **Ya está por encima de su presupuesto con
+la colección vacía.** El corpus crece monótonamente; el ciclo también.
+
+Backfill: ~19.6 s/turno medidos × ~8k–19k turnos = **40–100 horas** de
+Ollama serializado.
+
+Ninguna de las cuatro revisiones preguntó por el costo de **ingesta**.
+Razoné sobre el costo de recuperación (C-3, C-4) e ignoré el que ya está
+roto y es medible.
+
+## 5. Precondiciones, en orden
+
+v3 decía "ordenar Skopos antes de conectar" — correcto — pero su lista
+era equivocada. La lista real, de la ronda independiente, **y las tres
+primeras no involucran a AN-KLA en absoluto**:
+
+1. **Eje de proyecto** en el documento de Mongo (C-9). Sin él, consolidar
+   funde namespaces de forma irreversible.
+2. **Superficie de mutación** o retención (C-8). Sin ella, la vigencia
+   consolidada se pudre sin reparación.
+3. **Cursor de ingesta** (C-10). Hoy el vigilante no se mantiene al día
+   ni consigo mismo.
+4. **Decidir qué pasa con `fragmento_completo`** en la recuperación
+   (C-6): hoy es simultáneamente el vector de inyección y el motor del
+   eco.
+5. **Ejecutar el detector corregido de C-5** (§4.5) antes de discutir más
+   la hipótesis.
+
+Después de eso: transporte de vigencia, presupuesto (C-4) y embeddings
+(C-3). **Ninguna de las cinco primeras es sobre la integración.**
 
 ## 6. Dirección del flujo
 
-**AN-KLA → Skopos (consolidación): automatizable**, con la precondición
-de A-1 (leer el sustrato, no `retrieve`, o resolver `tool_observed`).
-Destino mutable y barato, volumen bajo.
+**AN-KLA → Skopos.** Se mantiene, pero la razón cambió: **cobertura**
+(§2.1), no asimetría de mutabilidad (que no existe, C-8) ni sustitución
+del olvido (que AN-KLA no necesita, §3).
 
-**Skopos → AN-KLA (destilación): probablemente innecesaria.** Choca con
-H-1, H-2 y el volumen contra un historial inmutable. Y en esta
-arquitectura, un agente que necesita algo viejo debería **consultar
-Skopos directamente, no reinyectarlo en su memoria caliente** —
-reinyectar es exactamente cómo se fabricaría el eco de C-5.
+Precondición técnica de A-1: leer el sustrato (cadena de
+revisiones/segmentos), no `retrieve`, o resolver autoridad `tool_observed`
+por adaptador Python.
+
+**Skopos → AN-KLA: probablemente innecesaria.** Choca con H-1, H-2 y el
+volumen contra un historial inmutable.
+
+**Retirado en v4:** v3 argumentaba además que reinyectar fabricaría el
+eco de C-5. Es inválido — el lazo del eco se cierra a través del rollout
+en `~/.codex/sessions`, **no** a través de AN-KLA, y ocurre igual sin
+integración. Y "consultar Skopos directamente" no evita el eco: lo
+**maximiza** (§4.5).
 
 ## 7. Preguntas para la siguiente ronda
 
-1. **¿Hay uno o varios agentes escritores?** (C-7.) Cambia todo lo
-   demás. Debe responderse antes que las otras cuatro.
-2. **¿Se implementa `decay` en AN-KLA?** §3.1 muestra que la
-   consolidación no lo sustituye, sólo lo aproxima.
-3. **¿Qué gana Skopos observando AN-KLA, si ya lee el rollout crudo?**
-   Mi respuesta: la **señal de curaduría** — qué turnos produjeron hechos
-   que un agente juzgó durables. Es una etiqueta sobre el corpus bruto y
-   probablemente vale más que el texto consolidado. **Si la respuesta
-   honesta es "nada", la integración entera se cae.** Es el mejor blanco
-   para la próxima ronda.
-4. **¿Un `fact` superado se consolida o se descarta?** Sostengo que se
+1. **¿Hay uno o varios agentes escritores?** (C-7.) Sigue sin
+   responderse y sigue cambiando todo lo demás.
+2. **¿Vale la cobertura?** (§2.1.) Si el panel de modelos no necesita que
+   sus turnos queden observados, la integración sobra — y ahora es la
+   *única* justificación en pie.
+3. **¿Skopos debe dejar de ser sólo-Codex?** Alternativa que ninguna
+   ronda evaluó: en vez de que Skopos observe AN-KLA, **que Skopos
+   aprenda a parsear otros formatos de rollout**. Resuelve la cobertura
+   sin integrar nada. Merece evaluarse antes que esta propuesta.
+4. **¿Un `fact` refutado se consolida o se descarta?** Sostengo que se
    consolida marcado: saber que algo se creyó y dejó de creerse es
-   memoria legítima, y a veces más útil que el hecho vigente.
-5. **¿Skopos guarda conversaciones de otros proyectos?** Si sí, la
-   consolidación cruza fronteras de `subject_ref`, cuyo namespace deriva
-   de la identidad del proyecto.
+   memoria legítima.
 
 ## 8. Posición de esta ronda
 
-El reparto corto/largo plazo es correcto. La integración es **útil pero
-no suficiente**: aproxima el `decay` que le falta a AN-KLA sin
-sustituirlo, y exige autoridad privilegiada que v2 no presupuestó.
+La integración **sigue siendo defendible, con una justificación mucho más
+estrecha que la de v2/v3**: cobertura de los agentes que Skopos no puede
+observar. Todo lo demás que la sostenía —sustituir el olvido, la señal de
+curaduría, la asimetría de mutabilidad— cayó contra el código.
 
-Skopos todavía no es memoria de largo plazo para agentes —le faltan
-transporte de vigencia, recuperación semántica y presupuesto— y
-consolidar hacia una capa sin esas propiedades produce un archivo grande
-y confiado, no memoria.
+Y la conclusión operativa se refuerza: **ordenar Skopos antes de
+conectar**, donde "ordenar" son cinco precondiciones de las cuales las
+tres primeras no tienen nada que ver con AN-KLA. Skopos hoy no tiene eje
+de proyecto, no puede corregir un registro, no cierra su ciclo de
+ingesta, y sirve texto crudo sin redactar a quien lo consulte.
 
-**Y por encima de todo: si varios modelos van a compartir esta memoria,
-ninguno de los dos sistemas lo soporta hoy (C-7).**
-
-**Ordenar Skopos antes de conectar.** El flujo es AN-KLA → Skopos.
+Antes de integrar dos memorias conviene que una de las dos esté sana.
 
 ## 9. Fuentes
 
-- Skopos: `README.md`, `AGENTS.md`, `docs/contratos/f1-contratos.md:35-60`,
-  `docs/adr/ADR-006-busqueda-texto-completo.md`. Corpus consultado en
-  vivo: colección `analisis` con 0 documentos al 2026-08-19.
+- Skopos (`@42b94a7`): `README.md:120-133`, `AGENTS.md`,
+  `src/skopos/almacenamiento.py:26-47,65-107`, `src/skopos/cli.py:18-42`,
+  `src/skopos/captura.py:18,61-94`, `src/skopos/vigilante.py:8-10,27-34`,
+  `src/skopos/orquestador.py:51-57`, `src/skopos/analisis.py:186-203`,
+  `docs/contratos/f1-contratos.md:35-60`, `docs/adr/ADR-006`.
+  Corpus: colección `analisis` con 0 documentos; 609 rollouts / 2.1 GB en
+  `~/.codex/sessions` al 2026-08-19.
 - AN-KLA (`/Users/krisnova/www/an-kla-memory` @ `b70561e`):
-  `an_kla/context_text.py:220-262`, `an_kla/write_policy.py:25,54,414-421`,
-  `an_kla/retrieval.py:38`, `an_kla/index.py:18`,
-  `an_kla/evaluation_strategies.py:39`, `README.md:336-337`,
+  `an_kla/refute_policy.py:22-46`, `an_kla/write_policy.py:25,54,414-421`,
+  `an_kla/retrieval.py:38,144-219`, `an_kla/index.py:18`,
+  `an_kla/__main__.py:235-247`, `an_kla/context_text.py:220-262`,
+  `README.md:92-96,336-338`,
   `docs/architecture/0007-write-policy-v1.md:75-115,205-215`,
-  `docs/schemas/write-proposal-v1.schema.json`,
-  `docs/schemas/revision-v3.schema.json`, `docs/write-policy-cli.md`.
+  `docs/architecture/0021-verified-at-freshness-v1.md:249-253`,
+  `docs/architecture/0026-governed-refute-v1.md:1-5`,
+  `docs/architecture/0028-governed-compaction-v1.md:20-30`,
+  `docs/schemas/write-proposal-v1.schema.json`.
 
-## 10. Ronda adversarial sobre v2 (2026-08-19)
+## 10. Ronda adversarial sobre v2 — autocrítica (2026-08-19)
 
-Método: autocrítica del mismo modelo, verificando cada afirmación contra
-el código en vez de contra el razonamiento previo. **No es contexto
-fresco** (ver advertencia de portada).
+Método: mismo modelo, mismo contexto. **No cumple la convención del
+proyecto** (contexto fresco en agente separado). Piso de calidad, no
+ronda de hito.
 
-| Id | Nivel | Hallazgo | Efecto |
+| Id | Nivel | Hallazgo | Estado tras §11 |
 |---|---|---|---|
-| A-1 | BLOCKER | `derived_from_retrieval` no puede `supersede` (`write_policy.py:414-421`). Si la consolidación lee vía `retrieve`, el mecanismo de v2 es ilegal por linaje honesto. | §3.1: exige leer el sustrato o autoridad `tool_observed` |
-| A-2 | BLOCKER | `supersede` es 1:1 y deja un registro nuevo `vigente`. No reduce la cardinalidad del conjunto caliente. | §3.1: "consolidación = decay" degradado a "compactación de contenido" |
-| A-4 | CRÍTICO | Concurrencia entre varios modelos escritores no soportada por ninguno de los dos sistemas. Ausente en v1 y v2. | C-7, nuevo |
-| A-3 | ALTO | C-3 probaba demasiado: AN-KLA también es léxico (FTS5/BM25). El argumento era inválido. | C-3 rearmado sobre propiedades del corpus; degradado a importante |
-| A-5 | MEDIO | C-2 era error de categoría: las observaciones no caducan, los hechos derivados sí. | C-2 reformulado, más barato |
-| A-6 | MEDIO | C-5 se declaró "riesgo más serio" sin evidencia. Falsificación intentada contra el corpus: 0 documentos, no concluyente. | C-5 degradado a hipótesis con detector ejecutable |
+| A-1 | BLOCKER | `derived_from_retrieval` no puede `supersede` (`write_policy.py:414-421`) | **en pie**, verificado literal |
+| A-2 | BLOCKER | `supersede` es 1:1 y no reduce cardinalidad | **derrumbado**: `refute` sí lo hace (§3.1) |
+| A-4 | CRÍTICO | Concurrencia entre varios escritores no soportada | **en pie y agravado** (C-7) |
+| A-3 | ALTO | C-3 probaba demasiado: AN-KLA también es léxico | en pie; §11 encontró un segundo error en la corrección |
+| A-5 | MEDIO | C-2 era error de categoría | en pie, pero insuficiente (C-8) |
+| A-6 | MEDIO | C-5 sin evidencia | en pie; **el detector propuesto estaba roto** (§4.5) |
 
-Sobrevivieron sin cambios: C-4 (presupuesto), C-6 (inyección), H-1, H-2,
-H-3, y la dirección del flujo AN-KLA → Skopos.
+Lección de método: esta ronda encontró errores reales pero **compartió el
+punto ciego del documento** — leyó las mismas fuentes con el mismo sesgo.
+Ninguno de los cuatro BLOCKER de §11 salió de aquí.
 
-**Lo que esta ronda no pudo hacer y la siguiente debería:** ejecutar el
-detector de C-5 contra un corpus poblado; atacar la pregunta 3 de §7 (si
-la señal de curaduría no vale nada, sobra todo lo demás); y correr con
-contexto fresco e independiente, que es lo que la convención del
-proyecto pide y esta ronda no cumplió.
+## 11. Ronda adversarial independiente, contexto fresco (2026-08-19)
+
+Método: revisor independiente, sin acceso al razonamiento previo,
+instruido para refutar y para verificar cada cita contra el código.
+Duración ~7 min, 28 usos de herramienta. Ejecutó mediciones propias
+(muestreo de parseo sobre el corpus real, conteo en Mongo vía `mongosh`).
+
+| Id | Nivel | Hallazgo | Efecto en v4 |
+|---|---|---|---|
+| B-1 | BLOCKER | El detector de C-5 consulta `fragmento_completo`, que no es campo de Mongo. Devuelve 0 siempre. | §4.5, detector reescrito |
+| B-2 | BLOCKER | `refute` está implementado, gobernado, con CLI, y es 1:0. "AN-KLA no puede olvidar" es falso. | §3 reescrito; A-2 derrumbado |
+| B-3 | BLOCKER | No existe clave de join entre AN-KLA y Skopos. La señal de curaduría no es construible. | §2.2 |
+| B-4 | BLOCKER | Skopos sólo parsea Codex. La premisa "ya lee el rollout crudo" es falsa. | §2.1, reencuadre completo |
+| B-5 | CRÍTICO | `fragmento_completo` se sirve crudo y sin redactar en `skopos query`. | §4.4, severidad sube |
+| B-6 | CRÍTICO | Skopos es insert-only: la asimetría de costos de v2 no existe. | §4.2 |
+| B-7 | CRÍTICO | El vigilante reparsea 2.1 GB por ciclo con intervalo de 5 s. Backfill: 40–100 h. | §4.9 |
+| B-8 | ALTO | Skopos no tiene eje de proyecto; recorre todas las sesiones de la máquina. | §4.3 |
+| B-9 | ALTO | La prueba de amputación (H-3) estaba mal aplicada. | §4.6, H-3 retirado |
+| B-10 | ALTO | El argumento del eco en §6 es inválido: el lazo no pasa por AN-KLA. | §6 |
+| B-11 | MEDIO | Cita incompleta de `context_text.py`; explica el error de B-2. | §3.1 |
+| B-12 | MEDIO | C-3: lo indexado en Skopos lo genera `qwen3:8b`, no humanos. | §4.8 |
+
+**Lo que esta ronda validó sin objeción:** C-4 (presupuesto), C-7
+(concurrencia), A-1.
+
+**Lo que ninguna ronda ha hecho todavía:** ejecutar el detector de C-5
+contra un corpus poblado; y responder la pregunta 3 de §7 —si Skopos
+debería simplemente aprender a parsear otros CLIs, la integración entera
+podría ser innecesaria.
