@@ -92,29 +92,28 @@ python3 -m unittest discover -s tests
   del estándar de Skevi (800 líneas genérico, 200 `AGENTS.md`, 300
   `README.md`) por declaración, sin gate automatizado propio todavía.
 
-## Próximos pasos (orden sugerido, ninguno decidido todavía)
+## Próximos pasos
 
-1. **Política de arranque del vigilante.** `skopos watch` no distingue
-   turnos históricos de nuevos: la primera corrida real analiza TODO lo
-   no guardado, sin feedback hasta terminar el ciclo completo. Confirmado
-   al probarlo — lo detuve manualmente en vez de dejarlo correr sin
-   límite. Falta decidir con el humano: ¿arranca "desde ahora" por
-   defecto y el backfill es opt-in explícito?
-2. **Herramienta de lectura por sesión/fecha/rango.** Discutido en
-   conversación (2026-08-13), no implementado: un comando distinto de
-   `skopos query` (que busca por tema) para leer una conversación
-   completa filtrando por `session_id`, fecha o rango de horas — ahora es
-   viable porque `ocurrido_en` ya existe en cada documento. Diseño
-   pendiente: ¿un `skopos read --session <id>` / `--desde --hasta`?
-3. Probar la integración con escrubery (REQ-10) contra el repo real —
-   implementada en `analisis.py` pero nunca ejercitada de verdad (exige
-   pasar `escrubery_script` explícitamente).
-4. Evaluar si conviene precargar `qwen3:8b` en memoria antes de un uso
-   interactivo — Ollama lo descarga tras inactividad; la primera llamada
-   tras eso puede tardar ~90s (medido), cubierto por el timeout de 120s
-   pero no ideal para latencia percibida.
-5. Búsqueda semántica (embeddings) si `$text` (ADR-006) resulta
-   insuficiente en uso real — `nomic-embed-text` ya está disponible.
+**Decisión del dueño (2026-08-20): Skopos será multi-CLI** (Claude Code,
+Kimi CLI, Qwen CLI y otros). El ciclo que prepara ese salto — orden,
+dependencias y decisiones pendientes del dueño (🔒) — está en
+`docs/propuestas/P-002-ajuste-ciclo-precondiciones.md`:
+
+1. **C-9 · eje de proyecto** (y eje CLI real) en el documento, la captura
+   y los índices.
+2. **C-8 · ADR** de superficie de mutación o retención (🔒 elección del
+   dueño entre tres alternativas).
+3. **C-10 · cursor de ingesta** desempaquetado: decisión 8 de arranque
+   (🔒) + ADR de lectura incremental como extensión de ADR-005.
+4. **C-6 · `fragmento_completo`**: decisión sobre cinco palancas (🔒).
+5. **C-5 · detector de eco** sobre un corpus piloto (requiere 3).
+6. Ensayo del canal escrubery contra el repo real (paralelo, REQ-10).
+7. Contrato de parser por CLI — sólo tras cerrar 1–5.
+
+Diferidos: `skopos read` por sesión/fecha/rango (lo prepara el índice
+`ocurrido_en` de C-9); precargar `qwen3:8b` antes de uso interactivo
+(latencia percibida, no corrección); búsqueda semántica si `$text`
+(ADR-006) resulta insuficiente en uso real.
 
 ## Riesgos conocidos, aceptados por ahora (no resueltos en esta ronda)
 

@@ -2,6 +2,9 @@
 
 Estado: **propuesta — no decidida. Insumo para rondas de consenso y
 adversariales entre varios modelos.**
+**Superada por decisión del dueño (2026-08-20):** Skopos será multi-CLI
+con parsers propios; la pregunta 3 de §7 quedó resuelta por decisión, no
+por ronda. No se reabre. Ver `P-002-ajuste-ciclo-precondiciones.md`.
 Fecha: 2026-08-19
 Revisión: v4 — v3 sometida a ronda adversarial **independiente, con
 contexto fresco** (§11). Cuatro BLOCKER. La tesis central de v2/v3 cayó.
