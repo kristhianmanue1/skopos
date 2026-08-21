@@ -32,7 +32,12 @@ Ninguna fase se declara cerrada sin los cinco pasos, en este orden:
 
 1. **Verificación base**: `python3 -m unittest discover -s tests` en
    verde; diff leído completo; specs/contratos/implementación/tests
-   consistentes; métricas fechadas.
+   consistentes; métricas fechadas. **Convención de reporte** (ronda
+   11, corrección 7 de Pinax): reportar "N descubiertos, OK/FALLO, S
+   saltados" — nunca "N/N ejercitados" cuando hay skips. Los skips
+   dependen de servicios locales (Mongo/Ollama): en la corrida
+   independiente de Pinax del 2026-08-20 fueron 54; con ambos servicios
+   arriba, 0. Citar mediciones de terceros con sus skips declarados.
 2. **Ronda adversarial** sobre lo producido en la fase: revisor con
    **contexto fresco** (subagente separado, que no vivió la
    implementación), instruido a refutar y a verificar cada cita contra
@@ -212,17 +217,20 @@ Puede correr desde ya; no bloquea ni depende de nada.
    llamada, y el hallazgo subprocess-por-turno (`analisis.py:194-197`)
    como recomendación de memoización — no se implementa aquí.
 
-## Fase 7 · contrato de parser por CLI (Hito 12) · DESBLOQUEADA
+## Fase 7 · contrato de parser por CLI (Hito 12) · CERRADA documentalmente
 
-Precondiciones 1–5 y Fase 6 cerradas (2026-08-20). En curso con
-autorización del dueño (alcance y stop rules del acto, 2026-08-20):
-ADR-010 propuesto + SPEC-006 propuesta, Codex como adaptador de
-referencia conceptual, ronda adversarial sobre el paquete, presentación
-al dueño. **Sin código, módulos, dependencias ni migraciones**; el ADR
-permanece propuesto hasta decisión 🔒; si el diseño exigiera dependencia
-dura de escrubery, migración de datos o cambio de contratos F1
-vigentes, se detiene y presentan alternativas (verificado: no los
-exige — ADR-010 §10).
+Precondiciones 1–5 y Fase 6 cerradas (2026-08-20). Diseño documental
+con autorización del dueño (alcance y stop rules del acto,
+2026-08-20): ADR-010 + SPEC-006, Codex como adaptador de referencia,
+rondas adversariales 10–17 (revisiones de Pinax 11/11b/11c, 13 y
+F1/F2 incorporadas; ronda 17 = gate final, PROCEED). **Aceptados por
+decisión 🔒 del dueño el 2026-08-21** (acto documental de aceptación;
+deuda F-1/F-2/F-3 registrada, no corregida). **Sin código, módulos,
+dependencias ni migraciones**; la implementación futura exige
+autorización y plan de fase propios; si exigiera dependencia dura de
+escrubery, migración de datos o cambio de contratos F1 vigentes, se
+detiene y presentan alternativas (verificado: no los exige — ADR-010
+§10). Commit pendiente de autorización.
 
 ## Dependencias
 
@@ -246,4 +254,17 @@ Fase 0 ✅
 | 4 · C-6 | ✅ Cerrada | ronda 6 (ADR, pre-decisión) + ronda 8 (implementación; 8 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-8-fase4-c6.md`) | `21ce77a` |
 | 5 · C-5 | ✅ Cerrada | ronda 9 (7 hallazgos de redacción/trazabilidad corregidos, incl. control positivo del detector 3/3; acta en `docs/rondas/2026-08-20-ronda-9-fase5-c5.md`; reporte en `docs/evidencia/detector-eco-piloto-1.md`: 6/6 éxitos sellados, detector 0 hits, composición 3/6 declarada) | `27c1332` |
 | 6 · escrubery | ✅ Cerrada | ronda 7 (verificación empírica, aprobado; acta en `docs/rondas/2026-08-20-ronda-7-escrubery.md`; ensayo en `docs/evidencia/ensayo-escrubery-2026-08-20.md`) | `8d68ed1` |
-| 7 · parser | En curso: ADR-010 + SPEC-006 **propuestos** (2026-08-20), aceptación 🔒 pendiente del dueño | ronda 10 (sobre ADR+SPEC) | `—` |
+| 7 · parser | ✅ Cerrada **documentalmente** — ADR-010 + SPEC-006 **aceptados** (decisión 🔒 del dueño, 2026-08-21, tras rondas 10–17; ronda 17 = gate final, PROCEED; actas en `docs/rondas/`). Implementación pendiente de autorización y plan propios | rondas 10–17 (17 = gate final) | `—` (hasta commit autorizado) |
+
+**Deuda documental no bloqueante (ronda 17, hallazgos BAJO —
+registrados, NO corregidos en el acto de aceptación por decisión del
+dueño; tocarlos exige pasada propia):**
+- F-1: la etiqueta «ronda de cierre» en ADR-010 §3 refiere a F1
+  (corrección del dueño) como si fuera ronda — reetiquetar o asentar
+  acta de F1.
+- F-2: desempate de Nivel B (reglas 2/3) vive en la cláusula de
+  precedencia + precondición §8, no en el número de regla — glosar en
+  una frase.
+- F-3: SPEC-006 cita `cli` entre «los campos de SPEC-001» pero
+  SPEC-001 no lo enumera en el Turno (lo tienen código y ADR §5) —
+  alinear (toca spec vigente: cuidado de compatibilidad).

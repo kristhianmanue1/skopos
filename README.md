@@ -114,8 +114,10 @@ dependencias y decisiones pendientes del dueño (🔒) — está en
 5. **C-5 · detector de eco** sobre un corpus piloto (requiere 3).
 6. Ensayo del canal escrubery contra el repo real (paralelo, REQ-10).
 7. Contrato de parser por CLI — precondiciones 1–5 y ensayo escrubery
-   cerrados; **ADR-010 + SPEC-006 propuestos** (2026-08-20), esperando
-   aceptación 🔒 del dueño.
+   cerrados; **ADR-010 + SPEC-006 aceptados 🔒 por el dueño el
+   2026-08-21** (rondas adversariales 10–18; ronda 17 = gate final
+   PROCEED). Fase 7 cerrada **documentalmente**; la implementación
+   multi-CLI queda pendiente de autorización y plan de fase propios.
 
 Diferidos: `skopos read` por sesión/fecha/rango (lo prepara el índice
 `ocurrido_en` de C-9); precargar `qwen3:8b` antes de uso interactivo

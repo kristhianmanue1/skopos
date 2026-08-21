@@ -273,64 +273,172 @@ corte `t0` de ADR-008 es un filtro de descubrimiento, nunca una segunda
 autoridad de "ya procesado"); SIGTERM/SIGINT detienen el vigilante
 entre ciclos, nunca a mitad de procesar un turno.
 
-## SPEC-006 [cubre: frontera multi-CLI; propuesta — gateada a la aceptación del ADR-010]
+## SPEC-006 [cubre: frontera multi-CLI; aceptada con el ADR-010 🔒 2026-08-21]
 
-> Estado: **propuesta** (2026-08-20, Fase 7 / Hito 12). Define la
+> Estado: **aceptada** (decisión 🔒 del dueño, 2026-08-21, junto al
+> ADR-010; gate final ronda 17, PROCEED). Define la
 > frontera `detectar formato → seleccionar parser → producir turnos
-> normalizados`. Sin implementación todavía; se activa con la aceptación
-> del ADR-010 y su propio plan de fase.
+> normalizados`. Sin implementación todavía; su plan de fase exige
+> autorización propia del dueño.
 
 Comportamiento: dado un archivo de sesión de cualquier CLI soportado,
-Skopos detecta su formato por marcas declaradas (definición operativa en
-ADR-010 §1: marca de identidad + marcas de estructura + alcance del
-escaneo, con evidencia por ficha), selecciona el parser declarado para
-ese formato y produce turnos normalizados idénticos en forma a los de
-SPEC-001 — o un diagnóstico del vocabulario cerrado. Nunca hay fallback
-a otro parser (ADR-010 §4).
+Skopos materializa una **instantánea única de bytes** bajo el protocolo
+de lectura de ADR-010 §5 (una apertura, N por `fstat` del mismo
+descriptor, lectura exacta de N bytes; short read/IO/UTF-8 inválido ⇒
+`entrada_corrupta`; lo que crezca después queda para el siguiente
+ciclo) y sobre ella **selecciona en dos niveles** (ADR-010 §1):
+**Nivel A (producto)** — evalúa predicados de identidad agrupados por
+`cli_producto` (dos versiones del mismo producto no son dos
+identidades): cero candidatos ⇒ `formato_desconocido`, más de uno ⇒
+`deteccion_ambigua` de producto; **Nivel B (versión)** — evalúa los
+predicados de versión del producto único: versión activa ⇒ su parser,
+retirada ⇒ `version_no_soportada` (`parser_retirado`), más de una
+compatible ⇒ `deteccion_ambigua` de versión, marcador positivo
+incompatible ⇒ `version_no_soportada`, ausencia de marcador bajo el
+perfil base ⇒ `ok`. parser-codex/v1 es hoy el perfil base del producto
+codex-cli. Nunca hay fallback a otro parser ni selección por orden del
+registro (ADR-010 §4), y detección, parseo, offsets y sello operan
+exclusivamente sobre la instantánea materializada.
 
 Entradas: ruta a un archivo de sesión (frontera por archivo; el
 descubrimiento de directorios queda fuera de esta SPEC — compone con
 cualquier discovery, incluido el de SPEC-005).
 
-Salidas: par `(diagnostico, turnos)` donde `diagnostico ∈ {ok,
-formato_desconocido, version_no_soportada, entrada_corrupta,
-deteccion_ambigua}` (vocabulario cerrado — totalidad en ADR-010 §3) y
-`turnos` es una lista de `Turno` con los campos de SPEC-001 (incluidos
-`proyecto`, `cli` y `fragmento_sha256` según la ficha del adaptador y
-el sello P4a sobre los bytes crudos del archivo original).
+Salidas: un `ResultadoParseo` — `{diagnostico, turnos, cli_producto,
+version_formato, version_cli_observada, detalle,
+eventos_no_reconocidos, descartes_linea}` (ADR-010 §3).
+`diagnostico ∈ {ok, formato_desconocido, version_no_soportada,
+entrada_corrupta, deteccion_ambigua}` con la precedencia total
+`entrada_corrupta > deteccion_ambigua > formato_desconocido >
+version_no_soportada > ok` (testeable). `detalle` es `null`, o
+`{codigo}`, o `{codigo, candidatos}` — unión cerrada (F1): `codigo` de
+enum cerrado (`identidad_reconocida_sin_cierres`, `parser_retirado`,
+`identidades_producto_multiples`, `versiones_formato_multiples`,
+`lectura_corta`); `candidatos` es **obligatorio únicamente** para
+`identidades_producto_multiples` y `versiones_formato_multiples`
+(lista lexicográficamente ordenada, sin duplicados, con al menos 2 ids
+de ficha) y **prohibido** para `identidad_reconocida_sin_cierres`,
+`parser_retirado` y `lectura_corta`; sin rutas, sin contenido, sin
+otras claves, sin texto libre. En `ok`, `turnos` es una lista de
+`Turno` con los campos
+de SPEC-001 (incluidos `proyecto`, `cli` y `fragmento_sha256` según la
+ficha del adaptador y el sello P4a sobre los bytes crudos de la
+instantánea); un archivo vivo sin marcas tardías da `ok` con cero
+turnos; los eventos de tipos no declarados por la ficha se ignoran para
+la extracción y se cuentan en `eventos_no_reconocidos` (nunca causan
+diagnóstico por sí solos — ronda 11c).
 
 Errores (por archivo; todo descarte es contabilizable y atribuible a su
 diagnóstico — la superficie exacta de los conteos se define en el plan
 de implementación, ADR-010 §3; un descarte sin diagnóstico es un bug de
 contrato):
-  - `formato_desconocido`: ninguna marca casa — el archivo se ignora.
-  - `version_no_soportada`: marca de identidad presente, estructuras no
-    declaradas (incluido `parser_retirado`) — nunca parseo parcial.
-  - `entrada_corrupta`: IO/decodificación imposible del archivo (la
-    línea corrupta dentro de archivo válido sigue siendo descarte de
-    línea, como SPEC-001).
-  - `deteccion_ambigua`: marcas de ≥2 parsers — nunca "probar ambos".
+  - `formato_desconocido`: cero productos candidatos tras el Nivel A
+    (ADR-010 §1) — el archivo se ignora.
+  - `version_no_soportada`: predicado positivo y versionado de la
+    ficha (marcador explícito incompatible / firma conocida mutuamente
+    excluyente / violación de estructura obligatoria reconocida), o
+    versión reconocida de parser retirado — nunca "estructuras no
+    declaradas" ni parseo parcial (ronda 12, H-1).
+  - `entrada_corrupta`: la instantánea no puede materializarse bajo el
+    protocolo §5 — IO/decodificación imposible, UTF-8 inválido, o
+    short read frente al N del `fstat` del mismo descriptor; la línea
+    corrupta dentro de instantánea válida sigue siendo descarte de
+    línea, como SPEC-001 (ronda 13, corrección 2).
+  - `deteccion_ambigua`: más de un producto candidato (Nivel A —
+    `detalle.codigo = identidades_producto_multiples`) o más de una
+    versión compatible del mismo producto (Nivel B —
+    `detalle.codigo = versiones_formato_multiples`) — nunca "probar
+    ambos". Un formato no registrado que imite una identidad es límite
+    residual de la detección heurística, no ambigüedad (ronda 13).
 
 Casos:
   - DADO un rollout de un CLI soportado con turnos cerrados CUANDO se
     procesa ENTONCES `ok` y cada `Turno` lleva sus offsets, su
     `ruta_origen`, su sello P4a y el `proyecto` según la regla de la
     ficha del adaptador.
+  - DADO un archivo vivo de formato soportado que aún no contiene las
+    marcas tardías (sesión recién creada) CUANDO se procesa ENTONCES
+    `ok` con cero turnos y `detalle.codigo =
+    "identidad_reconocida_sin_cierres"`
+    — ni incompatibilidad (ronda 11, corrección 1 de Pinax) ni éxito
+    opaco: el drift estructural es observable en los conteos (ronda
+    11b, corrección 3).
   - DADO un archivo de formato desconocido CUANDO se procesa ENTONCES
     `formato_desconocido`, cero turnos, cero llamadas a parsers.
-  - DADO un archivo cuyo formato cambió de versión CUANDO se procesa
-    ENTONCES `version_no_soportada` — nunca parseo parcial ni fallback
-    al parser de Codex (prohibición ADR-010 §4).
+  - DADO un archivo con evidencia positiva de versión incompatible o
+    de parser retirado CUANDO se procesa ENTONCES
+    `version_no_soportada` — nunca parseo parcial ni fallback al
+    parser de Codex (prohibición ADR-010 §4).
+  - DADO un rollout válido con un tipo de evento aditivo no declarado,
+    repetido muchas veces (ej. `world_state`, `compacted`) CUANDO se
+    procesa ENTONCES `ok` con sus turnos y
+    `eventos_no_reconocidos` > 0 — la frecuencia de lo desconocido
+    jamás produce un diagnóstico (ronda 11c, corrección 4 de Pinax).
+  - DADO un rollout cuyo formato viola una estructura obligatoria
+    reconocida por la ficha (o trae marcador explícito incompatible /
+    firma mutuamente excluyente declarada) CUANDO se procesa ENTONCES
+    `version_no_soportada` por predicado positivo y versionado de la
+    ficha (ronda 11c).
   - DADO un archivo leído dos veces sin cambios CUANDO se procesa
     ENTONCES produce los mismos `turn_id` y los mismos sellos
     (idempotencia; la dedup en Mongo — ADR-005 — hace el resto).
+  - DADO un archivo cuya materialización de instantánea se corta o
+    falla CUANDO se procesa ENTONCES `entrada_corrupta` — nunca turnos
+    ni sellos de una lectura parcial (ADR-010 §5, forma única
+    conforme).
   - DADO un CLI cuyo formato no garantiza unicidad global de turn_id
-    CUANDO el adaptador normaliza ENTONCES califica el id
-    (`{cli_producto}:{id_bruto}`) según su ficha — el store no cambia.
+    CUANDO el adaptador normaliza ENTONCES califica el id con la
+    gramática de ADR-010 §7 (`cli_producto ":" id_bruto`, primer
+    dos puntos delimita) según su ficha — el store no cambia.
   - DADO un turn_id a guardar que ya existe en Mongo con `cli` distinto
     CUANDO se procesa ENTONCES se reporta como señal explícita de
     colisión de identidad (defecto de ficha), nunca `omitido` en
     silencio (ADR-010 §7, canario).
+  - DADO que parser-codex/v1 y parser-codex/v2 coexisten (misma
+    identidad de producto) y el archivo trae la firma positiva de v2
+    CUANDO se procesa ENTONCES el Nivel A elige codex-cli sin
+    ambigüedad y el Nivel B selecciona parser-codex/v2 — la versión no
+    compite con la identidad (ronda 13, corrección 1).
+  - DADO que predicados de identidad de dos productos registrados
+    distintos casan CUANDO se procesa ENTONCES `deteccion_ambigua`
+    con `detalle.codigo = identidades_producto_multiples` y
+    `candidatos` con ambos ids de ficha (orden lexicográfico).
+  - DADO que dos versiones compatibles del mismo producto casan sus
+    predicados de versión CUANDO se procesa ENTONCES
+    `deteccion_ambigua` con `detalle.codigo =
+    versiones_formato_multiples` — la ambigüedad es de versión, no de
+    producto.
+  - DADO un archivo del perfil base parser-codex/v1 (identidad Codex,
+    sin firma incompatible registrada) sin cierres de turno CUANDO se
+    procesa ENTONCES `ok` con cero turnos y
+    `detalle.codigo = identidad_reconocida_sin_cierres`.
+  - DADO un archivo con una firma positiva de una versión futura no
+    soportada (excluida explícitamente por la ficha vigente) CUANDO se
+    procesa ENTONCES `version_no_soportada` — nunca fallback al
+    perfil base por orden del registro.
+
+Casos de la forma cerrada de `detalle` (F1 — positivos y negativos):
+
+  - DADO `deteccion_ambigua` con `detalle.codigo =
+    identidades_producto_multiples` CUANDO se construye el
+    `ResultadoParseo` ENTONCES `candidatos` está **presente**, con al
+    menos 2 ids de ficha, en orden lexicográfico y sin duplicados
+    [positivo: required].
+  - DADO `deteccion_ambigua` con `detalle.codigo =
+    versiones_formato_multiples` CUANDO se construye ENTONCES
+    `candidatos` presente con al menos 2 ids ordenados sin duplicados
+    [positivo: required].
+  - DADO `ok` con `detalle.codigo = identidad_reconocida_sin_cierres`,
+    o `version_no_soportada` con `parser_retirado`, o
+    `entrada_corrupta` con `lectura_corta` CUANDO se construye ENTONCES
+    `candidatos` está **ausente** — prohibido para esos tres códigos
+    [negativo: forbidden].
+  - DADO un `detalle` con una clave distinta de
+    `codigo`/`candidatos`, o un `candidatos` con duplicados, con orden
+    no lexicográfico, o con menos de 2 ids en los códigos que lo
+    exigen CUANDO se valida ENTONCES el `ResultadoParseo` es inválido
+    por contrato — un bug de contrato, no una forma permitida
+    [negativo: cardinalidad/unicidad/orden].
 
 Invariantes: la selección de parser es determinista por marcas
 declaradas (mismo archivo ⇒ mismo parser, siempre); ningún turno
