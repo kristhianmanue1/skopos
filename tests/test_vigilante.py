@@ -121,6 +121,10 @@ class CicloTests(unittest.TestCase):
 
         def _llegar_un_turno(resultados):
             if not resultados and not rollout.read_text(encoding="utf-8"):
+                # garantiza timestamp > t0 con holgura: _ahora_iso trunca
+                # a milisegundos y un turno escrito en el mismo ms que el
+                # arranque quedaría (conservador) como histórico
+                time.sleep(0.01)
                 _rollout_de_un_turno(
                     rollout, "t-vivo", "recien llegado", timestamp=_ahora_iso()
                 )
