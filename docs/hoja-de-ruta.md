@@ -18,7 +18,7 @@
 | 7 | Ronda adversarial de arquitectura + 7 correcciones | Cerrado | `ab9f51b` |
 | 8 | Política de arranque del vigilante (backfill opt-in vs "desde ahora") — hoy C-10(a) del ciclo P-002 | Cerrado (ADR-008, 🔒 2026-08-20) | `4f7900a` |
 | 9 | Herramienta de lectura por sesión/fecha/rango (`skopos read`) — diferido explícito (2026-08-20, P-002 §2); lo prepara el índice `ocurrido_en` de C-9 | Diferido | — |
-| 10 | Ensayo del canal escrubery contra el repo real (P-002 §3.6) | Pendiente | — |
+| 10 | Ensayo del canal escrubery contra el repo real (P-002 §3.6) | Cerrado | `8d68ed1` |
 | 11 | Búsqueda semántica (embeddings) — condicional a que `$text` (ADR-006) resulte insuficiente en uso real | Futuro, no decidido | — |
 | 12 | Soporte multi-CLI (más allá de Codex) — confirmado por el dueño el 2026-08-20; gated tras C-9..C-5 de P-002, con contrato de parser por CLI | Decidido, gated | — |
 | 13 | C-9: eje de proyecto + eje CLI real + índices (P-002 §3.1) | Cerrado | `811e58c` |

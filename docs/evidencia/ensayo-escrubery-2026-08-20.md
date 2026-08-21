@@ -39,3 +39,14 @@ real `_ficha_escrubery` de Skopos en el venv del proyecto (timeout 30 s).
    cuando el uso real lo pida.
 3. Escrubery aporta la verdad versionada del CLI (fichas con
    procedencia); los parsers los escribe Skopos — límite respetado.
+
+## Verificación de la ronda 7 (revisión independiente, 2026-08-20)
+
+Revisor con contexto fresco re-ejecutó todas las mediciones (load
+9.3–12.1, mayor que el original): tamaños byte-exactos (10,922 B la
+ficha, 77 B el error `sin_datos`), latencias del mismo orden (media
+caliente 0.56 s bajo su carga ≈ 1.5× la original), aritmética exacta.
+Verificó además el camino "clon ausente": script inexistente → `None`
+sin excepción (tercer camino de fallo del CONTRATO). Veredicto:
+aprobado. Acta: `docs/rondas/2026-08-20-ronda-7-escrubery.md`.
+
