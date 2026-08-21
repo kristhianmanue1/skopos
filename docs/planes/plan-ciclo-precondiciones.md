@@ -230,7 +230,10 @@ dependencias ni migraciones**; la implementación futura exige
 autorización y plan de fase propios; si exigiera dependencia dura de
 escrubery, migración de datos o cambio de contratos F1 vigentes, se
 detiene y presentan alternativas (verificado: no los exige — ADR-010
-§10). Commit pendiente de autorización.
+§10). Commit de cierre ejecutado con autorización del dueño:
+`fc37a9068aab03e49445c354c759181d627f43d5` (tree
+`55386a4327015d85c887c5cfdf190ca6dec09c3f`, padre `457d827`; único
+commit del acto).
 
 ## Dependencias
 
@@ -254,7 +257,7 @@ Fase 0 ✅
 | 4 · C-6 | ✅ Cerrada | ronda 6 (ADR, pre-decisión) + ronda 8 (implementación; 8 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-8-fase4-c6.md`) | `21ce77a` |
 | 5 · C-5 | ✅ Cerrada | ronda 9 (7 hallazgos de redacción/trazabilidad corregidos, incl. control positivo del detector 3/3; acta en `docs/rondas/2026-08-20-ronda-9-fase5-c5.md`; reporte en `docs/evidencia/detector-eco-piloto-1.md`: 6/6 éxitos sellados, detector 0 hits, composición 3/6 declarada) | `27c1332` |
 | 6 · escrubery | ✅ Cerrada | ronda 7 (verificación empírica, aprobado; acta en `docs/rondas/2026-08-20-ronda-7-escrubery.md`; ensayo en `docs/evidencia/ensayo-escrubery-2026-08-20.md`) | `8d68ed1` |
-| 7 · parser | ✅ Cerrada **documentalmente** — ADR-010 + SPEC-006 **aceptados** (decisión 🔒 del dueño, 2026-08-21, tras rondas 10–17; ronda 17 = gate final, PROCEED; actas en `docs/rondas/`). Implementación pendiente de autorización y plan propios | rondas 10–17 (17 = gate final) | `—` (hasta commit autorizado) |
+| 7 · parser | ✅ Cerrada **documentalmente** — ADR-010 + SPEC-006 **aceptados** (decisión 🔒 del dueño, 2026-08-21, tras rondas 10–17; ronda 17 = gate final, PROCEED; actas en `docs/rondas/`). Implementación pendiente de autorización y plan propios. Commit de cierre: `fc37a90` (`fc37a9068aab03e49445c354c759181d627f43d5`, tree `55386a4327015d85c887c5cfdf190ca6dec09c3f`, padre `457d827`) | rondas 10–17 (17 = gate final) | `fc37a90` |
 
 **Deuda documental no bloqueante (ronda 17, hallazgos BAJO —
 registrados, NO corregidos en el acto de aceptación por decisión del
