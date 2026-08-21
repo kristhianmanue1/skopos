@@ -49,4 +49,3 @@ caliente 0.56 s bajo su carga ≈ 1.5× la original), aritmética exacta.
 Verificó además el camino "clon ausente": script inexistente → `None`
 sin excepción (tercer camino de fallo del CONTRATO). Veredicto:
 aprobado. Acta: `docs/rondas/2026-08-20-ronda-7-escrubery.md`.
-

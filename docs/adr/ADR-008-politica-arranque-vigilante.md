@@ -23,7 +23,7 @@ en reposo a ~123 s bajo carga alta, contra intervalo de 5 s; análisis de
 90–126 s/turno en el estado del entorno de hoy (cota con carga y tamaños
 de turno mayores que la línea base del 2026-08-19; 2 de 7 llamadas
 cayeron al timeout por defecto). Backfill completo estimado: **~81 h a
-~474 h** según ritmo. 
+~474 h** según ritmo.
 
 Nota de forma (ronda 4, H7): P-002 §3.3(a) caracterizaba esta decisión
 como "sin ADR nuevo" bajo el supuesto de que no tocaría ADR-005; la
