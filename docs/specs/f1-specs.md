@@ -272,3 +272,76 @@ documento siga existiendo en Mongo (la dedup vive en Mongo — ADR-005; el
 corte `t0` de ADR-008 es un filtro de descubrimiento, nunca una segunda
 autoridad de "ya procesado"); SIGTERM/SIGINT detienen el vigilante
 entre ciclos, nunca a mitad de procesar un turno.
+
+## SPEC-006 [cubre: frontera multi-CLI; propuesta — gateada a la aceptación del ADR-010]
+
+> Estado: **propuesta** (2026-08-20, Fase 7 / Hito 12). Define la
+> frontera `detectar formato → seleccionar parser → producir turnos
+> normalizados`. Sin implementación todavía; se activa con la aceptación
+> del ADR-010 y su propio plan de fase.
+
+Comportamiento: dado un archivo de sesión de cualquier CLI soportado,
+Skopos detecta su formato por marcas declaradas (definición operativa en
+ADR-010 §1: marca de identidad + marcas de estructura + alcance del
+escaneo, con evidencia por ficha), selecciona el parser declarado para
+ese formato y produce turnos normalizados idénticos en forma a los de
+SPEC-001 — o un diagnóstico del vocabulario cerrado. Nunca hay fallback
+a otro parser (ADR-010 §4).
+
+Entradas: ruta a un archivo de sesión (frontera por archivo; el
+descubrimiento de directorios queda fuera de esta SPEC — compone con
+cualquier discovery, incluido el de SPEC-005).
+
+Salidas: par `(diagnostico, turnos)` donde `diagnostico ∈ {ok,
+formato_desconocido, version_no_soportada, entrada_corrupta,
+deteccion_ambigua}` (vocabulario cerrado — totalidad en ADR-010 §3) y
+`turnos` es una lista de `Turno` con los campos de SPEC-001 (incluidos
+`proyecto`, `cli` y `fragmento_sha256` según la ficha del adaptador y
+el sello P4a sobre los bytes crudos del archivo original).
+
+Errores (por archivo; todo descarte es contabilizable y atribuible a su
+diagnóstico — la superficie exacta de los conteos se define en el plan
+de implementación, ADR-010 §3; un descarte sin diagnóstico es un bug de
+contrato):
+  - `formato_desconocido`: ninguna marca casa — el archivo se ignora.
+  - `version_no_soportada`: marca de identidad presente, estructuras no
+    declaradas (incluido `parser_retirado`) — nunca parseo parcial.
+  - `entrada_corrupta`: IO/decodificación imposible del archivo (la
+    línea corrupta dentro de archivo válido sigue siendo descarte de
+    línea, como SPEC-001).
+  - `deteccion_ambigua`: marcas de ≥2 parsers — nunca "probar ambos".
+
+Casos:
+  - DADO un rollout de un CLI soportado con turnos cerrados CUANDO se
+    procesa ENTONCES `ok` y cada `Turno` lleva sus offsets, su
+    `ruta_origen`, su sello P4a y el `proyecto` según la regla de la
+    ficha del adaptador.
+  - DADO un archivo de formato desconocido CUANDO se procesa ENTONCES
+    `formato_desconocido`, cero turnos, cero llamadas a parsers.
+  - DADO un archivo cuyo formato cambió de versión CUANDO se procesa
+    ENTONCES `version_no_soportada` — nunca parseo parcial ni fallback
+    al parser de Codex (prohibición ADR-010 §4).
+  - DADO un archivo leído dos veces sin cambios CUANDO se procesa
+    ENTONCES produce los mismos `turn_id` y los mismos sellos
+    (idempotencia; la dedup en Mongo — ADR-005 — hace el resto).
+  - DADO un CLI cuyo formato no garantiza unicidad global de turn_id
+    CUANDO el adaptador normaliza ENTONCES califica el id
+    (`{cli_producto}:{id_bruto}`) según su ficha — el store no cambia.
+  - DADO un turn_id a guardar que ya existe en Mongo con `cli` distinto
+    CUANDO se procesa ENTONCES se reporta como señal explícita de
+    colisión de identidad (defecto de ficha), nunca `omitido` en
+    silencio (ADR-010 §7, canario).
+
+Invariantes: la selección de parser es determinista por marcas
+declaradas (mismo archivo ⇒ mismo parser, siempre); ningún turno
+normalizado se produce fuera de un parser seleccionado por detección;
+todo turno normalizado es resoluble a bytes sellados de su archivo
+original; el contenido normalizado es DATO y nunca adquiere autoridad
+(ADR-010 §6); los diagnósticos son el vocabulario cerrado de ADR-010
+§3 y todo descarte es contable.
+
+Cada adaptador aprueba su registro con una **ficha de adaptador**
+(ADR-010 §2/§8): constante `cli`, fuente de `proyecto` con regla y
+muestreo fechado (estándar C-9/H5), estrategia de identidad, marcas
+declaradas del formato, roles excluidos del texto conversacional. Sin
+ficha, no hay adaptador.

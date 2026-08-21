@@ -212,17 +212,17 @@ Puede correr desde ya; no bloquea ni depende de nada.
    llamada, y el hallazgo subprocess-por-turno (`analisis.py:194-197`)
    como recomendación de memoización — no se implementa aquí.
 
-## Fase 7 · contrato de parser por CLI (Hito 12) · GATED
+## Fase 7 · contrato de parser por CLI (Hito 12) · DESBLOQUEADA
 
-Sólo con Fases 1–5 cerradas **y Fase 6 cerrada** (corrección H7: el
-canal escrubery debe estar ejercitado o explícitamente invalidado antes
-de diseñar un contrato que se indexa "vía fichas de escrubery" — si el
-ensayo resulta en fallo tolerado, el diseño de esta fase lo declara y no
-depende del canal): ADR nuevo + SPEC nueva
-(`detectar formato → turnos normalizados`), Codex como adaptador de
-referencia, indexado por `(cli, versión)` vía fichas de escrubery. El
-diseño decide, por CLI, de dónde salen `proyecto` y `cli` (la trampa de
-fuente de verdad de Fase 1, generalizada a la familia).
+Precondiciones 1–5 y Fase 6 cerradas (2026-08-20). En curso con
+autorización del dueño (alcance y stop rules del acto, 2026-08-20):
+ADR-010 propuesto + SPEC-006 propuesta, Codex como adaptador de
+referencia conceptual, ronda adversarial sobre el paquete, presentación
+al dueño. **Sin código, módulos, dependencias ni migraciones**; el ADR
+permanece propuesto hasta decisión 🔒; si el diseño exigiera dependencia
+dura de escrubery, migración de datos o cambio de contratos F1
+vigentes, se detiene y presentan alternativas (verificado: no los
+exige — ADR-010 §10).
 
 ## Dependencias
 
@@ -246,4 +246,4 @@ Fase 0 ✅
 | 4 · C-6 | ✅ Cerrada | ronda 6 (ADR, pre-decisión) + ronda 8 (implementación; 8 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-8-fase4-c6.md`) | `21ce77a` |
 | 5 · C-5 | ✅ Cerrada | ronda 9 (7 hallazgos de redacción/trazabilidad corregidos, incl. control positivo del detector 3/3; acta en `docs/rondas/2026-08-20-ronda-9-fase5-c5.md`; reporte en `docs/evidencia/detector-eco-piloto-1.md`: 6/6 éxitos sellados, detector 0 hits, composición 3/6 declarada) | `27c1332` |
 | 6 · escrubery | ✅ Cerrada | ronda 7 (verificación empírica, aprobado; acta en `docs/rondas/2026-08-20-ronda-7-escrubery.md`; ensayo en `docs/evidencia/ensayo-escrubery-2026-08-20.md`) | `8d68ed1` |
-| 7 · parser | Pendiente (gated: 1–5) | — | — |
+| 7 · parser | En curso: ADR-010 + SPEC-006 **propuestos** (2026-08-20), aceptación 🔒 pendiente del dueño | ronda 10 (sobre ADR+SPEC) | `—` |
