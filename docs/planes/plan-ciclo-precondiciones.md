@@ -236,7 +236,7 @@ Fase 0 ✅
 | 1 · C-9 | ✅ Cerrada | ronda 1 (2026-08-20, 6 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-1-fase1-c9.md`) | `811e58c` |
 | 2 · C-8 | ✅ Cerrada | ronda 2 (ADR, pre-decisión) + ronda 3 (implementación; 10 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-3-fase2-c8.md`) | `f0f6134` |
 | 3 · C-10 | 3(a) ✅ Cerrada — decisión 8 🔒 firmada 2026-08-20 (ADR-008, tras revisión aprobatoria de Pinax); ronda 5 sobre la implementación (4 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-5-fase3a-c10.md`). (b) gated a evidencia (remedición en `docs/evidencia/remedicion-ciclo-c10-2026-08-20.md`). (c) pilotos pendientes | 3a: ronda 5 / `—` |
-| 4 · C-6 | Pendiente 🔒 | — | — |
+| 4 · C-6 | ✅ Cerrada | ronda 6 (ADR, pre-decisión) + ronda 8 (implementación; 8 hallazgos corregidos, acta en `docs/rondas/2026-08-20-ronda-8-fase4-c6.md`) | `—` |
 | 5 · C-5 | Pendiente (requiere 3a) | — | — |
 | 6 · escrubery | ✅ Cerrada | ronda 7 (verificación empírica, aprobado; acta en `docs/rondas/2026-08-20-ronda-7-escrubery.md`; ensayo en `docs/evidencia/ensayo-escrubery-2026-08-20.md`) | `8d68ed1` |
 | 7 · parser | Pendiente (gated: 1–5) | — | — |

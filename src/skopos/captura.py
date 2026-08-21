@@ -9,6 +9,7 @@ visto antes, con el texto real de usuario y agente de ese turno.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from dataclasses import dataclass
@@ -31,6 +32,23 @@ class Turno:
     offset_fin: int
     cli: str = CLI_ORIGEN
     proyecto: str | None = None
+    fragmento_sha256: str | None = None  # sello P4a (ADR-009)
+
+
+def _sellar_fragmento(path: Path, offset_inicio: int, offset_fin: int) -> str | None:
+    """sha256 de los bytes [offset_inicio, offset_fin) del archivo (ADR-009 P4a).
+
+    Sello fragmento-only: los turnos teselan el archivo, así que este hash
+    detecta rotación/edición/truncación sin falsos positivos ante appends
+    de sesiones vivas (ronda 6, R6-2). El tamaño no se sella aparte:
+    es `offset_fin - offset_inicio` por construcción.
+    """
+    try:
+        with path.open("rb") as handle:
+            handle.seek(offset_inicio)
+            return hashlib.sha256(handle.read(offset_fin - offset_inicio)).hexdigest()
+    except OSError:
+        return None
 
 
 def _proyecto_de_cwd(cwd: str) -> str | None:
@@ -181,6 +199,7 @@ def extraer_turnos(path: Path | str) -> list[Turno]:
                 offset_inicio=offset_inicio_turno,
                 offset_fin=fin,
                 proyecto=proyecto,
+                fragmento_sha256=_sellar_fragmento(path, offset_inicio_turno, fin),
             )
         )
         texto_usuario_partes = []

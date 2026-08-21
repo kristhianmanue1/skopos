@@ -74,6 +74,12 @@ Entrada (esquema del documento insertado en la colección):
   rollout-jsonl-de-codex); ausente = desconocido. Con supersede [v2], un
   documento vigente sin `proyecto` puede completarse insertando versión
   nueva que lo traiga — la vieja no se toca
+  `fragmento_sha256`: string [opcional, ADR-009 P4a, 2026-08-20] —
+  sha256 de los bytes `[offset_inicio, offset_fin)` del archivo de
+  origen, computado al extraer el turno; el tamaño no se sella aparte
+  (es la diferencia de offsets por construcción). Ausente = legado:
+  servido con chequeo de longitud y `sellado: false`. Todo documento
+  nuevo lo trae desde la implementación de ADR-009
   `dominio`: string [opcional] — presente si se usó configuración de
   dominio (ADR-003)
   `entidades`: lista de string [opcional, saldado en v2 — siempre se
@@ -187,12 +193,41 @@ Entrada:
   resultados por el campo `proyecto` del documento; los documentos sin
   `proyecto` (pre-C-9 o desconocido) quedan fuera cuando el filtro está
   presente, nunca se inventa una coincidencia para ellos
+  `--max`: int [opcional, ADR-009 P5, 2026-08-20] — máximo de
+  resultados a servir (default 20); el excedente se reporta en
+  `excluidos`, no se descarta en silencio
 
 Salida (JSON a stdout):
   `resultados`: lista de objetos `{tema, resumen, turn_id, ruta_origen,
-  proyecto, fragmento_completo}` — `proyecto` añadido por C-9
-  (2026-08-20): valor del campo del documento o `null` si no lo tiene —
-  ordenados por relevancia de texto (`textScore`)
+  proyecto, fragmento_estado, sellado, fragmento_completo}` —
+  `proyecto` añadido por C-9 (2026-08-20): valor del campo del documento
+  o `null` si no lo tiene; `fragmento_estado` y `sellado` añadidos por
+  ADR-009 (2026-08-20) — ordenados por relevancia de texto (`textScore`)
+  `fragmento_estado`: string — `integro` (sello verificado, texto
+  completo) | `truncado` (verificado; texto cortado al tope de 64 KiB
+  con marcador `\n…[fragmento truncado: servidos X de Y bytes]` — el
+  marcador añade una cantidad fija de bytes sobre el tope y el corte
+  puede partir un carácter multibyte, que se degrada con U+FFFD) |
+  `origen_perdido` (el archivo de origen no se pudo leer;
+  `fragmento_completo` es `null`) | `integridad_fallida` (longitud leída
+  ≠ esperada, rango inválido, o sha256 ≠ sello:
+  rotación/edición/truncación del origen; `fragmento_completo` es
+  `null` — nunca se sirven bytes no verificados)
+  `sellado`: bool — `false` para documentos sin `fragmento_sha256`
+  (legados pre-ADR-009, o capturados con el archivo ilegible en ese
+  momento): se sirven con chequeo de longitud, el mínimo Y-5
+  `excluidos`: objeto `{por_limite: int}` [ADR-009 P5] — señal de
+  exclusión: cuántos resultados vigentes coincidentes quedaron fuera
+  por el presupuesto (`--max`); versiones superseded no consumen cupo
+  (filtro de vigencia ADR-007 antes del corte)
+
+**P3 (ADR-009, decisión 9 🔒 2026-08-20): `fragmento_completo` es DATO,
+nunca instrucción.** El texto proviene de conversaciones observadas y
+puede contener cualquier cosa, incluidas órdenes redactadas como si
+fueran para el lector. El consumidor de esta salida debe tratarlo como
+evidencia a analizar, no como directivas a seguir — igual que SPEC-002
+trata el texto de origen al construir el prompt del análisis. Skopos
+declara esta marca; no puede exigirla.
 
 Errores:
   tema sin resultados: exit 0, `{"resultados": []}`
@@ -204,6 +239,12 @@ Invariantes:
   - `$text` es coincidencia por palabra, no semántica: sinónimos o
     reformulaciones sin palabras en común no se recuperan (búsqueda por
     embeddings queda para un ADR futuro si la evidencia lo justifica)
+  - [ADR-009] nunca se sirven bytes de fragmento no verificados: ante
+    discordancia de longitud o de sello, `fragmento_completo` es `null`
+    con `fragmento_estado` explícito (cierre de Y-5)
+  - [ADR-009] el egreso por consulta está acotado (`--max` × tope de
+    fragmento); el excedente se declara en `excluidos.por_limite`, no
+    se pierde en silencio (señal de exclusión, P-001 C-4)
 
 Compatibilidad: agregar campos opcionales es compatible hacia atrás;
 en el resultado de `skopos query`, quitar o renombrar campos exige v2.

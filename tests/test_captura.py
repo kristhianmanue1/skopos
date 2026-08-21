@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -324,6 +325,62 @@ class ProyectoTests(unittest.TestCase):
                     [_turn_context(cwd), _mensaje("user", "x"), _cierre("t1")]
                 )
                 self.assertIsNone(extraer_turnos(self.path)[0].proyecto)
+
+
+class SelloFragmentoTests(unittest.TestCase):
+    """ADR-009 P4a: el Turno lleva el sha256 de los bytes de su rango."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = Path(self.tmp.name) / "rollout-test.jsonl"
+
+    def _escribir(self, eventos):
+        self.path.write_text(
+            "\n".join(_linea(e) for e in eventos) + "\n", encoding="utf-8"
+        )
+
+    def test_sello_es_el_sha256_del_rango_exacto(self):
+        self._escribir(
+            [_mensaje("user", "hola"), _cierre("t1"), _mensaje("user", "segundo"), _cierre("t2")]
+        )
+        contenido = self.path.read_bytes()
+        turnos = extraer_turnos(self.path)
+        self.assertEqual(len(turnos), 2)
+        for turno in turnos:
+            rango = contenido[turno.offset_inicio : turno.offset_fin]
+            self.assertEqual(
+                turno.fragmento_sha256,
+                hashlib.sha256(rango).hexdigest(),
+            )
+        # rangos contiguos desde 0: el sello del primero difiere del segundo
+        self.assertNotEqual(turnos[0].fragmento_sha256, turnos[1].fragmento_sha256)
+
+    def test_sello_cubre_lineas_no_mensaje_del_rango(self):
+        # el fragmento servido incluye turn_context/event_msg: el sello
+        # debe cubrir esos bytes también (teselación)
+        self._escribir(
+            [
+                _turn_context(str(Path.home() / "www" / "skopos")),
+                _mensaje("user", "x"),
+                _cierre("t1"),
+            ]
+        )
+        turno = extraer_turnos(self.path)[0]
+        rango = self.path.read_bytes()[turno.offset_inicio : turno.offset_fin]
+        # el rango incluye la línea turn_context
+        self.assertIn(b"turn_context", rango)
+        self.assertEqual(
+            turno.fragmento_sha256, hashlib.sha256(rango).hexdigest()
+        )
+
+    def test_archivo_ilegible_al_sellar_deja_sello_none(self):
+        # SPEC-001/ADR-009: el sello degrada a None si el rango no puede
+        # leerse en ese momento (se sirve como sellado=false con chequeo
+        # de longitud). El turno en sí ya fue extraído del handle vivo.
+        from skopos.captura import _sellar_fragmento
+
+        self.assertIsNone(_sellar_fragmento(Path("/no/existe/rollout.jsonl"), 0, 10))
 
 
 if __name__ == "__main__":

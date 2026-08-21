@@ -13,10 +13,12 @@ Mongo (ADR-005), corregido en la ronda adversarial 2026-08-13.
 Salidas: un objeto `Turno` con: `turn_id`, `session_id`, `texto_usuario`,
 `texto_agente`, `timestamp_cierre`, `ruta_origen`, `offset_inicio`,
 `offset_fin` (estos dos últimos permiten recuperar el fragmento exacto
-después, sin releer todo el archivo) y `proyecto` [C-9, 2026-08-20:
+después, sin releer todo el archivo), `proyecto` [C-9, 2026-08-20:
 `basename(cwd)` del `turn_context` del turno cuando `cwd` tiene al menos
 dos niveles bajo `$HOME`; `None` en caso contrario — regla y muestreo en
-`docs/evidencia/muestreo-cwd-c9-2026-08-20.md`].
+`docs/evidencia/muestreo-cwd-c9-2026-08-20.md`] y `fragmento_sha256`
+[ADR-009 P4a, 2026-08-20: sha256 de los bytes del rango, computado al
+extraer; `None` sólo si el archivo deja de ser legible en ese momento].
 
 Errores:
   - archivo no encontrado en un ciclo de poll: no es fatal, se reintenta
@@ -182,11 +184,17 @@ fragmento completo de origen.
 Entradas: `tema` (string, argumento posicional de línea de comandos);
 `--proyecto` (opcional, C-9 2026-08-20 — filtra por el campo `proyecto`;
 los documentos sin el campo quedan fuera cuando el filtro está
-presente).
+presente); `--max` (opcional, ADR-009 P5 — default 20; el excedente se
+declara en `excluidos.por_limite`).
 
 Salidas: JSON a stdout — lista de resultados, cada uno con `tema`,
 `resumen`, `turn_id`, `ruta_origen`, `proyecto` (o `null` si el
-documento no lo tiene — C-9, 2026-08-20) y `fragmento_completo`.
+documento no lo tiene — C-9, 2026-08-20), `fragmento_estado`
+(`integro`|`truncado`|`origen_perdido`|`integridad_fallida`),
+`sellado` (bool; `false` = legado sin sello) y `fragmento_completo`
+(texto verificado, truncado al tope de 64 KiB con marcador cuando
+corresponda, o `null` ante pérdida/fallo de integridad — ADR-009). El
+objeto raíz incluye `excluidos: {por_limite: N}` (señal de exclusión).
 
 Errores:
   - tema sin resultados: JSON con lista vacía, exit code 0 (no es error);
@@ -204,6 +212,20 @@ Casos:
     CUANDO se consulta ENTONCES la salida incluye sólo los de `X`;
     documentos sin `proyecto` (pre-C-9 o desconocido) nunca aparecen
     bajo un filtro por proyecto.
+  - DADO un documento sellado cuyo archivo de origen fue editado o
+    truncado después de la ingesta CUANDO se consulta ENTONCES ese
+    resultado tiene `fragmento_estado: "integridad_fallida"` y
+    `fragmento_completo: null` — nunca bytes de otro turno en silencio
+    [ADR-009, cierre de Y-5].
+  - DADO un documento cuyo archivo de origen ya no existe CUANDO se
+    consulta ENTONCES `fragmento_estado: "origen_perdido"` y
+    `fragmento_completo: null`, sin fallo de la consulta [ADR-009].
+  - DADO un documento con fragmento mayor al tope CUANDO se consulta
+    ENTONCES se sirve truncado con marcador de cuántos bytes de cuántos
+    [ADR-009 P5].
+  - DADO más coincidencias vigentes que `--max` CUANDO se consulta
+    ENTONCES se sirven las `--max` mejores por relevancia y
+    `excluidos.por_limite` declara el excedente [ADR-009 P5].
 
 Invariantes: la salida en stdout es siempre JSON válido cuando el exit
 code es 0; los errores van a stderr, nunca mezclados con stdout.

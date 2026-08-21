@@ -51,6 +51,10 @@ def _documento(analisis: Analisis) -> dict:
         documento["ocurrido_en"] = analisis.ocurrido_en
     if analisis.proyecto:
         documento["proyecto"] = analisis.proyecto
+    if analisis.fragmento_sha256:
+        # sello P4a (ADR-009): sha256 de los bytes del fragmento; el
+        # tamaño no se sella aparte (offsets por construcción)
+        documento["fragmento_sha256"] = analisis.fragmento_sha256
     if analisis.entidades:
         documento["entidades"] = analisis.entidades
     if analisis.dominio:

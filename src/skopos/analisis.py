@@ -74,6 +74,7 @@ class Analisis:
     dominio: str | None = None
     metadata_cli: dict | None = None
     proyecto: str | None = None
+    fragmento_sha256: str | None = None
 
 
 class AnalisisFallido(Exception):
@@ -227,4 +228,5 @@ def analizar_turno(
         dominio=(dominio_config or {}).get("domain"),
         metadata_cli=metadata_cli,
         proyecto=turno.proyecto,
+        fragmento_sha256=turno.fragmento_sha256,
     )

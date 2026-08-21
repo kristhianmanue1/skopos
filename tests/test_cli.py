@@ -5,6 +5,7 @@ Mismo patrón que test_almacenamiento.py: se salta si no hay Mongo local.
 
 from __future__ import annotations
 
+import hashlib
 import tempfile
 import unittest
 from io import StringIO
@@ -72,7 +73,7 @@ class QueryTests(unittest.TestCase):
 
     def test_tema_sin_resultados_devuelve_lista_vacia(self):
         salida = query("tema que no existe", coleccion=self.coleccion)
-        self.assertEqual(salida, {"resultados": []})
+        self.assertEqual(salida, {"resultados": [], "excluidos": {"por_limite": 0}})
 
     def test_ruta_origen_inexistente_devuelve_fragmento_none_sin_fallar(self):
         guardar_analisis(
@@ -133,7 +134,8 @@ class QueryTests(unittest.TestCase):
         salida = query(
             "arquitectura de memoria", coleccion=self.coleccion, proyecto="skopos"
         )
-        self.assertEqual(salida, {"resultados": []})
+        self.assertEqual(salida["resultados"], [])
+        self.assertEqual(salida["excluidos"], {"por_limite": 0})
 
     def test_sin_filtro_devuelve_documentos_con_y_sin_proyecto(self):
         for turn_id, proyecto in (("t6", "skopos"), ("t7", None)):
@@ -193,6 +195,171 @@ class QueryTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         salida = _json.loads(buffer.getvalue())
         self.assertEqual([r["turn_id"] for r in salida["resultados"]], ["t8"])
+
+
+@unittest.skipUnless(_mongo_disponible(), "MongoDB no está corriendo en localhost:27017")
+class FragmentoSelladoTests(unittest.TestCase):
+    """ADR-009 (P4a+P5, decisión 9 🔒 2026-08-20): servido sellado,
+    acotado y con señal de exclusión. Cierre de Y-5."""
+
+    def setUp(self):
+        self.coleccion = coleccion_local(db=DB_DE_PRUEBA)
+        cliente = self.coleccion.database.client
+        self.addCleanup(cliente.close)
+        self.addCleanup(cliente.drop_database, DB_DE_PRUEBA)
+
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.rollout = Path(self.tmp.name) / "rollout-sellado.jsonl"
+
+    def _guardar(self, *, contenido: bytes, sha256: str | None, turn_id="s1",
+                 tema="tema sellado", **extra):
+        self.rollout.write_bytes(contenido)
+        guardar_analisis(
+            Analisis(
+                tema=tema,
+                resumen="resumen del tema sellado",
+                turn_id=turn_id,
+                session_id="s",
+                ruta_origen=str(self.rollout),
+                offset_inicio=extra.pop("offset_inicio", 0),
+                offset_fin=extra.pop("offset_fin", len(contenido)),
+                cli="codex-cli", modelo_analisis="test-modelo",
+                fragmento_sha256=sha256,
+            ),
+            coleccion=self.coleccion,
+        )
+
+    def _resultado(self, tema="tema sellado", **kwargs):
+        salida = query(tema, coleccion=self.coleccion, **kwargs)
+        self.assertEqual(len(salida["resultados"]), 1)
+        return salida["resultados"][0]
+
+    def test_integro_sirve_texto_verificado(self):
+        contenido = b"contenido completo y verificado del turno\n"
+        self._guardar(
+            contenido=contenido,
+            sha256=hashlib.sha256(contenido).hexdigest(),
+        )
+        r = self._resultado()
+        self.assertEqual(r["fragmento_estado"], "integro")
+        self.assertTrue(r["sellado"])
+        self.assertEqual(r["fragmento_completo"], contenido.decode())
+
+    def test_edicion_del_origen_da_integridad_fallida_y_null(self):
+        # Y-5 cerrado: nunca bytes de otro turno en silencio
+        contenido = b"texto original del turno\n"
+        self._guardar(contenido=contenido, sha256=hashlib.sha256(contenido).hexdigest())
+        self.rollout.write_bytes(b"texto EDITADO del turno\n")  # misma longitud
+        r = self._resultado()
+        self.assertEqual(r["fragmento_estado"], "integridad_fallida")
+        self.assertIsNone(r["fragmento_completo"])
+
+    def test_lectura_corta_da_integridad_fallida(self):
+        # ronda 6 R6-3: seek fuera de EOF no falla — sin chequeo de
+        # longitud esto se serviría parcial/vacío en silencio
+        contenido = b"texto que luego se trunca\n"
+        self._guardar(contenido=contenido, sha256=hashlib.sha256(contenido).hexdigest())
+        self.rollout.write_bytes(b"texto que luego se ")  # truncado
+        r = self._resultado()
+        self.assertEqual(r["fragmento_estado"], "integridad_fallida")
+        self.assertIsNone(r["fragmento_completo"])
+
+    def test_origen_perdido_se_declara_sin_fallar_la_consulta(self):
+        self._guardar(contenido=b"x" * 100, sha256=hashlib.sha256(b"x" * 100).hexdigest())
+        self.rollout.unlink()
+        r = self._resultado()
+        self.assertEqual(r["fragmento_estado"], "origen_perdido")
+        self.assertIsNone(r["fragmento_completo"])
+
+    def test_legado_sin_sello_se_sirve_con_chequeo_de_longitud(self):
+        contenido = b"documento legado pre-ADR-009\n"
+        self._guardar(contenido=contenido, sha256=None)
+        r = self._resultado()
+        self.assertEqual(r["fragmento_estado"], "integro")
+        self.assertFalse(r["sellado"])
+        # y si el legado queda truncado, también se detecta (mínimo Y-5)
+        self.rollout.write_bytes(contenido[:10])
+        r = self._resultado()
+        self.assertEqual(r["fragmento_estado"], "integridad_fallida")
+
+    def test_fragmento_grande_se_sirve_truncado_con_marcador(self):
+        from skopos.cli import TOPE_FRAGMENTO_BYTES, MARCADOR_TRUNCADO
+
+        contenido = b"a" * (TOPE_FRAGMENTO_BYTES + 1000)
+        self._guardar(contenido=contenido, sha256=hashlib.sha256(contenido).hexdigest())
+        r = self._resultado()
+        self.assertEqual(r["fragmento_estado"], "truncado")
+        self.assertTrue(r["sellado"])
+        marcador = MARCADOR_TRUNCADO.format(
+            servidos=TOPE_FRAGMENTO_BYTES, total=len(contenido)
+        )
+        self.assertTrue(r["fragmento_completo"].endswith(marcador))
+
+    def test_max_acota_y_declara_el_excedente(self):
+        # P5: presupuesto + señal de exclusión (P-001 C-4)
+        contenido = b"x" * 50
+        sha = hashlib.sha256(contenido).hexdigest()
+        for i in range(3):
+            guardar_analisis(
+                Analisis(
+                    tema="presupuesto consultable",
+                    resumen=f"resultado numero {i}",
+                    turn_id=f"p{i}",
+                    session_id="s",
+                    ruta_origen=str(self.rollout),
+                    offset_inicio=0,
+                    offset_fin=len(contenido),
+                    cli="codex-cli", modelo_analisis="test-modelo",
+                    fragmento_sha256=sha,
+                ),
+                coleccion=self.coleccion,
+            )
+        salida = query("presupuesto", coleccion=self.coleccion, max_resultados=2)
+        self.assertEqual(len(salida["resultados"]), 2)
+        self.assertEqual(salida["excluidos"], {"por_limite": 1})
+        # sin recorte: excluidos en cero, no ausente
+        salida = query("presupuesto", coleccion=self.coleccion, max_resultados=20)
+        self.assertEqual(salida["excluidos"], {"por_limite": 0})
+
+    def test_rango_invalido_en_documento_da_integridad_fallida_sin_traza(self):
+        # ronda 8, H2: offsets corruptos (fin < inicio) no revientan la
+        # consulta con ValueError — se declara integridad_fallida
+        guardar_analisis(
+            Analisis(
+                tema="rango corrupto",
+                resumen="offsets imposibles",
+                turn_id="corrupto",
+                session_id="s",
+                ruta_origen=str(self.rollout),
+                offset_inicio=100,
+                offset_fin=10,
+                cli="codex-cli", modelo_analisis="test-modelo",
+            ),
+            coleccion=self.coleccion,
+        )
+        r = self._resultado(tema="rango corrupto")
+        self.assertEqual(r["fragmento_estado"], "integridad_fallida")
+        self.assertIsNone(r["fragmento_completo"])
+
+    def test_max_cableado_por_argparse(self):
+        # ronda 8, H7: el flag --max llega por query_command, y un
+        # negativo se rechaza en el borde (H1)
+        import json as _json
+
+        with mock.patch("skopos.cli.coleccion_local", return_value=self.coleccion):
+            buffer = StringIO()
+            with redirect_stdout(buffer):
+                exit_code = query_command(["tema sellado", "--max", "0"])
+            self.assertEqual(exit_code, 0)
+            salida = _json.loads(buffer.getvalue())
+            self.assertEqual(salida["resultados"], [])
+            self.assertEqual(salida["excluidos"], {"por_limite": 0})
+
+            stderr = StringIO()
+            with redirect_stderr(stderr):
+                with self.assertRaises(SystemExit):
+                    query_command(["tema sellado", "--max", "-1"])
 
 
 @unittest.skipUnless(_mongo_disponible(), "MongoDB no está corriendo en localhost:27017")
@@ -292,6 +459,7 @@ class ReanalizarTests(unittest.TestCase):
             offset_inicio=0,
             offset_fin=len(contenido),
             cli="codex-cli", modelo_analisis="test-modelo",
+            fragmento_sha256=hashlib.sha256(contenido.encode()).hexdigest(),
         )
         with mock.patch("skopos.cli.coleccion_local", return_value=self.coleccion):
             with mock.patch("skopos.cli.analizar_turno", return_value=analisis_nuevo):
@@ -302,6 +470,11 @@ class ReanalizarTests(unittest.TestCase):
         vigente = version_vigente("r3", coleccion=self.coleccion)
         self.assertEqual(vigente["version"], 2)
         self.assertEqual(vigente["tema"], "nuevo")
+        # el supersede asienta el sello recomputado (ronda 8, H7)
+        self.assertEqual(
+            vigente.get("fragmento_sha256"),
+            hashlib.sha256(contenido.encode()).hexdigest(),
+        )
 
     def test_reanalisis_completo_con_rollout_perdido_falla_explicito(self):
         # lección Y-5: nunca supersede a ciegas desde una referencia rota

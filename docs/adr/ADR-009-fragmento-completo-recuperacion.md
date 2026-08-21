@@ -1,9 +1,14 @@
 # ADR-009: `fragmento_completo` en la recuperación — cinco palancas
 
-Estado: **propuesto — decisión 🔒 pendiente del dueño** (Fase 4 / C-6,
-Hito 16; 2026-08-20). Sometido a ronda adversarial pre-decisión (ronda 6,
-`docs/rondas/2026-08-20-ronda-6-adr009.md`). Sin implementar nada, por
-exigencia del dueño.
+Estado: **aceptado** — decisión 9 🔒 firmada por el dueño el 2026-08-20
+(Fase 4 / C-6, Hito 16), tras revisión aprobatoria de Pinax. Palancas:
+**P4a + P5 + P3, manteniendo P1; P2 y P4b rechazadas** con sus criterios
+de reapertura registrados (P2: contaminación real demostrada por el
+detector de Fase 5; P4b: rotación/pérdida de rollouts que lastime la
+recuperación). Sometido a ronda adversarial pre-decisión (ronda 6,
+`docs/rondas/2026-08-20-ronda-6-adr009.md`): 10 hallazgos incorporados
+antes de la firma. Mediciones en
+`docs/evidencia/fragmentos-c6-2026-08-20.md`.
 
 ## Contexto
 
@@ -144,13 +149,54 @@ P1 (servir crudo sellado y acotado); P2 rechazada por ahora.**
 - (−) Turnos con fragmento > tope se sirven truncados (con marcador) —
   el consumidor que necesite el completo tiene `ruta_origen`+offsets.
 - (−) El sello se aplica a ingesta nueva; documentos ya guardados (0
-  hoy) quedarían sin sello y se servirían marcados
-  `integridad_no_verificada` (o se sellan retroactivamente vía
-  supersede, ahora posible — decisión de implementación).
+  hoy) quedarían sin sello y se servirían con `sellado: false`
+  (chequeo de longitud únicamente; o se sellan retroactivamente vía
+  supersede, ahora posible — decisión de implementación). *(Deriva
+  corregida por la implementación: no existe el estado
+  `integridad_no_verificada` que esta sección pre-decisión anunciaba;
+  los cuatro estados reales están en "Decisiones de implementación",
+  que manda — ronda 8, H5.)*
 - Cambios de superficie: `skopos query` gana `--max`/tope y campos de
   exclusión/truncado/estado en la salida (aditivos); CONTRATO
   cli-skopos-query v1 enmendado al implementar.
 
 ## Firma de decisión
 
-- Dueño: ______ · Fecha: ______ · Palancas elegidas: ______
+- Dueño: firma 🔒 comunicada en canal del agente y confirmada con
+  revisión aprobatoria de Pinax (2026-08-20) · Palancas: **P4a + P5 +
+  P3, manteniendo P1; P2 y P4b rechazadas por ahora**
+- Exigencia de la firma, registrada (restricción de orden de Pinax):
+  ningún piloto de Fase 3c/5 ingesta a Mongo hasta que el sello de P4a
+  exista — si no, el retro-sello deja de ser gratis. Sello implementado
+  en el mismo commit que esta firma.
+
+## Decisiones de implementación (cerradas al implementar, 2026-08-20)
+
+- **Campo**: `fragmento_sha256` en `Turno`→`Analisis`→documento (sello
+  fragmento-only; tamaño derivable de los offsets por construcción, no
+  se duplica). Computado en `captura` al extraer (re-lectura del rango
+  por turno: costo despreciable frente al análisis, que domina por
+  órdenes de magnitud).
+- **Servido** (`cli._servir_fragmento`): estados
+  `integro`/`truncado`/`origen_perdido`/`integridad_fallida` + flag
+  `sellado` (false = sin sello: legado o captura con archivo ilegible).
+  Ante longitud leída ≠ esperada, rango inválido (`esperado <= 0`,
+  ronda 8 H2) o sha256 discordante → `fragmento_completo: null` (nunca
+  bytes no verificados); `origen_perdido` para OSError. El chequeo de
+  longitud aplica también a legados sin sello (mínimo Y-5, R6-3). El
+  marcador exacto: `\n…[fragmento truncado: servidos X de Y bytes]`
+  (añade ~55 bytes fijos sobre el tope; el corte puede partir un
+  carácter multibyte → U+FFFD — ronda 8, H3/H4/H6).
+- **P5**: `--max` (default 20) sobre vigentes ya filtrados (ADR-007) —
+  versiones superseded no consumen cupo (R6-5); tope de fragmento 64
+  KiB como constante (`TOPE_FRAGMENTO_BYTES`) con marcador
+  `…[fragmento truncado: X de Y bytes]`; señal `excluidos.por_limite`.
+- **P3**: declaración dato-nunca-instrucción en el CONTRATO
+  cli-skopos-query v1 (aditiva).
+- **Retro-sello**: innecesario hoy (colección con 0 documentos,
+  verificado 2026-08-20); si algún documento legado apareciera, se
+  sella vía supersede (`superseder_documento` con
+  `fragmento_sha256`), ya posible por ADR-007.
+- **Reanalizar modo completo**: propaga el sello recomputado del Turno
+  re-extraído (el rango no cambia ante appends; cambia si el archivo
+  fue editado — y entonces el sello nuevo describe la realidad nueva).
