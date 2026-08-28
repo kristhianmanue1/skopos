@@ -19,7 +19,8 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 from skopos.almacenamiento import DocumentoInvalido, existe_turn_id, guardar_analisis
 from skopos.analisis import Analisis, AnalisisFallido, analizar_turno
 from skopos.captura import Turno
-from skopos.parseo import ResultadoParseo, parsear
+from skopos.cursor import Cursor
+from skopos.parseo import ResultadoParseo, parsear, sellar_prefijo
 
 ESTADOS_TERMINALES = {"guardado", "fallido", "omitido"}
 
@@ -73,6 +74,8 @@ def procesar_rollout(
     ya_guardado: Callable[..., bool] = existe_turn_id,
     desde: datetime | None = None,
     on_diagnostico: Callable[[Path, ResultadoParseo], None] | None = None,
+    cursor: Cursor | None = None,
+    on_cursor: Callable[[Path, Cursor], None] | None = None,
     **kwargs_analisis,
 ) -> list[ResultadoTurno]:
     """Procesa los turnos cerrados de un rollout, uno por uno.
@@ -89,37 +92,59 @@ def procesar_rollout(
     turnos cerrados a partir de ese instante; los anteriores quedan fuera
     de la ventana sin producir resultado (no son "omitidos" — nunca se
     les consultó a la dedup; son históricos no invitados).
+
+    `cursor`/`on_cursor` (ADR-011): lectura incremental. **El cursor sólo
+    avanza sobre turnos que llegaron a un desenlace que no exige
+    reintento**: se detiene en el primer `fallido`, porque un turno cuyo
+    análisis falló no está en Mongo, y adelantarlo significaría no
+    volver a verlo nunca — el cursor pasaría de caché inofensiva a
+    pérdida silenciosa de datos.
     """
-    parseo = parsear(path)
+    parseo = parsear(path, cursor=cursor)
     if on_diagnostico is not None:
         on_diagnostico(Path(path), parseo)
     if parseo.diagnostico != "ok":
         return []
 
     resultados: list[ResultadoTurno] = []
+    avance: int | None = None  # hasta dónde puede avanzar el cursor (ADR-011)
+    congelado = False  # un fallido congela el avance: hay que reintentarlo
+
+    def _avanzar(turno: Turno) -> None:
+        nonlocal avance
+        if not congelado:
+            avance = turno.offset_fin
+
     for turno in parseo.turnos:
         if not _cerrado_desde(turno, desde):
+            # histórico no invitado (ADR-008): no se procesa, pero
+            # tampoco hay nada que reintentar en él
+            _avanzar(turno)
             continue
 
         try:
             visto = ya_guardado(turno.turn_id, coleccion=coleccion)
         except PyMongoError as exc:
             resultados.append(ResultadoTurno(turno.turn_id, "fallido", f"dedup falló: {exc}"))
+            congelado = True
             continue
         if visto:
             resultados.append(ResultadoTurno(turno.turn_id, "omitido"))
+            _avanzar(turno)
             continue
 
         if _contenido_insuficiente(turno):
             resultados.append(
                 ResultadoTurno(turno.turn_id, "omitido", "sin contenido significativo")
             )
+            _avanzar(turno)
             continue
 
         try:
             analisis = analizar(turno, **kwargs_analisis)
         except AnalisisFallido as exc:
             resultados.append(ResultadoTurno(turno.turn_id, "fallido", str(exc)))
+            congelado = True
             continue
 
         try:
@@ -127,10 +152,16 @@ def procesar_rollout(
         except DuplicateKeyError:
             # otro proceso guardó este turn_id entre el chequeo y esta escritura
             resultados.append(ResultadoTurno(turno.turn_id, "omitido", "duplicado concurrente"))
+            _avanzar(turno)
             continue
         except (PyMongoError, DocumentoInvalido) as exc:
             resultados.append(ResultadoTurno(turno.turn_id, "fallido", str(exc)))
+            congelado = True
             continue
 
         resultados.append(ResultadoTurno(turno.turn_id, "guardado"))
+        _avanzar(turno)
+
+    if on_cursor is not None and avance is not None and parseo.instantanea is not None:
+        on_cursor(Path(path), Cursor(avance, sellar_prefijo(parseo.instantanea, avance)))
     return resultados

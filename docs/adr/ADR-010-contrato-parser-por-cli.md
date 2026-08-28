@@ -249,7 +249,11 @@ ResultadoParseo := {
   eventos_no_reconocidos: int ≥ 0 — eventos de tipos no declarados por
                           la ficha (JSON válido), ignorados para la
                           extracción pero contabilizados (ronda 11c):
-                          señal de evolución aditiva, nunca incompatibilidad
+                          señal de evolución aditiva, nunca incompatibilidad.
+                          **ADR-011 (2026-08-28) desvía esto**: en lectura
+                          incremental el conteo es del tramo leído, no del
+                          archivo — el total por archivo exigiría reparsearlo
+                          entero, que es lo que el cursor evita
   descartes_linea:        int ≥ 0 — líneas JSON inválidas dentro de una
                           instantánea válida (observable, como SPEC-001)
 }

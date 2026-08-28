@@ -1,6 +1,6 @@
 # ADR-011: lectura incremental con cursor como caché verificable
 
-Estado: **propuesto** — pendiente de decisión 🔒 del dueño. Cierra
+Estado: **aceptado** — decisión 🔒 del dueño, 2026-08-28. Cierra
 C-10(b) de P-002 §3.3 / Hito 15 si se acepta. No revierte ADR-005: lo
 extiende por el camino que el propio ADR-005 pre-registró ("si el
 volumen… ese es un ADR nuevo sobre lectura incremental").
@@ -74,15 +74,57 @@ parseo de todo lo ya visto.
   caro; una dependencia de red añadida en el descubrimiento cuesta
   robustez.
 
+## Cláusulas que la implementación obligó a añadir (ronda 23, 2026-08-28)
+
+Las cuatro salieron de escribir el código y de la ronda adversarial
+sobre él; ninguna estaba en el texto aceptado, y sin ellas el cursor
+**no** sería la caché inofensiva que este ADR promete. Se incorporan
+como parte de la decisión, no como notas al margen.
+
+1. **El cursor nunca adelanta un turno fallido.** Un turno cuyo análisis
+   falló no está en Mongo; si el cursor pasara por encima, no se
+   volvería a leer **nunca** — la dedup no puede rescatarlo porque nunca
+   lo vio. El avance se congela en el primer `fallido` del archivo y se
+   reintenta desde ahí en el ciclo siguiente. Los `omitido` (ya
+   guardado, sin contenido, duplicado concurrente) sí avanzan: no exigen
+   reintento.
+2. **El estado que cruza la frontera se hereda explícitamente.**
+   `proyecto` viene del último `turn_context` **anterior** al cursor y
+   `version_cli_observada` del `session_meta` de cabecera. Sin herencia,
+   toda lectura incremental degradaría el eje de proyecto de C-9 a
+   `None` en silencio — peor que no tener cursor. La herencia de
+   `proyecto` es una búsqueda de bytes hacia atrás, no un reparseo del
+   prefijo.
+3. **Los conteos pasan a ser de la lectura, no del archivo.**
+   `eventos_no_reconocidos` y `descartes_linea` cuentan lo observado en
+   **este tramo**. Es una **desviación declarada** de ADR-010 §3, que
+   dice "total por archivo": en lectura incremental ese total no se
+   puede afirmar sin reparsear todo, que es justo lo que se evita. Se
+   prefiere un conteo honesto de lo leído a un total inventado.
+4. **El cursor recuerda lectura, no ingesta.** Si se vacía la colección
+   de Mongo, los cursores siguen diciendo "ya leído": recuperar el
+   histórico exige `--backfill`, que **ignora los cursores** por
+   diseño. Un backfill es "reléelo todo", y honrar cursores ahí saltaría
+   exactamente lo que se pidió recuperar.
+
+**Un archivo sin turnos cerrados no recibe cursor** (11 de 643 en el
+corpus de hoy): avanzar hasta EOF saltaría el texto acumulado que aún no
+tiene cierre, y el turno siguiente saldría con el contenido mutilado. El
+precio es que esos archivos se reparsean enteros cada ciclo; es
+deliberado.
+
 ## Consecuencias (si se acepta)
 
 - El ciclo pasa de reparsear 2.42 GB a leer y sellar 2.42 GB más parsear
   únicamente la cola nueva — con los números de hoy, de 22.6–39.1 s a
   ~7 s de piso, y bajando en proporción según crezca la parte estable
   del corpus.
-- Aparece **estado local** que antes no existía. Debe vivir fuera del
-  repo (gitignorado), ser borrable sin consecuencias y regenerarse solo.
-  Un cursor ausente = un ciclo caro, nunca datos perdidos.
+- Aparece **estado local** que antes no existía. Vive fuera del repo —
+  `~/.local/state/skopos/cursores.json`, así que no hay ni que
+  gitignorarlo—, es borrable sin consecuencias y se regenera solo. Un
+  cursor ausente = un ciclo caro, nunca datos perdidos. Se **poda** en
+  cada ciclo con los archivos descubiertos: sin eso, cada sesión
+  archivada o borrada dejaría su entrada dentro para siempre.
 - La fase B de P-003 (adaptadores nuevos) hereda este protocolo de
   lectura ya decidido, en vez de que cada adaptador improvise el suyo o
   haya que reescribir cuatro después.
@@ -98,5 +140,10 @@ marcado como marginal antes de cualquier piloto.
 
 ## Firma de decisión
 
-- Dueño: **pendiente**. Este documento es una propuesta con evidencia
-  fechada; no se implementa nada hasta la 🔒.
+- Dueño: decisión 🔒 comunicada en canal del agente · Fecha:
+  **2026-08-28** · Sobre la propuesta con la evidencia fechada de
+  `docs/evidencia/remedicion-ciclo-c10-2026-08-28.md`.
+- **Implementado el mismo día** (`src/skopos/cursor.py`, soporte en
+  `parseo.py`/`captura.py`, enrutado en `orquestador.py`/`vigilante.py`),
+  con las cuatro cláusulas de arriba incorporadas tras la ronda 23.
+  Evidencia y medición: `docs/evidencia/cursor-incremental-2026-08-28.md`.

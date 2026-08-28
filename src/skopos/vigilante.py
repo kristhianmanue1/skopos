@@ -29,6 +29,7 @@ from typing import Callable
 from pymongo.collection import Collection
 
 from skopos.almacenamiento import coleccion_local
+from skopos.cursor import AlmacenCursores
 from skopos.orquestador import ResultadoTurno, procesar_rollout
 from skopos.parseo import ResultadoParseo
 
@@ -49,6 +50,7 @@ def ciclo(
     descubrir: Callable[[Path], set[Path]] = descubrir_rollouts,
     t0: datetime | None = None,
     on_diagnostico: Callable[[Path, ResultadoParseo], None] | None = None,
+    cursores: AlmacenCursores | None = None,
     **kwargs_procesar,
 ) -> list[ResultadoTurno]:
     """Un barrido completo: procesa los turnos nuevos de todos los rollouts.
@@ -58,9 +60,17 @@ def ciclo(
     archivo intacto desde antes de `t0` no puede contener turnos
     cerrados después (skew mtime↔evento medido en 0.0 s, ronda 4). El
     filtro semántivo por turno vive en `procesar_rollout(desde=…)`.
+
+    `cursores` (ADR-011) evita reparsear lo ya procesado de cada archivo.
+    Se pasa **sólo fuera de backfill**: un backfill es por definición
+    "reléelo todo", y honrar cursores ahí saltaría precisamente el
+    histórico que se pidió recuperar.
     """
     resultados: list[ResultadoTurno] = []
-    for path in sorted(descubrir(sessions_dir)):
+    descubiertos = sorted(descubrir(sessions_dir))
+    if cursores is not None:
+        cursores.podar(descubiertos)
+    for path in descubiertos:
         if t0 is not None:
             try:
                 if path.stat().st_mtime < t0.timestamp():
@@ -73,9 +83,13 @@ def ciclo(
                 coleccion=coleccion,
                 desde=t0,
                 on_diagnostico=on_diagnostico,
+                cursor=cursores.obtener(path) if cursores else None,
+                on_cursor=cursores.actualizar if cursores else None,
                 **kwargs_procesar,
             )
         )
+    if cursores is not None:
+        cursores.guardar()
     return resultados
 
 
@@ -97,6 +111,8 @@ def ejecutar(
     previo (todo turno no guardado, sin distinción histórica).
     """
     t0 = None if backfill else datetime.now(timezone.utc)
+    # ADR-011: sin cursores en backfill — releerlo todo es el encargo
+    cursores = None if backfill else AlmacenCursores().cargar()
     detener = False
 
     def _parar(_signum: int, _frame: object) -> None:
@@ -118,6 +134,7 @@ def ejecutar(
                 coleccion=coleccion,
                 t0=t0,
                 on_diagnostico=_contar,
+                cursores=cursores,
                 **kwargs_procesar,
             )
             if on_ciclo:

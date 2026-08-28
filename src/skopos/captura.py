@@ -138,7 +138,7 @@ def _proyecto_de_turn_context(evento: object) -> str | None | type(...) :
     return _proyecto_de_cwd(cwd)
 
 
-def iter_lineas(instantanea: bytes) -> Iterator[tuple[bytes, int, int]]:
+def iter_lineas(instantanea: bytes, desde: int = 0) -> Iterator[tuple[bytes, int, int]]:
     """(línea, offset_inicio, offset_fin) en bytes de la instantánea.
 
     Corta **sólo** por `\n`, igual que iterar el descriptor de archivo:
@@ -147,7 +147,7 @@ def iter_lineas(instantanea: bytes) -> Iterator[tuple[bytes, int, int]]:
     guardado (JSON válido no lleva esos bytes crudos, pero la
     equivalencia no debe depender de esa suposición).
     """
-    offset = 0
+    offset = desde
     total = len(instantanea)
     while offset < total:
         salto = instantanea.find(b"\n", offset)
@@ -157,14 +157,14 @@ def iter_lineas(instantanea: bytes) -> Iterator[tuple[bytes, int, int]]:
 
 
 def _iter_eventos_con_offsets(
-    instantanea: bytes,
+    instantanea: bytes, desde: int = 0
 ) -> Iterator[tuple[object | None, int, int]]:
     """Eventos JSON con sus offsets; `None` marca una línea descartada.
 
     Las líneas en blanco no son ni evento ni descarte: no llevan
     contenido que contar (SPEC-001 las ignora desde F2).
     """
-    for raw_line, inicio, fin in iter_lineas(instantanea):
+    for raw_line, inicio, fin in iter_lineas(instantanea, desde):
         line = raw_line.strip()
         if not line:
             continue
@@ -262,20 +262,89 @@ def _cli_version(evento: object) -> str | None:
     return version if isinstance(version, str) and version else None
 
 
-def extraer_de_instantanea(instantanea: bytes, path: Path) -> Extraccion:
-    """Extrae los turnos cerrados de una instantánea ya materializada."""
+def _proyecto_heredado(instantanea: bytes, desde: int) -> str | None:
+    """El `proyecto` vigente al llegar al offset `desde`.
+
+    Estado que cruza la frontera incremental (ADR-011): `proyecto` no
+    viene del turno, viene del último `turn_context` que lo precede — y
+    ése puede estar antes del cursor. Sin esto, toda lectura incremental
+    produciría `proyecto=None` y el eje de proyecto de C-9 se degradaría
+    en silencio, que es peor que no tener cursor.
+
+    Se busca hacia atrás la última línea con la marca, sin parsear el
+    prefijo entero: es una búsqueda de bytes, no un parseo de JSON.
+    """
+    marca = b'"turn_context"'
+    fin = desde
+    while True:
+        pos = instantanea.rfind(marca, 0, fin)
+        if pos == -1:
+            return None
+        inicio_linea = instantanea.rfind(b"\n", 0, pos) + 1
+        fin_linea = instantanea.find(b"\n", pos)
+        if fin_linea == -1 or fin_linea > desde:
+            fin_linea = desde
+        try:
+            evento = json.loads(instantanea[inicio_linea:fin_linea].strip())
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            fin = inicio_linea
+            continue
+        proyecto = _proyecto_de_turn_context(evento)
+        if proyecto is not ...:
+            return proyecto
+        fin = inicio_linea
+
+
+def version_cli_de_instantanea(instantanea: bytes) -> str | None:
+    """`cli_version` del `session_meta` de cabecera (ADR-010 §1).
+
+    Vive en el mismo alcance de escaneo que la identidad (10 líneas), no
+    en el tramo que toque leer: en una lectura incremental (ADR-011) el
+    `session_meta` queda por debajo del cursor, y sin esto la versión
+    observada se degradaría a `None` en cuanto el cursor avanzara.
+    """
+    for indice, (raw_line, _inicio, _fin) in enumerate(iter_lineas(instantanea)):
+        if indice >= LINEAS_ESCANEO_IDENTIDAD:
+            return None
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            evento = json.loads(line)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        version = _cli_version(evento)
+        if version is not None:
+            return version
+    return None
+
+
+def extraer_de_instantanea(
+    instantanea: bytes, path: Path, desde: int = 0
+) -> Extraccion:
+    """Extrae los turnos cerrados de una instantánea ya materializada.
+
+    `desde` (ADR-011) arranca la extracción en un byte offset ya
+    procesado: los turnos teselan el archivo, así que empezar en el
+    `offset_fin` del último turno cerrado no parte ninguno por la mitad.
+    Los offsets producidos siguen siendo de la instantánea completa —
+    el sello P4a y el fragmento servido no cambian de semántica— y los
+    conteos (`eventos_no_reconocidos`, `descartes_linea`) son los de
+    **este tramo**, no los del archivo entero: cuentan lo observado en
+    esta lectura, que es lo que el ciclo puede afirmar.
+    """
     session_id = path.stem  # decisión de ficha v1 por compatibilidad (ADR-010 §8)
     turnos: list[Turno] = []
     vistos: set[str] = set()
     texto_usuario_partes: list[str] = []
     texto_agente_partes: list[str] = []
-    offset_inicio_turno = 0
-    proyecto: str | None = None
+    offset_inicio_turno = desde
+    proyecto: str | None = _proyecto_heredado(instantanea, desde) if desde else None
     eventos_no_reconocidos = 0
     descartes_linea = 0
-    version_cli_observada: str | None = None
+    version_cli_observada = version_cli_de_instantanea(instantanea)
 
-    for evento, _inicio, fin in _iter_eventos_con_offsets(instantanea):
+    for evento, _inicio, fin in _iter_eventos_con_offsets(instantanea, desde):
         if evento is None:
             descartes_linea += 1
             continue
@@ -288,9 +357,6 @@ def extraer_de_instantanea(instantanea: bytes, path: Path) -> Extraccion:
             # corruptas de campo.
             eventos_no_reconocidos += 1
             continue
-
-        if version_cli_observada is None:
-            version_cli_observada = _cli_version(evento)
 
         nuevo_proyecto = _proyecto_de_turn_context(evento)
         if nuevo_proyecto is not ...:

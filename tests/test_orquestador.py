@@ -98,6 +98,92 @@ class FronteraSpec006Tests(unittest.TestCase):
         self.assertEqual(vistos, ["ok"])
 
 
+class AvanceDelCursorTests(unittest.TestCase):
+    """ADR-011: el cursor es caché inofensiva; jamás pérdida silenciosa."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = Path(self.tmp.name) / "rollout-test.jsonl"
+        self.path.write_text(
+            "\n".join(
+                _linea(e)
+                for e in [
+                    _session_meta(),
+                    _mensaje("user", "uno"), _cierre("t1"),
+                    _mensaje("user", "dos"), _cierre("t2"),
+                    _mensaje("user", "tres"), _cierre("t3"),
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    def _procesar(self, analizar):
+        cursores = []
+        resultados = procesar_rollout(
+            self.path,
+            coleccion=None,
+            analizar=analizar,
+            guardar=lambda a, **k: {},
+            ya_guardado=_nunca_visto,
+            on_cursor=lambda ruta, cursor: cursores.append(cursor),
+        )
+        return resultados, (cursores[0] if cursores else None)
+
+    def _analisis(self, turno):
+        return Analisis(
+            tema="x", resumen="y", turn_id=turno.turn_id, session_id=turno.session_id,
+            ruta_origen=turno.ruta_origen, offset_inicio=turno.offset_inicio,
+            offset_fin=turno.offset_fin, cli="codex-cli", modelo_analisis="test-modelo",
+        )
+
+    def test_sin_fallos_el_cursor_llega_al_final_del_ultimo_turno(self):
+        from skopos.parseo import parsear
+
+        resultados, cursor = self._procesar(lambda t, **k: self._analisis(t))
+        self.assertEqual([r.estado for r in resultados], ["guardado"] * 3)
+        ultimo = parsear(self.path).turnos[-1]
+        self.assertEqual(cursor.offset, ultimo.offset_fin)
+
+    def test_un_turno_fallido_congela_el_cursor_antes_de_el(self):
+        # si el cursor pasara por encima de un turno cuyo analisis fallo,
+        # ese turno no esta en Mongo y no se volveria a leer NUNCA
+        from skopos.parseo import parsear
+
+        def analizar(turno, **_):
+            if turno.turn_id == "t2":
+                raise AnalisisFallido("Ollama caído")
+            return self._analisis(turno)
+
+        resultados, cursor = self._procesar(analizar)
+        self.assertEqual([r.estado for r in resultados], ["guardado", "fallido", "guardado"])
+        primero = parsear(self.path).turnos[0]
+        self.assertEqual(cursor.offset, primero.offset_fin)  # se quedo antes de t2
+
+    def test_el_fallo_del_primer_turno_no_emite_cursor(self):
+        def analizar(turno, **_):
+            raise AnalisisFallido("Ollama caído")
+
+        resultados, cursor = self._procesar(analizar)
+        self.assertEqual([r.estado for r in resultados], ["fallido"] * 3)
+        self.assertIsNone(cursor)
+
+    def test_los_omitidos_si_avanzan_el_cursor(self):
+        # un turno ya guardado o sin contenido no exige reintento
+        from skopos.parseo import parsear
+
+        resultados = procesar_rollout(
+            self.path,
+            coleccion=None,
+            analizar=lambda t, **k: self._analisis(t),
+            guardar=lambda a, **k: {},
+            ya_guardado=lambda tid, **k: True,
+            on_cursor=lambda ruta, cursor: None,
+        )
+        self.assertEqual([r.estado for r in resultados], ["omitido"] * 3)
+
+
 class ProcesarRolloutTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

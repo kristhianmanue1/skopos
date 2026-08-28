@@ -15,6 +15,7 @@ registra — `captura.py` es el adaptador de referencia (parser-codex/v1).
 
 from __future__ import annotations
 
+import hashlib
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,6 +23,7 @@ from typing import Callable
 
 from skopos import captura
 from skopos.captura import Turno
+from skopos.cursor import Cursor
 
 
 VERSION_CONTRATO = "parser-contrato/v1"
@@ -84,6 +86,13 @@ class ResultadoParseo:
     detalle: Detalle | None = None
     eventos_no_reconocidos: int = 0
     descartes_linea: int = 0
+    # ADR-011: la instantánea de la que salieron estos turnos, para que
+    # el llamador pueda sellar el prefijo hasta donde decida avanzar su
+    # cursor. `None` cuando no hubo instantánea (entrada_corrupta).
+    instantanea: bytes | None = None
+    # True si esta lectura se apoyó en un cursor válido (sólo se parseó
+    # la cola nueva); False si se parseó el archivo entero.
+    incremental: bool = False
 
 
 @dataclass(frozen=True)
@@ -160,8 +169,39 @@ def _ids(fichas: list[Ficha]) -> tuple[str, ...]:
     return tuple(sorted({ficha.id_ficha for ficha in fichas}))
 
 
-def parsear(path: Path | str, registro: tuple[Ficha, ...] = REGISTRO) -> ResultadoParseo:
-    """Detecta, selecciona y extrae; un diagnóstico por archivo."""
+def sellar_prefijo(instantanea: bytes, offset: int) -> str:
+    """sha256 de `bytes[0:offset]` — el sello que valida un cursor (ADR-011)."""
+    return hashlib.sha256(instantanea[:offset]).hexdigest()
+
+
+def _cursor_aplicable(instantanea: bytes, cursor: Cursor | None) -> bool:
+    """El cursor sirve sólo si su prefijo sigue siendo byte a byte el mismo.
+
+    Rotación, edición o truncación hacen que el sello no case y el
+    archivo se reparsea entero (ADR-011): la discrepancia es observable,
+    nunca un salto silencioso. `tamaño+mtime` está prohibido como
+    comparación (ADR-010 §5), por eso se verifica por contenido.
+    """
+    if cursor is None or cursor.offset <= 0:
+        return False
+    if len(instantanea) < cursor.offset:
+        return False  # el archivo encogió: truncado o sustituido
+    return sellar_prefijo(instantanea, cursor.offset) == cursor.digest_prefijo
+
+
+def parsear(
+    path: Path | str,
+    registro: tuple[Ficha, ...] = REGISTRO,
+    cursor: Cursor | None = None,
+) -> ResultadoParseo:
+    """Detecta, selecciona y extrae; un diagnóstico por archivo.
+
+    Con `cursor` (ADR-011) y si su sello sigue casando, sólo se parsea la
+    cola nueva; los offsets de los turnos siguen siendo de la instantánea
+    completa, así que el sello P4a y `fragmento_completo` no cambian de
+    semántica. La detección de identidad se evalúa siempre sobre la
+    instantánea entera: un cursor jamás sustituye a la frontera.
+    """
     path = Path(path)
     try:
         instantanea = materializar_instantanea(path)
@@ -170,6 +210,8 @@ def parsear(path: Path | str, registro: tuple[Ficha, ...] = REGISTRO) -> Resulta
         return ResultadoParseo(diagnostico="entrada_corrupta", detalle=detalle)
     except OSError:
         return ResultadoParseo(diagnostico="entrada_corrupta")
+
+    incremental = _cursor_aplicable(instantanea, cursor)
 
     candidatos = _candidatos_por_producto(instantanea, registro)
 
@@ -206,9 +248,15 @@ def parsear(path: Path | str, registro: tuple[Ficha, ...] = REGISTRO) -> Resulta
             detalle=Detalle("parser_retirado"),
         )
 
-    extraccion = ficha.extraer(instantanea, path)
+    desde = cursor.offset if incremental else 0
+    extraccion = ficha.extraer(instantanea, path, desde)
+    # `identidad_reconocida_sin_cierres` describe el ARCHIVO, no la cola:
+    # en una lectura incremental sin turnos nuevos no se afirma que el
+    # archivo no tenga cierres — ya se sabía que los tenía.
     detalle = (
-        Detalle("identidad_reconocida_sin_cierres") if not extraccion.turnos else None
+        Detalle("identidad_reconocida_sin_cierres")
+        if not extraccion.turnos and not incremental
+        else None
     )
     return ResultadoParseo(
         diagnostico="ok",
@@ -219,4 +267,6 @@ def parsear(path: Path | str, registro: tuple[Ficha, ...] = REGISTRO) -> Resulta
         detalle=detalle,
         eventos_no_reconocidos=extraccion.eventos_no_reconocidos,
         descartes_linea=extraccion.descartes_linea,
+        instantanea=instantanea,
+        incremental=incremental,
     )
