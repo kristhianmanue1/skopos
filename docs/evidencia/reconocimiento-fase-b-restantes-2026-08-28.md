@@ -33,6 +33,15 @@ no una ficha.
 
 ## kimi-code — JSONL, pero partido en dos y sin tiempo
 
+> **⚠️ SECCIÓN ERRÓNEA, corregida el mismo día.** Este análisis se quedó
+> en `context.jsonl` y no abrió el `message.payload` de `wire.jsonl`, que
+> trae la conversación **y** el tiempo **y** marcas explícitas de turno
+> (`TurnBegin`/`TurnEnd`). kimi-code **no estaba bloqueado**: era el caso
+> más fácil de los tres, y quedó implementado el 2026-08-28
+> (`docs/evidencia/ficha-kimi-code-2026-08-28.md`). Se conserva el texto
+> como registro del error: el diagnóstico salió de mirar un archivo y no
+> su vecino.
+
 `~/.kimi/sessions/<workspace>/<sesión>/`, con dos archivos por sesión:
 
 | Archivo | Nº | Líneas (muestra) | Qué tiene | Timestamp |
@@ -79,8 +88,10 @@ la forma es justo lo que el contrato asume. Con los datos de hoy:
 - **codex-cli** ✅ y **claude-code** ✅ — JSONL por línea, contrato
   intacto, ambos entregados.
 - **cline** — cabe con una decisión menor (declarar que no usa cursor).
-- **kimi-code** — exige decidir la fuente del tiempo, y de paso resolver
-  la colisión con ADR-008; posiblemente una frontera de dos archivos.
+  **Hecho el mismo día**: `docs/evidencia/ficha-cline-2026-08-28.md`.
+- **kimi-code** — ~~exige decidir la fuente del tiempo~~ **diagnóstico
+  erróneo, ver aviso arriba**: `wire.jsonl` basta por sí solo. **Hecho el
+  mismo día**: `docs/evidencia/ficha-kimi-code-2026-08-28.md`.
 - **opencode** — exige un ADR sobre orígenes que no son archivos de
   líneas. Es el más caro con diferencia y el que más contenido tiene.
 
