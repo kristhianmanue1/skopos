@@ -424,12 +424,45 @@ class ReanalizarTests(unittest.TestCase):
         self.assertEqual(codigo, 1)
         self.assertIn("no hay versión guardada", stderr.getvalue())
 
+    def test_rollout_que_ya_no_se_identifica_no_supersede_a_ciegas(self):
+        # ADR-010 §4 + lección Y-5: si el archivo de origen ya no casa
+        # con ningún parser (rotado, sustituido), el supersede se detiene
+        # con el diagnóstico a la vista, nunca reparsea "por parecido".
+        rollout = Path(self.id().replace(".", "_") + ".jsonl")
+        self.addCleanup(rollout.unlink, missing_ok=True)
+        contenido = '{"type":"algo-de-otro-formato","payload":{}}\n'
+        rollout.write_text(contenido, encoding="utf-8")
+        guardar_analisis(
+            Analisis(
+                tema="viejo",
+                resumen="analisis original",
+                turn_id="r9",
+                session_id=rollout.stem,
+                ruta_origen=str(rollout),
+                offset_inicio=0,
+                offset_fin=len(contenido),
+                cli="codex-cli", modelo_analisis="test-modelo",
+            ),
+            coleccion=self.coleccion,
+        )
+        stderr = StringIO()
+        with mock.patch("skopos.cli.coleccion_local", return_value=self.coleccion):
+            with redirect_stderr(stderr):
+                codigo = reanalizar_command(["r9"])
+        self.assertEqual(codigo, 1)
+        self.assertIn("formato_desconocido", stderr.getvalue())
+        # y la versión guardada sigue intacta
+        self.assertEqual(version_vigente("r9", coleccion=self.coleccion)["tema"], "viejo")
+
     def test_reanalisis_completo_reextrae_y_supersede(self):
         # modo completo: re-extrae el turno del rollout real y re-analiza
         # (Ollama mockeado); fallo explícito si el rollout ya no sirve
         rollout = Path(self.id().replace(".", "_") + ".jsonl")
         self.addCleanup(rollout.unlink, missing_ok=True)
         contenido = (
+            # identidad Codex: la re-lectura pasa por la frontera de
+            # SPEC-006, que rechaza lo que no se identifica (ADR-010 §4)
+            '{"type":"session_meta","payload":{"originator":"codex-tui"}}\n'
             '{"type":"response_item","payload":{"type":"message","role":"user",'
             '"content":[{"type":"input_text","text":"hola"}]}}\n'
             '{"type":"event_msg","payload":{"type":"task_complete","turn_id":"r3"}}\n'

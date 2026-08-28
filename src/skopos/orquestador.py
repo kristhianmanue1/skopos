@@ -18,7 +18,8 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from skopos.almacenamiento import DocumentoInvalido, existe_turn_id, guardar_analisis
 from skopos.analisis import Analisis, AnalisisFallido, analizar_turno
-from skopos.captura import Turno, extraer_turnos
+from skopos.captura import Turno
+from skopos.parseo import ResultadoParseo, parsear
 
 ESTADOS_TERMINALES = {"guardado", "fallido", "omitido"}
 
@@ -71,17 +72,32 @@ def procesar_rollout(
     guardar: Callable[..., dict] = guardar_analisis,
     ya_guardado: Callable[..., bool] = existe_turn_id,
     desde: datetime | None = None,
+    on_diagnostico: Callable[[Path, ResultadoParseo], None] | None = None,
     **kwargs_analisis,
 ) -> list[ResultadoTurno]:
     """Procesa los turnos cerrados de un rollout, uno por uno.
+
+    La entrada pasa por la frontera de SPEC-006 (`parsear`), no por el
+    parser de Codex directamente: un archivo cuya identidad no casa se
+    descarta con diagnóstico, nunca se parsea "por parecido" (ADR-010
+    §4). `on_diagnostico` recibe SIEMPRE el `ResultadoParseo` del
+    archivo —incluido el `ok`— para que todo descarte sea contabilizable
+    y atribuible (ADR-010 §3); sin él, el descarte sigue siendo correcto
+    pero silencioso, así que el vigilante lo pasa siempre.
 
     `desde` (ADR-008, decisión 8): si está presente, sólo se procesan los
     turnos cerrados a partir de ese instante; los anteriores quedan fuera
     de la ventana sin producir resultado (no son "omitidos" — nunca se
     les consultó a la dedup; son históricos no invitados).
     """
+    parseo = parsear(path)
+    if on_diagnostico is not None:
+        on_diagnostico(Path(path), parseo)
+    if parseo.diagnostico != "ok":
+        return []
+
     resultados: list[ResultadoTurno] = []
-    for turno in extraer_turnos(path):
+    for turno in parseo.turnos:
         if not _cerrado_desde(turno, desde):
             continue
 

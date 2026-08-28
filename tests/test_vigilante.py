@@ -7,6 +7,8 @@ import os
 import tempfile
 import time
 import unittest
+from contextlib import redirect_stderr
+from io import StringIO
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest import mock
@@ -45,6 +47,8 @@ def _rollout_de_un_turno(
     if timestamp is not None:
         cierre["timestamp"] = timestamp
     eventos = [
+        # identidad Codex: la ingesta pasa por la frontera de SPEC-006
+        {"type": "session_meta", "payload": {"originator": "codex-tui"}},
         {
             "type": "response_item",
             "payload": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": texto}]},
@@ -52,6 +56,34 @@ def _rollout_de_un_turno(
         cierre,
     ]
     path.write_text("\n".join(json.dumps(e) for e in eventos) + "\n", encoding="utf-8")
+
+
+
+class ReporteDeDescartesTests(unittest.TestCase):
+    """ADR-010 §3: un archivo que la frontera rechaza no baja en silencio."""
+
+    def test_los_descartes_se_reportan_por_diagnostico(self):
+        from collections import Counter
+        from skopos.vigilante import _reportar_diagnosticos
+
+        salida = StringIO()
+        with redirect_stderr(salida):
+            _reportar_diagnosticos(
+                Counter({"ok": 3, "formato_desconocido": 2, "entrada_corrupta": 1})
+            )
+        texto = salida.getvalue()
+        self.assertIn("entrada_corrupta: 1", texto)
+        self.assertIn("formato_desconocido: 2", texto)
+        self.assertNotIn("ok:", texto)  # el caso normal no es ruido de ciclo
+
+    def test_sin_descartes_no_imprime_nada(self):
+        from collections import Counter
+        from skopos.vigilante import _reportar_diagnosticos
+
+        salida = StringIO()
+        with redirect_stderr(salida):
+            _reportar_diagnosticos(Counter({"ok": 5}))
+        self.assertEqual(salida.getvalue(), "")
 
 
 class DescubrirRolloutsTests(unittest.TestCase):

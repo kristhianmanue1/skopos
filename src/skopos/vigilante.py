@@ -21,6 +21,7 @@ import argparse
 import signal
 import sys
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
@@ -29,6 +30,7 @@ from pymongo.collection import Collection
 
 from skopos.almacenamiento import coleccion_local
 from skopos.orquestador import ResultadoTurno, procesar_rollout
+from skopos.parseo import ResultadoParseo
 
 SESSIONS_DIR_POR_DEFECTO = Path.home() / ".codex" / "sessions"
 INTERVALO_POR_DEFECTO = 5.0
@@ -46,6 +48,7 @@ def ciclo(
     coleccion: Collection,
     descubrir: Callable[[Path], set[Path]] = descubrir_rollouts,
     t0: datetime | None = None,
+    on_diagnostico: Callable[[Path, ResultadoParseo], None] | None = None,
     **kwargs_procesar,
 ) -> list[ResultadoTurno]:
     """Un barrido completo: procesa los turnos nuevos de todos los rollouts.
@@ -65,7 +68,13 @@ def ciclo(
             except OSError:
                 continue
         resultados.extend(
-            procesar_rollout(path, coleccion=coleccion, desde=t0, **kwargs_procesar)
+            procesar_rollout(
+                path,
+                coleccion=coleccion,
+                desde=t0,
+                on_diagnostico=on_diagnostico,
+                **kwargs_procesar,
+            )
         )
     return resultados
 
@@ -76,6 +85,7 @@ def ejecutar(
     coleccion: Collection,
     intervalo: float = INTERVALO_POR_DEFECTO,
     on_ciclo: Callable[[list[ResultadoTurno]], None] | None = None,
+    on_diagnosticos: Callable[[Counter], None] | None = None,
     max_ciclos: int | None = None,
     backfill: bool = False,
     **kwargs_procesar,
@@ -98,11 +108,22 @@ def ejecutar(
     try:
         ciclos = 0
         while not detener:
+            diagnosticos: Counter[str] = Counter()
+
+            def _contar(_path: Path, parseo: ResultadoParseo) -> None:
+                diagnosticos[parseo.diagnostico] += 1
+
             resultados = ciclo(
-                sessions_dir, coleccion=coleccion, t0=t0, **kwargs_procesar
+                sessions_dir,
+                coleccion=coleccion,
+                t0=t0,
+                on_diagnostico=_contar,
+                **kwargs_procesar,
             )
             if on_ciclo:
                 on_ciclo(resultados)
+            if on_diagnosticos:
+                on_diagnosticos(diagnosticos)
             ciclos += 1
             if max_ciclos is not None and ciclos >= max_ciclos:
                 break
@@ -120,6 +141,20 @@ def _reportar_ciclo(resultados: list[ResultadoTurno]) -> None:
     print(f"ciclo: {guardados} guardado(s), {len(fallidos)} fallido(s)", file=sys.stderr)
     for r in fallidos:
         print(f"  fallido {r.turn_id}: {r.motivo}", file=sys.stderr)
+
+
+def _reportar_diagnosticos(diagnosticos: Counter) -> None:
+    """ADR-010 §3: todo descarte es contabilizable y atribuible.
+
+    Un archivo que la frontera no acepta nunca baja en silencio; los
+    `ok` no se reportan (son el caso normal, y su conteo por ciclo sería
+    ruido en cada barrido).
+    """
+    descartes = {d: n for d, n in diagnosticos.items() if d != "ok"}
+    if not descartes:
+        return
+    detalle = ", ".join(f"{d}: {n}" for d, n in sorted(descartes.items()))
+    print(f"ciclo: archivos descartados — {detalle}", file=sys.stderr)
 
 
 def watch_command(argv: list[str]) -> int:
@@ -151,6 +186,7 @@ def watch_command(argv: list[str]) -> int:
         coleccion=coleccion,
         intervalo=args.intervalo,
         on_ciclo=_reportar_ciclo,
+        on_diagnosticos=_reportar_diagnosticos,
         backfill=args.backfill,
     )
     return 0

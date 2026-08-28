@@ -29,8 +29,73 @@ def _cierre(turn_id: str) -> dict:
     return {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": turn_id}}
 
 
+def _session_meta() -> dict:
+    # identidad Codex: desde ADR-010 la ingesta pasa por la frontera de
+    # SPEC-006, que descarta lo que no la lleva (nunca parsea "por
+    # parecido"). Las fixtures son rollouts, así que la declaran.
+    return {"type": "session_meta", "payload": {"originator": "codex-tui", "cli_version": "0.147.0"}}
+
+
 def _nunca_visto(turn_id, *, coleccion):
     return False
+
+
+class FronteraSpec006Tests(unittest.TestCase):
+    """La ingesta pasa por parsear(), no por el parser de Codex directo."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = Path(self.tmp.name) / "rollout-test.jsonl"
+
+    def _escribir_crudo(self, eventos: list[dict]) -> None:
+        self.path.write_text(
+            "\n".join(_linea(e) for e in eventos) + "\n", encoding="utf-8"
+        )
+
+    def test_archivo_sin_identidad_no_se_procesa_ni_analiza(self):
+        # mismo contenido de un rollout, sin session_meta: antes de
+        # ADR-010 se parseaba igual; ahora se descarta (§4, sin fallback)
+        self._escribir_crudo([_mensaje("user", "hola"), _cierre("t1")])
+        llamadas = []
+        resultados = procesar_rollout(
+            self.path,
+            coleccion=None,
+            analizar=lambda t, **k: llamadas.append(t),
+            guardar=lambda a, **k: llamadas.append(a),
+            ya_guardado=_nunca_visto,
+        )
+        self.assertEqual(resultados, [])
+        self.assertEqual(llamadas, [])
+
+    def test_el_descarte_es_atribuible_a_su_diagnostico(self):
+        # ADR-010 §3: un descarte sin diagnóstico es un bug de contrato
+        self._escribir_crudo([_mensaje("user", "hola"), _cierre("t1")])
+        vistos = []
+        procesar_rollout(
+            self.path,
+            coleccion=None,
+            ya_guardado=_nunca_visto,
+            on_diagnostico=lambda ruta, parseo: vistos.append((ruta, parseo.diagnostico)),
+        )
+        self.assertEqual(vistos, [(self.path, "formato_desconocido")])
+
+    def test_el_diagnostico_ok_tambien_se_notifica(self):
+        self._escribir_crudo([_session_meta(), _mensaje("user", "hola"), _cierre("t1")])
+        vistos = []
+        procesar_rollout(
+            self.path,
+            coleccion=None,
+            analizar=lambda t, **k: Analisis(
+                tema="x", resumen="y", turn_id=t.turn_id, session_id=t.session_id,
+                ruta_origen=t.ruta_origen, offset_inicio=t.offset_inicio,
+                offset_fin=t.offset_fin, cli="codex-cli", modelo_analisis="test-modelo",
+            ),
+            guardar=lambda a, **k: {},
+            ya_guardado=_nunca_visto,
+            on_diagnostico=lambda ruta, parseo: vistos.append(parseo.diagnostico),
+        )
+        self.assertEqual(vistos, ["ok"])
 
 
 class ProcesarRolloutTests(unittest.TestCase):
@@ -41,7 +106,8 @@ class ProcesarRolloutTests(unittest.TestCase):
 
     def _escribir(self, eventos: list[dict]) -> None:
         self.path.write_text(
-            "\n".join(_linea(e) for e in eventos) + "\n", encoding="utf-8"
+            "\n".join(_linea(e) for e in [_session_meta()] + eventos) + "\n",
+            encoding="utf-8",
         )
 
     def test_turno_analizado_y_guardado_queda_en_guardado(self):

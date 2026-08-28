@@ -28,7 +28,7 @@ from skopos.almacenamiento import (
     version_vigente,
 )
 from skopos.analisis import AnalisisFallido, analizar_turno, redactar_secretos
-from skopos.captura import extraer_turnos
+from skopos.parseo import parsear
 
 # P5 (ADR-009): presupuesto de la salida. Defaults afinables; la palanca
 # es la acotación misma (46.5% de los turnos del snapshot 2026-08-20
@@ -200,18 +200,21 @@ def reanalizar_command(argv: list[str]) -> int:
                 return 0
         else:
             # re-análisis completo: re-extrae el turno del rollout de
-            # origen — si el archivo ya no está o el turno no se halla,
-            # fallo explícito, nunca supersede a ciegas (lección Y-5)
-            try:
-                turnos = {
-                    t.turn_id: t for t in extraer_turnos(vigente["ruta_origen"])
-                }
-            except OSError as exc:
+            # origen por la frontera de SPEC-006. Si el archivo ya no
+            # está, no se identifica (rotado, sustituido) o no trae el
+            # turno, el fallo es explícito con su diagnóstico a la vista:
+            # nunca supersede a ciegas (lección Y-5) ni reparsea "por
+            # parecido" (ADR-010 §4)
+            parseo = parsear(vigente["ruta_origen"])
+            if parseo.diagnostico != "ok":
+                codigo = f" ({parseo.detalle.codigo})" if parseo.detalle else ""
                 print(
-                    f"error: no se puede releer {vigente['ruta_origen']}: {exc}",
+                    f"error: no se puede releer {vigente['ruta_origen']}: "
+                    f"{parseo.diagnostico}{codigo}",
                     file=sys.stderr,
                 )
                 return 1
+            turnos = {t.turn_id: t for t in parseo.turnos}
             turno = turnos.get(args.turn_id)
             if turno is None:
                 print(
