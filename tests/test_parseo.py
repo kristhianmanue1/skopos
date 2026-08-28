@@ -284,11 +284,17 @@ class DetalleTests(unittest.TestCase):
 
 
 class RegistroTests(unittest.TestCase):
-    def test_el_registro_declara_la_ficha_de_referencia(self):
-        self.assertEqual(REGISTRO, (FICHA_CODEX,))
+    def test_el_registro_declara_las_fichas_activas(self):
+        self.assertIn(FICHA_CODEX, REGISTRO)
         self.assertEqual(FICHA_CODEX.cli_producto, "codex-cli")
         self.assertEqual(FICHA_CODEX.version_parser, "parser-codex/v1")
-        self.assertTrue(FICHA_CODEX.activa)
+        self.assertTrue(all(f.activa for f in REGISTRO))
+
+    def test_cada_producto_registrado_aparece_una_sola_vez(self):
+        # dos fichas del mismo producto exigirian exclusion mutua
+        # explicita (ADR-010 §8); hoy no hay ninguna pareja asi
+        productos = [f.cli_producto for f in REGISTRO]
+        self.assertEqual(len(productos), len(set(productos)))
 
     def test_ningun_producto_repite_ficha_con_el_mismo_id(self):
         ids = [f.id_ficha for f in REGISTRO]
