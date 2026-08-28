@@ -373,9 +373,16 @@ normalización no interpreta ni ejecuta contenido.
   re-lectura produce `turn_id`s idénticos y la dedup en Mongo (ADR-005)
   los omite.
 - **Identidad**: cada adaptador declara su estrategia: (a) **id crudo**
-  si el formato garantiza unicidad global (Codex: UUIDv7 — verificado
-  empíricamente contra el corpus, ronda 10; los 6 documentos del piloto
-  siguen válidos sin cambio), o (b) **id calificado**
+  si el formato garantiza unicidad global (~~Codex: UUIDv7 — verificado
+  empíricamente contra el corpus, ronda 10~~ — **excepción REVOCADA el
+  2026-08-28 por contraejemplo**: el `turn_id` de Codex es único dentro
+  de una sesión pero **se repite entre sesiones**, con texto distinto;
+  16,301 turnos daban sólo 10,441 ids y la dedup habría descartado el
+  35 %. Evidencia:
+  `docs/evidencia/colision-turn-id-codex-2026-08-28.md`. parser-codex/v1
+  pasa a **id calificado** `codex-cli:{session_id}:{turn_id}`, con el que
+  el mismo corpus da 16,301 ids únicos y 0 colisiones. **Hoy ningún
+  adaptador usa id crudo**), o (b) **id calificado**
   (`{cli_producto}:{id_bruto}`) si el formato puede colisionar entre
   CLIs. **Gramática inequívoca del ID calificado** (corrección 4 de
   Pinax): `id_calificado := cli_producto ":" id_bruto`, donde
@@ -470,10 +477,14 @@ evento de cierre. **timestamp_cierre**: campo `timestamp` del evento de
 cierre (ISO 8601 UTC con `Z`; ausente ⇒ `None`).
 **Codificación/offsets**: UTF-8; `offset_inicio`/`offset_fin` son byte
 offsets **de la instantánea materializada** (§5; sello P4a sobre
-ellos). **Identidad**: id crudo (UUIDv7) como **excepción compatible y
-probabilística** — evidencia: verificación empírica de la ronda 10
-contra el corpus; revisable a calificada si aparece un
-contraejemplo/canario. `version_cli_observada`:
+ellos). **Identidad**: **id calificado** `codex-cli:{session_id}:{turn_id}`
+desde el 2026-08-28. *(Hasta esa fecha: id crudo UUIDv7 como excepción
+probabilística de la ronda 10. La revisión que el propio §7 dejaba
+prevista se disparó con el contraejemplo medido — 5,860 turnos, el 35 %
+del corpus, se habrían descartado en silencio;
+`docs/evidencia/colision-turn-id-codex-2026-08-28.md`.)* Documentos
+guardados antes del cambio conservan su id crudo: son legado y no se
+mutan (ADR-007 es insert-only). `version_cli_observada`:
 `session_meta.payload.cli_version` (presente en 616/616). Roles
 excluidos del texto conversacional: `developer`.
 **Estado de la implementación (actualizado 2026-08-28, fase A de P-003

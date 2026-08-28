@@ -91,7 +91,7 @@ class DeteccionTests(_ConArchivo):
         self._escribir([_session_meta(), _mensaje("user", "hola"), _cierre("t1")])
         resultado = parsear(self.path)
         self.assertEqual(resultado.diagnostico, "ok")
-        self.assertEqual([t.turn_id for t in resultado.turnos], ["t1"])
+        self.assertEqual([t.turn_id for t in resultado.turnos], ["codex-cli:rollout-test:t1"])
         self.assertEqual(resultado.cli_producto, "codex-cli")
         self.assertEqual(resultado.version_formato, "codex-rollout/v1")
         self.assertEqual(resultado.version_cli_observada, "0.147.0")

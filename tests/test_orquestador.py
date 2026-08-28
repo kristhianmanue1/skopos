@@ -152,7 +152,7 @@ class AvanceDelCursorTests(unittest.TestCase):
         from skopos.parseo import parsear
 
         def analizar(turno, **_):
-            if turno.turn_id == "t2":
+            if turno.turn_id.endswith(":t2"):
                 raise AnalisisFallido("Ollama caído")
             return self._analisis(turno)
 
@@ -218,7 +218,7 @@ class ProcesarRolloutTests(unittest.TestCase):
         )
         self.assertEqual(len(resultados), 1)
         self.assertEqual(resultados[0].estado, "guardado")
-        self.assertEqual(resultados[0].turn_id, "t1")
+        self.assertEqual(resultados[0].turn_id, "codex-cli:rollout-test:t1")
         self.assertEqual(len(guardados), 1)
 
     def test_analisis_fallido_no_llama_a_guardar(self):
@@ -278,8 +278,9 @@ class ProcesarRolloutTests(unittest.TestCase):
         llamadas = {"t1": AnalisisFallido("falla t1"), "t2": None}
 
         def analizar_mixto(turno, **_):
-            if llamadas[turno.turn_id] is not None:
-                raise llamadas[turno.turn_id]
+            crudo = turno.turn_id.rsplit(":", 1)[-1]  # identidad calificada
+            if llamadas[crudo] is not None:
+                raise llamadas[crudo]
             return Analisis(
                 tema="x", resumen="y", turn_id=turno.turn_id, session_id=turno.session_id,
                 ruta_origen=turno.ruta_origen, offset_inicio=turno.offset_inicio,
@@ -292,7 +293,8 @@ class ProcesarRolloutTests(unittest.TestCase):
             ya_guardado=_nunca_visto,
         )
         estados = {r.turn_id: r.estado for r in resultados}
-        self.assertEqual(estados, {"t1": "fallido", "t2": "guardado"})
+        self.assertEqual(estados, {"codex-cli:rollout-test:t1": "fallido",
+                                   "codex-cli:rollout-test:t2": "guardado"})
 
     def test_fallo_de_dedup_no_tumba_el_proceso_entero(self):
         # ronda adversarial 2026-08-13 [BLOCKER]: ya_guardado sin try/except

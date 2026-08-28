@@ -63,9 +63,10 @@ class LecturaIncrementalTests(_ConRollout):
         completo = parsear(self.path)
 
         self.assertTrue(incremental.incremental)
-        self.assertEqual([t.turn_id for t in incremental.turnos], ["t2"])
+        self.assertEqual([t.turn_id for t in incremental.turnos], ["codex-cli:rollout-test:t2"])
         # byte a byte lo mismo que la lectura completa: offsets y sellos
-        nuevos_del_completo = [t for t in completo.turnos if t.turn_id == "t2"]
+        nuevos_del_completo = [t for t in completo.turnos
+                               if t.turn_id.endswith(":t2")]
         self.assertEqual(incremental.turnos, nuevos_del_completo)
 
     def test_el_proyecto_sobrevive_a_la_frontera_incremental(self):
@@ -115,7 +116,7 @@ class ValidacionDelCursorTests(_ConRollout):
         cursor_falso = Cursor(cursor.offset, "0" * 64)
         r = parsear(self.path, cursor=cursor_falso)
         self.assertFalse(r.incremental)
-        self.assertEqual([t.turn_id for t in r.turnos], ["t1"])
+        self.assertEqual([t.turn_id for t in r.turnos], ["codex-cli:rollout-test:t1"])
 
     def test_archivo_editado_por_debajo_del_cursor_se_reparsea_entero(self):
         self._escribir([_session_meta(), _mensaje("uno"), _cierre("t1")])
@@ -124,7 +125,7 @@ class ValidacionDelCursorTests(_ConRollout):
         self._escribir([_session_meta(), _mensaje("XXX"), _cierre("t9")])
         r = parsear(self.path, cursor=cursor)
         self.assertFalse(r.incremental)
-        self.assertEqual([t.turn_id for t in r.turnos], ["t9"])
+        self.assertEqual([t.turn_id for t in r.turnos], ["codex-cli:rollout-test:t9"])
 
     def test_archivo_truncado_por_debajo_del_cursor_se_reparsea_entero(self):
         self._escribir([_session_meta(), _mensaje("uno"), _cierre("t1"),
@@ -133,7 +134,7 @@ class ValidacionDelCursorTests(_ConRollout):
         self._escribir([_session_meta(), _mensaje("uno"), _cierre("t1")])
         r = parsear(self.path, cursor=cursor)
         self.assertFalse(r.incremental)
-        self.assertEqual([t.turn_id for t in r.turnos], ["t1"])
+        self.assertEqual([t.turn_id for t in r.turnos], ["codex-cli:rollout-test:t1"])
 
     def test_cursor_ausente_o_en_cero_no_es_incremental(self):
         self._escribir([_session_meta(), _mensaje("uno"), _cierre("t1")])

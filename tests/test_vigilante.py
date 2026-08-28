@@ -226,7 +226,7 @@ class PoliticaArranqueTests(unittest.TestCase):
             self.sessions_dir, coleccion=self.coleccion,
             t0=t0, analizar=self._analizar_fake,
         )
-        self.assertEqual([r.turn_id for r in resultados], ["t-nuevo"])
+        self.assertEqual([r.turn_id for r in resultados], ["codex-cli:rollout-nuevo:t-nuevo"])
         self.assertEqual(resultados[0].estado, "guardado")
 
     def test_backfill_procesa_el_historico(self):
@@ -238,7 +238,7 @@ class PoliticaArranqueTests(unittest.TestCase):
             self.sessions_dir, coleccion=self.coleccion,
             t0=None, analizar=self._analizar_fake,  # backfill: sin corte
         )
-        self.assertEqual([r.turn_id for r in resultados], ["t-viejo"])
+        self.assertEqual([r.turn_id for r in resultados], ["codex-cli:rollout-viejo:t-viejo"])
         self.assertEqual(resultados[0].estado, "guardado")
 
     def test_turno_sin_timestamp_es_historico_bajo_corte(self):
@@ -254,7 +254,7 @@ class PoliticaArranqueTests(unittest.TestCase):
             self.sessions_dir, coleccion=self.coleccion,
             t0=None, analizar=self._analizar_fake,
         )
-        self.assertEqual([r.turn_id for r in resultados], ["t-sints"])
+        self.assertEqual([r.turn_id for r in resultados], ["codex-cli:rollout-sin-ts:t-sints"])
 
     def test_timestamp_tz_naive_es_historico_y_no_tumba_el_ciclo(self):
         # ronda 5, H1: un timestamp parseable pero sin offset compararía
@@ -283,7 +283,7 @@ class PoliticaArranqueTests(unittest.TestCase):
             self.sessions_dir, coleccion=self.coleccion,
             t0=t0, analizar=self._analizar_fake,
         )
-        self.assertEqual([r.turn_id for r in resultados], ["t-en-t0"])
+        self.assertEqual([r.turn_id for r in resultados], ["codex-cli:rollout-en-t0:t-en-t0"])
 
     def test_banner_watch_command_distingue_modos(self):
         # ronda 5, H4: superficie declarada en ADR-008

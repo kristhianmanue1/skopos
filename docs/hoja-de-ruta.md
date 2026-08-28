@@ -53,10 +53,17 @@ a `f-ciclo-multi-cli-2026-08-20`; transacción
 
 ## Índice de turnos (P-004) e identidad de Codex
 
-P-004 aceptada 🔒 2026-08-28: `skopos.turnos` como colección aparte, con
-`documento-turno-mongo v1` y el comando `skopos indexar`. **El índice no
-se ha llenado**: el piloto destapó que el `turn_id` crudo de Codex se
-repite entre sesiones y la dedup descartaría el 35 % de los turnos
-(`docs/evidencia/colision-turn-id-codex-2026-08-28.md`). Calificar con la
-sesión lo resuelve (0 colisiones sobre 16,301), pero toca la ficha del
-ADR-010 §7/§8 y espera decisión 🔒 del dueño.
+P-004 aceptada 🔒 2026-08-28 e **implementada**: `skopos.turnos` con
+`documento-turno-mongo v1` y el comando `skopos indexar`. El piloto
+destapó que el `turn_id` crudo de Codex se repite entre sesiones —la
+dedup habría descartado el 35 % de los turnos
+(`docs/evidencia/colision-turn-id-codex-2026-08-28.md`)—, así que **la
+identidad de parser-codex pasó a calificada** (🔒 2026-08-28, ADR-010
+§7/§8 actualizados: la excepción de id crudo queda revocada por
+contraejemplo). Con eso, **índice lleno: 19,826 turnos de 4 CLIs en
+47.6 s, 174 MB, búsqueda en <10 ms**
+(`docs/evidencia/indice-de-turnos-2026-08-28.md`).
+
+Pendiente declarado: ninguna superficie sirve todavía el texto crudo
+—cuando exista debe llevar P3/P5 de ADR-009—, `watch` no indexa aún, y
+falta el control positivo del detector de eco sobre la colección nueva.

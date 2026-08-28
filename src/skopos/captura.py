@@ -201,8 +201,30 @@ def _texto_de_response_item(evento: object) -> tuple[str, str] | None:
     return rol, contenido
 
 
+def calificar(session_id: str, turn_id_bruto: str) -> str:
+    """`{cli_producto}:{session_id}:{turn_id}` — identidad calificada.
+
+    ADR-010 §7 permitió a este adaptador el **id crudo** como excepción
+    probabilística, "revisable a calificada si aparece un
+    contraejemplo". Apareció: sobre el corpus real, 16,301 turnos dan
+    sólo 10,441 `turn_id` distintos —el id se repite entre sesiones, con
+    texto distinto— así que la dedup descartaría el 35 % de los turnos
+    (`docs/evidencia/colision-turn-id-codex-2026-08-28.md`). Calificar
+    con la sesión da 16,301 ids únicos y 0 colisiones.
+
+    La gramática es la del §7: el **primer** dos puntos delimita el
+    producto, que por construcción no lleva ninguno; lo de después es el
+    id bruto tal cual, sin escapes.
+    """
+    return f"{CLI_PRODUCTO}:{session_id}:{turn_id_bruto}"
+
+
 def _turn_id_si_cierre(evento: object) -> str | None:
-    """Devuelve el turn_id sólo para el marcador empírico task_complete."""
+    """Devuelve el turn_id crudo sólo para el marcador task_complete.
+
+    La calificación la aplica el extractor, que es quien conoce la
+    sesión.
+    """
     if not isinstance(evento, dict) or evento.get("type") != EVENTO_CIERRE:
         return None
     payload = evento.get("payload")
@@ -388,7 +410,7 @@ def extraer_de_instantanea(
         vistos.add(turn_id)
         turnos.append(
             Turno(
-                turn_id=turn_id,
+                turn_id=calificar(session_id, turn_id),
                 session_id=session_id,
                 texto_usuario="".join(texto_usuario_partes),
                 texto_agente="".join(texto_agente_partes),

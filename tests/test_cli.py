@@ -467,12 +467,15 @@ class ReanalizarTests(unittest.TestCase):
             '"content":[{"type":"input_text","text":"hola"}]}}\n'
             '{"type":"event_msg","payload":{"type":"task_complete","turn_id":"r3"}}\n'
         )
+        # identidad calificada (ADR-010 §7): el turn_id guardado es el que
+        # produce el parser, no el crudo del evento
+        turn_id = f"codex-cli:{rollout.stem}:r3"
         rollout.write_text(contenido, encoding="utf-8")
         guardar_analisis(
             Analisis(
                 tema="viejo",
                 resumen="analisis original",
-                turn_id="r3",
+                turn_id=turn_id,
                 session_id=rollout.stem,
                 ruta_origen=str(rollout),
                 offset_inicio=0,
@@ -486,7 +489,7 @@ class ReanalizarTests(unittest.TestCase):
         analisis_nuevo = _Analisis(
             tema="nuevo",
             resumen="reanalizado",
-            turn_id="r3",
+            turn_id=turn_id,
             session_id=rollout.stem,
             ruta_origen=str(rollout),
             offset_inicio=0,
@@ -498,9 +501,9 @@ class ReanalizarTests(unittest.TestCase):
             with mock.patch("skopos.cli.analizar_turno", return_value=analisis_nuevo):
                 buffer = StringIO()
                 with redirect_stdout(buffer):
-                    codigo = reanalizar_command(["r3"])
+                    codigo = reanalizar_command([turn_id])
         self.assertEqual(codigo, 0)
-        vigente = version_vigente("r3", coleccion=self.coleccion)
+        vigente = version_vigente(turn_id, coleccion=self.coleccion)
         self.assertEqual(vigente["version"], 2)
         self.assertEqual(vigente["tema"], "nuevo")
         # el supersede asienta el sello recomputado (ronda 8, H7)

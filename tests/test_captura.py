@@ -75,7 +75,7 @@ class ExtraerTurnosTests(unittest.TestCase):
         turnos = extraer_turnos(self.path)
         self.assertEqual(len(turnos), 1)
         turno = turnos[0]
-        self.assertEqual(turno.turn_id, "t1")
+        self.assertEqual(turno.turn_id, "codex-cli:rollout-test:t1")  # calificada (ADR-010 §7)
         self.assertEqual(turno.texto_usuario, "¿qué es MongoDB?")
         self.assertEqual(turno.texto_agente, "Una base de datos documental.")
         self.assertEqual(turno.session_id, "rollout-test")
