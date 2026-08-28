@@ -1,13 +1,17 @@
 # P-003: colector multi-CLI que emite conversation-event/v0 — primer consumidor del contrato de escrubery
 
-Estado: **propuesta** — pendiente de decisión 🔒 del dueño. No reabre
+Estado: **aceptada con alcance recortado** — decisión 🔒 del dueño,
+**2026-08-28**: se aprueban las **fases A y B** (multi-CLI puro, la
+implementación que ADR-010 dejó "pendiente de autorización y plan
+propios"); **las fases C y D quedan aplazadas** sin fecha (opción (c) de
+§6.4). Ver "Firma de decisión" al final. No reabre
 P-002 ni contradice ADR-001..010; **es la implementación autorizada por
 ADR-010** (la implementación multi-CLI "pendiente de autorización y
 plan de fase propios": esta propuesta es ese plan).
 Fecha: 2026-08-22. **Revisada por la ronda 22 (2026-08-28,
 `docs/rondas/2026-08-28-ronda-22-p003.md`): correcciones R2–R5
-incorporadas en §3.3, §4 y §6; R1 (ALTO) queda abierto en §6.4 —
-la propuesta NO está lista para 🔒 mientras R1 siga sin decidir.**
+incorporadas en §3.3, §4 y §6; R1 (ALTO) resuelto por la vía del
+aplazamiento — ver §6.4 y la firma.**
 Origen: sesión de trabajo escrubery (cierre H7-T4 + definición de la
 ruta del supervisor multi-proyecto). Redactada por el agente de escrubery
 a petición del dueño; conservando la gobernanza de P-002 (actos 🔒 una
@@ -100,7 +104,15 @@ Presupuesto LLM: 0 (parseo local de historiales existentes).
 
 ### 6.4 · R1 — cómo hereda la exportación las mitigaciones de ADR-009
 
-**Hallazgo ALTO de la ronda 22, sin resolver en esta redacción.** ADR-009
+> **Resuelto por la decisión 🔒 del 2026-08-28: opción (c)** — al
+> aplazar C/D no existe superficie de exportación, así que no hay canal
+> de eco que mitigar y **ADR-009 no se toca**. La opción (a) queda
+> **preacordada** como la forma que tomará la exportación si algún día
+> se desbloquea, para no reabrir el diseño desde cero. El texto de abajo
+> se conserva como registro del hallazgo y de las alternativas
+> evaluadas.
+
+**Hallazgo ALTO de la ronda 22.** ADR-009
 quedó cerrado 🔒 (2026-08-20) con **P4a + P5 + P3**: toda salida del CLI
 que sirva fragmentos lleva sello de hash, límite de volumen (`--max`,
 default 20) y la declaración *dato-nunca-instrucción* en el contrato. Un
@@ -144,3 +156,34 @@ propuesta.
 - Ruta del supervisor (origen de la necesidad): sesión del dueño
   2026-08-22 (docker + agentes preconfigurados + inyección AN-KLA +
   recolección de resultados; escrubery H8 demostró la inyección viva).
+
+## Firma de decisión
+
+- Dueño: decisión 🔒 comunicada en canal del agente · Fecha:
+  **2026-08-28** · Tras la ronda 22
+  (`docs/rondas/2026-08-28-ronda-22-p003.md`) y la incorporación de
+  R2–R5.
+- **Alcance aprobado: fases A y B.** A (extracción del parser codex a
+  adaptador tras `parser-contrato/v1`) y B (adaptadores de los CLIs
+  restantes del mapa: claude-code, opencode, cline, kimi-code), cada una
+  con el gate de evidencia de §4.
+- **Fases C y D aplazadas** sin fecha (opción (c) de §6.4). Motivo
+  registrado: construyen un formato de exportación **sin consumidor
+  existente** — el supervisor multi-proyecto es ruta definida, no sistema
+  que pueda recibir eventos hoy; AGENTS.md prohíbe placeholders y
+  dependencias especulativas, y §5 de esta propuesta ya concede que
+  A+B valen por sí solas y que C+D son aditivas.
+- **Consecuencias del recorte:** (i) R1 no se activa y ADR-009 queda
+  intacto; (ii) la decisión de dependencia de §3.3 no se toma —
+  `pyproject.toml` sigue con `pymongo` como única dependencia; (iii) el
+  contrato `conversation-event/v0` (v0, de otro repo) **no se congela**
+  en `docs/contratos/` todavía — no se adopta una versión que puede
+  moverse sin tener quién la consuma.
+- **Secuencia acordada:** cerrar **A primero** (refactor puro, gate ya
+  medido: 616/616 positivos, 11/11 negativos); antes de arrancar **B**,
+  revisar el estado del **Hito 15** (ADR de lectura incremental, fase 3b
+  del plan de P-002), porque B multiplica por cinco las superficies que
+  el vigilante lee y ese comportamiento aún no está decidido.
+- **Reactivación de C/D:** exige propuesta o pasada propia cuando exista
+  un consumidor real; la forma ya está preacordada (opción (a): eventos
+  sin fragmento, con `fragmento_sha256`, offsets y ruta).
