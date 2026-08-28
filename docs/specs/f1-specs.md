@@ -278,8 +278,12 @@ entre ciclos, nunca a mitad de procesar un turno.
 > Estado: **aceptada** (decisión 🔒 del dueño, 2026-08-21, junto al
 > ADR-010; gate final ronda 17, PROCEED). Define la
 > frontera `detectar formato → seleccionar parser → producir turnos
-> normalizados`. Sin implementación todavía; su plan de fase exige
-> autorización propia del dueño.
+> normalizados`. **Implementada** en `src/skopos/parseo.py` por la fase
+> A de P-003 (plan de fase autorizado 🔒 2026-08-28; commits `ee37e28`
+> y `e6d8faf`; evidencia en
+> `docs/evidencia/fase-a-adaptador-codex-2026-08-28.md` y
+> `docs/evidencia/enrutado-frontera-2026-08-28.md`). Hoy hay un
+> adaptador registrado (parser-codex/v1); los demás son la fase B.
 
 Comportamiento: dado un archivo de sesión de cualquier CLI soportado,
 Skopos materializa una **instantánea única de bytes** bajo el protocolo

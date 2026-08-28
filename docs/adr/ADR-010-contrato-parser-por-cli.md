@@ -53,7 +53,12 @@ parser-codex: primer `session_meta` con `payload.originator` que case
 `(?i)^codex([ _-]|$)` — frontera de palabra completa, no subcadena;
 616/616 positivos, 11/11 controles negativos sobre 2 formatos ajenos,
 ver `docs/evidencia/predicado-identidad-codex-2026-08-20.md`;
-enum observado: `codex-tui`, `codex_exec`, `Codex Desktop`); (ii) las
+enum observado: `codex-tui`, `codex_exec`, `Codex Desktop` —
+remedición 2026-08-28 sobre 643 archivos: aparece un cuarto valor,
+`codex-chrome-extension-sidepanel` (2), que casa por la frontera de
+palabra sin cambiar predicado ni resultado, 643/643 positivos
+(`docs/evidencia/fase-a-adaptador-codex-2026-08-28.md`); el enum
+describe el corpus observado, no forma parte del predicado); (ii) las
 **marcas de estructura** — con su **rol declarado por la ficha**
 (extracción/cierre o reconocimiento de versión: parser-codex v1
 declara el primer rol, ronda 14 R-3); (iii) el **alcance
@@ -327,10 +332,11 @@ observable sólo por el sello en re-lecturas futuras); su garantía es
 que **diagnóstico, turnos, offsets y sello corresponden exactamente a
 los mismos bytes materializados**. Prohibido volver a tamaño+mtime
 como comparación entre dos lecturas (eliminado en 11b, se mantiene
-eliminado). Nota honesta de implementación: `captura.py` hoy lee el
-archivo dos veces (iteración y sello por rango) — **no conforme**; la
-conversión a este protocolo es el primer paso del plan de
-implementación.
+eliminado). Nota de implementación (actualizada 2026-08-28): `captura.py`
+leía el archivo dos veces (iteración y sello por rango) — **no
+conforme**; la fase A de P-003 (`ee37e28`) lo convirtió a este
+protocolo, y el sello se computa sobre la misma instantánea de la que
+salen los offsets.
 
 ## 6. Normalización de roles sin convertir contenido en autoridad
 
@@ -403,7 +409,7 @@ normalización no interpreta ni ejecuta contenido.
 
 | parser | cli_producto | version_parser | formato declarado | identidad | estado |
 |---|---|---|---|---|---|
-| parser-codex (referencia) | codex-cli | v1 (prevista) | codex-rollout/v1 | id crudo (UUIDv7, verificado ronda 10) | **ficha incluida abajo; implementación de detección pendiente del plan de fase** |
+| parser-codex (referencia) | codex-cli | v1 | codex-rollout/v1 | id crudo (UUIDv7, verificado ronda 10) | **activo — implementado en la fase A de P-003 (`ee37e28`, 2026-08-28): ficha abajo, detección en `src/skopos/parseo.py`, adaptador en `src/skopos/captura.py`; evidencia en `docs/evidencia/fase-a-adaptador-codex-2026-08-28.md`** |
 
 **Ficha del adaptador de referencia (parser-codex v1, documental):**
 `cli = "codex-cli"` (constante). `proyecto`: de `turn_context.cwd`,
@@ -453,12 +459,16 @@ probabilística** — evidencia: verificación empírica de la ronda 10
 contra el corpus; revisable a calificada si aparece un
 contraejemplo/canario. `version_cli_observada`:
 `session_meta.payload.cli_version` (presente en 616/616). Roles
-excluidos del texto conversacional: `developer`. Estado actual de la
-implementación: el parser existe (`captura.py`, SPEC-001); la
-**detección por predicados aún no** — hoy se parsea incondicionalmente
-lo que se le da; el plan de implementación de este contrato añade la
-detección, el `ResultadoParseo` y el vocabulario de diagnósticos
-(ronda 10, H-2: el estado "previsto" es honesto hasta entonces).
+excluidos del texto conversacional: `developer`.
+**Estado de la implementación (actualizado 2026-08-28, fase A de P-003
+— actualización de estado, no de decisión):** la detección por
+predicados, el `ResultadoParseo` y el vocabulario de diagnósticos
+existen (`src/skopos/parseo.py`); el adaptador declara su ficha como
+constantes (`src/skopos/captura.py`) y la ingesta pasa por la frontera
+(`e6d8faf`), de modo que ya no se parsea incondicionalmente lo que se le
+da. *(Redacción previa, hasta 2026-08-28: "el parser existe
+(`captura.py`, SPEC-001); la detección por predicados aún no" —
+ronda 10, H-2, honesta mientras duró.)*
 
 ## 9. Relación con escrubery — frontera precisa (corrección 6 de Pinax)
 
