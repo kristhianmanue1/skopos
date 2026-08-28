@@ -4,7 +4,10 @@ Estado: **propuesta** — pendiente de decisión 🔒 del dueño. No reabre
 P-002 ni contradice ADR-001..010; **es la implementación autorizada por
 ADR-010** (la implementación multi-CLI "pendiente de autorización y
 plan de fase propios": esta propuesta es ese plan).
-Fecha: 2026-08-22.
+Fecha: 2026-08-22. **Revisada por la ronda 22 (2026-08-28,
+`docs/rondas/2026-08-28-ronda-22-p003.md`): correcciones R2–R5
+incorporadas en §3.3, §4 y §6; R1 (ALTO) queda abierto en §6.4 —
+la propuesta NO está lista para 🔒 mientras R1 siga sin decidir.**
 Origen: sesión de trabajo escrubery (cierre H7-T4 + definición de la
 ruta del supervisor multi-proyecto). Redactada por el agente de escrubery
 a petición del dueño; conservando la gobernanza de P-002 (actos 🔒 una
@@ -53,17 +56,24 @@ paredes son reales, y este colector es la contraparte de observación.
    ganan una superficie de exportación estándar (cualquier consumidor
    futuro del supervisor, dashboards, análisis cross-CLI) sin exponer
    el almacén interno.
-3. **No añade dependencias nuevas**: el schema es JSON + ajv
-   (equivalente Python: jsonschema); regla de P-002 intacta.
+3. **Fases A y B no añaden dependencias**: son parseo de JSONL con la
+   biblioteca estándar, igual que `captura.py` hoy. **La fase C sí exige
+   una decisión de dependencia** (corrección R2, ronda 22): validar el
+   schema en Python pide `jsonschema` —presente en el entorno (4.25.1)
+   pero **no declarado** en `pyproject.toml`, que hoy sólo lista
+   `pymongo`—, y declararla es una operación de autoridad separada que
+   requiere autorización explícita del dueño (AGENTS.md). Alternativa
+   sin dependencia: validar el subconjunto del schema a mano en la fase
+   C y declarar en la evidencia qué cláusulas no se verifican.
 
 ## 4. Fases propuestas (cada una cierra con evidencia)
 
 | Fase | Entrega | Gate |
 |---|---|---|
 | A | Refactor del parser codex incrustado → adaptador tras el contrato parser-contrato/v1 (ya aceptado; extracción desde `captura.py`, constantes declaradas, registro §8 del ADR) | Tests actuales en verde; detección por marcas idéntica (616/616, 11/11 negativos) |
-| B | Adaptadores claude-code + opencode (los 3 CLIs con historiales locales ya mapeados por los probes de escrubery; kimi/qwen después) | Muestras positivas + controles negativos fechados en `docs/evidencia/`, como el predicado codex |
-| C | Emisor `conversation-event/v0`: turnos normalizados → eventos validados contra el schema ajv de escrubery (verificador oficial: escrubery expone `npm run` o spec Python equivalente — mini-ticket en escrubery si el dueño lo pide) | Corpus piloto re-ingestado → eventos 100% válidos contra schema; redondeo de pérdida declarado (qué campo no llena cada CLI) |
-| D | `skopos export --format conversation-event` (CLI) | Un comando real ejecutado end-to-end sobre el corpus piloto |
+| B | Adaptadores de los CLIs restantes del mapa de escrubery. El mapa cubre **5**: codex-cli (ya cubierto por la fase A), claude-code, opencode, cline y kimi-code (35 celdas = 5 CLIs × 7 tipos de evento; corrección R3, ronda 22 — la redacción previa decía «3 CLIs» y proponía `qwen-code`, que sólo aparece en el `listar` de candidatos del ensayo 2026-08-20 y **no tiene adaptador mapeado**) | Muestras positivas + controles negativos fechados en `docs/evidencia/`, como el predicado codex |
+| C | Emisor `conversation-event/v0`: turnos normalizados → eventos validados contra una **copia local congelada** del schema en `docs/contratos/` (citada por hash), para que el gate sea ejecutable sin `npm` ni el canal de escrubery. **Precondición: R1 resuelto** (herencia de P4a+P5+P3 de ADR-009, §6.4) y decisión de dependencia tomada (§3.3) | Corpus piloto re-ingestado → eventos 100% válidos contra schema; tabla de cobertura por CLI que **nombra los huecos ya conocidos** —`turno_fallido` transversal, `sesion_cerrada` sólo en cline (corrección R5, ronda 22)— además de los que aparezcan |
+| D | `skopos export --format conversation-event` (CLI) **más su contrato `cli-skopos-export v1`** en `docs/contratos/f1-contratos.md` — es la tercera superficie CLI y ADR-002 gobierna su forma JSON-a-stdout, como `cli-skopos-query v1` y `cli-skopos-reanalizar v1` (corrección R4, ronda 22) | Contrato escrito y un comando real ejecutado end-to-end sobre el corpus piloto, verificado contra ese contrato |
 
 Orden A→B→C→D sin paralelismo; B puede iterar CLI por CLI.
 Presupuesto LLM: 0 (parseo local de historiales existentes).
@@ -82,8 +92,44 @@ Presupuesto LLM: 0 (parseo local de historiales existentes).
 1. ¿Se aprueba P-003 como plan de fase de la implementación ADR-010?
 2. ¿Con o sin la fase C/D (emisión de eventos) en esta primera pasada?
 3. Confirmación del orden CLI de fase B (propuesta: claude-code →
-   opencode → kimi-code → qwen-code, por orden de madurez del mapa de
-   escrubery).
+   opencode → cline → kimi-code, por madurez del mapa de escrubery;
+   `qwen-code` queda fuera por no tener adaptador mapeado — corrección
+   R3, ronda 22).
+4. **Decisión de dependencia de la fase C** (§3.3): autorizar
+   `jsonschema` en `pyproject.toml`, o validar a mano sin dependencia.
+
+### 6.4 · R1 — cómo hereda la exportación las mitigaciones de ADR-009
+
+**Hallazgo ALTO de la ronda 22, sin resolver en esta redacción.** ADR-009
+quedó cerrado 🔒 (2026-08-20) con **P4a + P5 + P3**: toda salida del CLI
+que sirva fragmentos lleva sello de hash, límite de volumen (`--max`,
+default 20) y la declaración *dato-nunca-instrucción* en el contrato. Un
+emisor de `conversation-event/v0` es exactamente esa superficie, y la
+redacción original de P-003 no la contemplaba: tal como estaba, las
+fases C/D abrirían un canal de eco fuera de las mitigaciones que el
+Hito 16 decidió y el Hito 17 midió. Tres salidas, ninguna elegida
+todavía —**requiere decisión 🔒 del dueño porque toca el perímetro de un
+ADR aceptado**:
+
+- **(a) Eventos sin fragmento (recomendada por la ronda 22)** — el
+  evento lleva metadata, `fragmento_sha256`, offsets y ruta, nunca el
+  texto. Hereda P4a por construcción, P5 deja de aplicar (no hay volumen
+  que acotar) y P3 es trivial. Quien quiera el texto usa `skopos query`,
+  que ya tiene sus límites puestos. No modifica ADR-009.
+- **(b) Eventos con fragmento bajo las mismas mitigaciones** — exige
+  `--max` y la marca *dato-nunca-instrucción* dentro de
+  `cli-skopos-export v1`. Más útil para el supervisor, más superficie de
+  eco que vigilar. No modifica ADR-009, lo extiende a una superficie
+  nueva.
+- **(c) Aplazar C/D** — aprobar sólo A+B (multi-CLI puro, ya autorizado
+  por ADR-010 y que vale por sí solo, §5). R1 desaparece hasta que exista
+  un consumidor real del contrato.
+
+Entre (a) y (c) la diferencia es cuánto se adelanta para el supervisor:
+(a) si el supervisor es ruta firme, (c) si todavía es exploración.
+Cualquier opción distinta de (a) y (c) que exporte fragmentos exige
+sustituir o extender ADR-009 con un ADR propio, no una cláusula de esta
+propuesta.
 
 ## Referencias
 
