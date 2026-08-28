@@ -50,3 +50,13 @@ a `f-ciclo-multi-cli-2026-08-20`; transacción
 `sha256:9e0667800db068c8dcff9a958f6d389b875ee05d16835892d2e1da6763362bd4`
 (revisión 2). Recuperable con
 `an-kla retrieve --query "ciclo multi-CLI" --budget 5000`.
+
+## Índice de turnos (P-004) e identidad de Codex
+
+P-004 aceptada 🔒 2026-08-28: `skopos.turnos` como colección aparte, con
+`documento-turno-mongo v1` y el comando `skopos indexar`. **El índice no
+se ha llenado**: el piloto destapó que el `turn_id` crudo de Codex se
+repite entre sesiones y la dedup descartaría el 35 % de los turnos
+(`docs/evidencia/colision-turn-id-codex-2026-08-28.md`). Calificar con la
+sesión lo resuelve (0 colisiones sobre 16,301), pero toca la ficha del
+ADR-010 §7/§8 y espera decisión 🔒 del dueño.

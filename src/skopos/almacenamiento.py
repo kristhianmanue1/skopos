@@ -17,6 +17,7 @@ from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from skopos.analisis import Analisis
+from skopos.captura import Turno
 
 COLECCION_POR_DEFECTO = "analisis"
 
@@ -211,6 +212,82 @@ def coleccion_local(
     if "turn_id_1" in {i["name"] for i in coleccion.list_indexes()}:
         coleccion.drop_index("turn_id_1")
     coleccion.create_index([("tema", "text"), ("resumen", "text")])
+    coleccion.create_index("proyecto")
+    coleccion.create_index("cli")
+    coleccion.create_index("ocurrido_en")
+    return coleccion
+
+
+# --- Índice de turnos (P-004, CONTRATO documento-turno-mongo v1) -------
+#
+# Colección SEPARADA de `analisis`: un turno es un hecho observado (esto
+# se dijo, en este archivo, en estos bytes); un análisis es la opinión de
+# un modelo concreto sobre él. Mezclarlos obligaría a que cada lectura
+# distinguiera si hay interpretación o no, y tocaría datos vivos y el
+# supersede de ADR-007. Aquí no se toca nada de eso: es aditivo.
+
+COLECCION_TURNOS = "turnos"
+
+
+def _documento_turno(turno: Turno) -> dict:
+    documento = {
+        "turn_id": turno.turn_id,
+        "session_id": turno.session_id,
+        "cli": turno.cli,
+        "ruta_origen": turno.ruta_origen,
+        "offset_inicio": turno.offset_inicio,
+        "offset_fin": turno.offset_fin,
+        "texto_usuario": turno.texto_usuario,
+        "texto_agente": turno.texto_agente,
+        "indexado_en": datetime.now(timezone.utc).isoformat(),
+    }
+    if turno.timestamp_cierre:
+        documento["ocurrido_en"] = turno.timestamp_cierre
+    if turno.proyecto:
+        documento["proyecto"] = turno.proyecto
+    if turno.fragmento_sha256:
+        documento["fragmento_sha256"] = turno.fragmento_sha256
+    return documento
+
+
+def indexar_turno(turno: Turno, *, coleccion: Collection) -> bool:
+    """Guarda un turno observado. Devuelve si se insertó (False = ya estaba).
+
+    Insert-only como el resto del almacén: un turno ya indexado no se
+    reescribe nunca. La dedup es por `turn_id`, que los adaptadores
+    nuevos ya califican con su producto (ADR-010 §7), así que dos CLIs no
+    pueden colisionar. No llama al modelo: indexar es observar, no
+    interpretar.
+    """
+    if not turno.turn_id or not turno.ruta_origen:
+        raise DocumentoInvalido(
+            f"turn_id y ruta_origen son obligatorios: turn_id={turno.turn_id!r} "
+            f"ruta_origen={turno.ruta_origen!r}"
+        )
+    try:
+        coleccion.insert_one(_documento_turno(turno))
+    except DuplicateKeyError:
+        return False
+    return True
+
+
+def coleccion_turnos(
+    *,
+    uri: str = "mongodb://localhost:27017",
+    db: str = "skopos",
+    nombre: str = COLECCION_TURNOS,
+    timeout_ms: int = 2000,
+) -> Collection:
+    """Colección del índice de turnos, con sus índices asegurados.
+
+    `$text` sobre el texto crudo (misma decisión de ADR-006 que rige la
+    búsqueda de análisis, aplicada a lo observado) y los ejes de C-9
+    para filtrar sin collection scan.
+    """
+    cliente = pymongo.MongoClient(uri, serverSelectionTimeoutMS=timeout_ms)
+    coleccion = cliente[db][nombre]
+    coleccion.create_index("turn_id", unique=True)
+    coleccion.create_index([("texto_usuario", "text"), ("texto_agente", "text")])
     coleccion.create_index("proyecto")
     coleccion.create_index("cli")
     coleccion.create_index("ocurrido_en")

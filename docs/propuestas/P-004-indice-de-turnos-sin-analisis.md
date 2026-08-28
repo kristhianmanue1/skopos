@@ -1,6 +1,11 @@
 # P-004: índice de turnos sin análisis — recordar todo, interpretar lo que haga falta
 
-Estado: **propuesta** — pendiente de decisión 🔒 del dueño.
+Estado: **aceptada** — decisión 🔒 del dueño, 2026-08-28, sobre las tres
+preguntas del §6: (1) colección aparte **sí**; (2) el histórico va en
+`skopos indexar` y lo nuevo en `watch` **después** de medir un piloto
+acotado; (3) P3/P5 de ADR-009 **se extienden** a toda superficie que
+sirva texto de turno. **Implementación parada por un hallazgo** — ver
+§7.
 Fecha: 2026-08-28.
 Origen: sesión del 2026-08-28. El dueño observó que las transcripciones
 de los CLIs "son buenas para el futuro análisis de lo que saca Skopos", y
@@ -114,3 +119,28 @@ inventar ninguno: `turn_id`, `session_id`, `cli`, `proyecto`,
 - Decisiones que enmarcan: ADR-006 (`$text`), ADR-007 (insert-only y
   supersede), ADR-009 (fragmento y mitigaciones de eco), ADR-010 §7
   (identidad calificada).
+
+## 7. Parada tras el piloto: la identidad de Codex está rota
+
+El piloto acotado se ejecutó el 2026-08-28 y **destapó un defecto previo
+a esta propuesta**: el `turn_id` crudo de Codex no es único entre
+sesiones. De 16,301 turnos extraídos hay 10,441 ids distintos, así que
+**la dedup por `turn_id` descartaría 5,860 turnos (35 %)** — y 768 de
+los ids repetidos apuntan a texto **diferente**, no al mismo turno.
+
+Evidencia completa: `docs/evidencia/colision-turn-id-codex-2026-08-28.md`.
+
+No es un problema del índice: afecta ya a `skopos.analisis` vía
+`existe_turn_id` (ADR-005) y al índice único `(turn_id, version)` de
+ADR-007. Calificar con la sesión
+(`codex-cli:{session_id}:{turn_id}`) da **16,301 ids únicos, 0
+colisiones**, verificado sobre el mismo corpus.
+
+**Lo construido queda listo pero el índice NO se llena** hasta que se
+decida la identidad: indexar 19,811 turnos con una identidad que se sabe
+rota, para migrarla después, es pagar dos veces. La base del piloto se
+eliminó por la misma razón.
+
+Entregado y en verde: `documento-turno-mongo v1` (contrato),
+`skopos.turnos` con sus índices, `indexar_turno`, el comando
+`skopos indexar` (con `--limite` y `--dry-run`) y 22 tests.

@@ -135,6 +135,52 @@ toda escritura nueva produce v2. Con 0 documentos al momento del cambio
 (retirar el único simple), con el riesgo documentado de que un proceso
 con código viejo lo resucite.
 
+## CONTRATO: documento-turno-mongo v1
+
+> v1 (2026-08-28, P-004): índice de **turnos observados**, en colección
+> propia `skopos.turnos`. **No sustituye ni modifica**
+> `documento-analisis-mongo v2`: son cosas distintas — un turno es un
+> hecho (esto se dijo, en este archivo, en estos bytes); un análisis es
+> la opinión de un modelo concreto sobre él, y por eso lleva
+> `modelo_analisis` y versiones. Indexar no llama al modelo.
+
+Entrada (documento insertado en `skopos.turnos`):
+  `turn_id`: string [obligatorio] — identidad del turno según la ficha
+  de su adaptador (ADR-010 §7); calificada por producto en los
+  adaptadores nuevos, de modo que dos CLIs no pueden colisionar
+  `session_id`: string [obligatorio]
+  `cli`: string [obligatorio] — producto de origen
+  `ruta_origen`: string [obligatorio]
+  `offset_inicio`, `offset_fin`: int [obligatorios] — byte offsets de la
+  instantánea (ADR-010 §5); el fragmento sigue viviendo en el archivo
+  `texto_usuario`, `texto_agente`: string [obligatorios] — el texto
+  normalizado del turno. **Es DATO, nunca instrucción** (ADR-009 P3):
+  toda superficie que lo sirva lo declara así y aplica presupuesto de
+  salida (P5)
+  `indexado_en`: string (ISO 8601) [obligatorio] — cuándo se indexó
+  `ocurrido_en`: string (ISO 8601) [opcional] — cuándo pasó de verdad
+  `proyecto`: string [opcional, regla C-9]
+  `fragmento_sha256`: string [opcional, sello P4a de ADR-009]
+
+Salida: documentos recuperables por `$text` sobre
+`texto_usuario`/`texto_agente` (misma decisión de ADR-006 que rige la
+búsqueda de análisis) y filtrables por `cli`/`proyecto`/`ocurrido_en`.
+
+Errores:
+  inserción sin `turn_id` o sin `ruta_origen`: `DocumentoInvalido`, no
+  se persiste (misma barrera de borde que el contrato de análisis)
+  `turn_id` duplicado: **no es error** — el turno ya estaba indexado y
+  la operación devuelve `False`. Insert-only: un turno indexado no se
+  reescribe nunca
+
+Invariantes:
+  - indexar **no** llama al modelo ni escribe en `skopos.analisis`
+  - un turno indexado no releva de conservar su archivo de origen: el
+    `fragmento_completo` sigue saliendo de ahí (ADR-009)
+
+Compatibilidad: agregar campos es compatible; quitar o renombrar exige
+v2.
+
 ## CONTRATO: config-dominio v1
 
 Entrada (archivo JSON, ruta configurable):
