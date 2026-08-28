@@ -16,9 +16,17 @@ Salidas: un objeto `Turno` con: `turn_id`, `session_id`, `texto_usuario`,
 después, sin releer todo el archivo), `proyecto` [C-9, 2026-08-20:
 `basename(cwd)` del `turn_context` del turno cuando `cwd` tiene al menos
 dos niveles bajo `$HOME`; `None` en caso contrario — regla y muestreo en
-`docs/evidencia/muestreo-cwd-c9-2026-08-20.md`] y `fragmento_sha256`
-[ADR-009 P4a, 2026-08-20: sha256 de los bytes del rango, computado al
-extraer; `None` sólo si el archivo deja de ser legible en ese momento].
+`docs/evidencia/muestreo-cwd-c9-2026-08-20.md`], `cli`
+[hallazgo F-3 de la ronda 17, alineado 2026-08-28: el campo existe en el
+`Turno` desde el Hito 6 y SPEC-006 ya lo citaba entre "los campos de
+SPEC-001", pero esta lista no lo enumeraba. Es **constante declarada por
+el adaptador** (ADR-010 §2), nunca inferida del contenido del archivo;
+`codex-cli` para el adaptador de referencia] y `fragmento_sha256`
+[ADR-009 P4a, 2026-08-20: sha256 de los bytes del rango. Desde la fase A
+de P-003 (2026-08-28) se computa sobre la **instantánea materializada**
+de la que salen los offsets (ADR-010 §5), no releyendo el archivo: ya no
+puede degradar a `None` por una relectura fallida — un archivo ilegible
+es `entrada_corrupta` en la frontera, antes de producir turnos].
 
 Errores:
   - archivo no encontrado en un ciclo de poll: no es fatal, se reintenta

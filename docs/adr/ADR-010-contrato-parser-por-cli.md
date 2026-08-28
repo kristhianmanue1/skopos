@@ -101,6 +101,15 @@ evalúan mezcladas:
    `version_no_soportada`.
 6. Ausencia de marcador incompatible bajo el **perfil base** ⇒ `ok`.
 
+**El orden de esta lista es expositivo, no un desempate** (glosa del
+hallazgo F-2 de la ronda 17, añadida 2026-08-28): las reglas 2 y 3 no
+compiten por su número. Dos fichas del mismo producto no pueden ser
+ambas compatibles, porque la **precondición de registro del §8** exige
+exclusión mutua explícita entre ellas; y si por un defecto de ficha lo
+fueran, quien decide es la **precedencia total del §3**
+(`deteccion_ambigua` antes que `version_no_soportada`), no la posición
+en esta enumeración.
+
 **Perfil base (ronda 13)**: parser-codex/v1 es hoy el perfil base
 compatible del producto codex-cli: la identidad Codex más la ausencia
 de una firma incompatible registrada. **No se afirma que
@@ -247,7 +256,10 @@ ResultadoParseo := {
 ```
 
 **Forma de `detalle` congelada** (ronda 13, corrección 3 de Pinax;
-**unión cerrada por completo en F1**, ronda de cierre): `detalle` es
+**unión cerrada por completo en F1** por corrección directa del dueño
+—no hubo tal "ronda de cierre": la etiqueta era incorrecta y se
+reemplaza aquí, hallazgo F-1 de la ronda 17, corregido 2026-08-28):
+`detalle` es
 `null`, o `{codigo}`, o `{codigo, candidatos}` — **nada más**.
 `candidatos` es **obligatorio únicamente** para
 `identidades_producto_multiples` y `versiones_formato_multiples`, y en

@@ -42,9 +42,16 @@ falta y por qué.
 
 ## Prohibido sin autorización explícita, una vez por operación
 
-`git push`, merge a rama protegida, instalar dependencias nuevas, borrar
-o mover archivos de `docs/` que registran decisiones ya cerradas (F0/F1).
-Editar no implica commit; commit no implica push.
+Merge a rama protegida, instalar dependencias nuevas, borrar o mover
+archivos de `docs/` que registran decisiones ya cerradas (F0/F1).
+Editar no implica commit.
+
+**`git push` y `commit`: autorizados de forma permanente** por el dueño
+el 2026-08-28 — no se pide confirmación cada vez. La contrapartida es
+que la sección "Verificación antes de declarar terminado" deja de ser
+un trámite: nada se empuja sin la suite en verde y el diff leído, y todo
+push se reporta. El resto de esta lista sigue exigiendo autorización
+**cada vez**.
 
 ## Límites de tamaño
 

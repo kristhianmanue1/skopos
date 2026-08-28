@@ -261,7 +261,8 @@ Fase 0 ✅
 
 **Deuda documental no bloqueante (ronda 17, hallazgos BAJO —
 registrados, NO corregidos en el acto de aceptación por decisión del
-dueño; tocarlos exige pasada propia):**
+dueño; tocarlos exigía pasada propia). ✅ SALDADA el 2026-08-28 en esa
+pasada propia (`AGENTS.md`/docs, sin tocar decisiones):**
 - F-1: la etiqueta «ronda de cierre» en ADR-010 §3 refiere a F1
   (corrección del dueño) como si fuera ronda — reetiquetar o asentar
   acta de F1.
@@ -271,3 +272,14 @@ dueño; tocarlos exige pasada propia):**
 - F-3: SPEC-006 cita `cli` entre «los campos de SPEC-001» pero
   SPEC-001 no lo enumera en el Turno (lo tienen código y ADR §5) —
   alinear (toca spec vigente: cuidado de compatibilidad).
+
+**Cómo se saldó (2026-08-28):** F-1, reetiquetada la falsa «ronda de
+cierre» como corrección directa del dueño (ADR-010 §3). F-2, glosa
+añadida en el Nivel B del §1: el orden de las reglas es expositivo y el
+desempate real vive en la precondición de registro del §8 más la
+precedencia total del §3. F-3, `cli` enumerado en las Salidas de
+SPEC-001 como constante declarada por el adaptador (ADR-010 §2) —
+adición documental de un campo que el código ya producía desde el Hito
+6, compatible por construcción; de paso se alineó `fragmento_sha256`,
+que prometía degradar a `None` por relectura fallida y desde la fase A
+se computa sobre la instantánea (ADR-010 §5).
