@@ -1,10 +1,19 @@
-"""Extrae turnos completos de un rollout de Codex.
+"""Adaptador parser-codex/v1: extrae turnos de un rollout de Codex.
 
 Implementa SPEC-001 (docs/specs/f1-specs.md) y el CONTRATO
-rollout-jsonl-de-codex v1 (docs/contratos/f1-contratos.md): lee un
-rollout-*.jsonl línea por línea, descarta líneas corruptas sin detenerse,
-y produce un Turno completo por cada cierre (event_msg/task_complete) no
-visto antes, con el texto real de usuario y agente de ese turno.
+rollout-jsonl-de-codex v1 (docs/contratos/f1-contratos.md), y es el
+**adaptador de referencia** del contrato parser-contrato/v1 (ADR-010):
+declara aquí, como constantes, la ficha que el §8 del ADR registra —
+identidad, marcas de estructura, alcance del escaneo, fuentes de
+`session_id`/`turn_id`/`timestamp_cierre` y estrategia de identidad.
+La selección de este adaptador NO vive aquí (sería fallback por
+defecto, ADR-010 §4): vive en la frontera de SPEC-006, `parseo.py`.
+
+Este módulo opera sobre la **instantánea materializada** de bytes que
+esa frontera produce (ADR-010 §5): una sola lectura, offsets y sello
+sobre el mismo buffer. `extraer_turnos(path)` se conserva como entrada
+directa de SPEC-001 (orquestador, `skopos reanalizar`) y materializa la
+instantánea por su cuenta.
 """
 
 from __future__ import annotations
@@ -12,12 +21,38 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
 
-CLI_ORIGEN = "codex-cli"  # nombre tal como lo identifica escrubery (EV-7 de F0)
+# --- Ficha del adaptador (ADR-010 §2 y §8; constantes declaradas) ------
+
+ID_FICHA = "parser-codex/v1"
+CLI_PRODUCTO = "codex-cli"  # nombre tal como lo identifica escrubery (EV-7 de F0)
+CLI_ORIGEN = CLI_PRODUCTO  # nombre histórico del campo `cli` del Turno
+VERSION_PARSER = "parser-codex/v1"
+VERSION_FORMATO = "codex-rollout/v1"
+
+# Identidad: primer `session_meta` dentro de las primeras 10 líneas con
+# `payload.originator` de frontera cerrada (`codexfoo` no casa).
+# Evidencia: docs/evidencia/predicado-identidad-codex-2026-08-20.md
+# (616/616 positivos, 11/11 controles negativos sobre 2 formatos ajenos).
+LINEAS_ESCANEO_IDENTIDAD = 10
+EVENTO_IDENTIDAD = "session_meta"
+PATRON_ORIGINATOR = re.compile(r"^codex([ _-]|$)", re.IGNORECASE)
+
+# Marcas de estructura (rol: extracción y cierre — NO reconocen versión;
+# v1 es perfil base por ausencia de firma incompatible, ronda 13 F-4).
+EVENTOS_DECLARADOS = frozenset(
+    {EVENTO_IDENTIDAD, "turn_context", "response_item", "event_msg"}
+)
+EVENTO_CIERRE = "event_msg"
+PAYLOAD_CIERRE = "task_complete"
+
+# Roles excluidos del texto conversacional (decisión de ficha, ADR-010 §6).
+ROLES_CONVERSACION = {"user": "usuario", "assistant": "agente"}
 
 
 @dataclass(frozen=True)
@@ -30,25 +65,37 @@ class Turno:
     ruta_origen: str
     offset_inicio: int
     offset_fin: int
-    cli: str = CLI_ORIGEN
+    cli: str = CLI_PRODUCTO
     proyecto: str | None = None
     fragmento_sha256: str | None = None  # sello P4a (ADR-009)
 
 
-def _sellar_fragmento(path: Path, offset_inicio: int, offset_fin: int) -> str | None:
-    """sha256 de los bytes [offset_inicio, offset_fin) del archivo (ADR-009 P4a).
+@dataclass(frozen=True)
+class Extraccion:
+    """Lo que el adaptador produce de una instantánea (ADR-010 §3).
 
-    Sello fragmento-only: los turnos teselan el archivo, así que este hash
-    detecta rotación/edición/truncación sin falsos positivos ante appends
-    de sesiones vivas (ronda 6, R6-2). El tamaño no se sella aparte:
-    es `offset_fin - offset_inicio` por construcción.
+    Los conteos son disjuntos por definición: `eventos_no_reconocidos`
+    cuenta JSON válido de tipo no declarado por la ficha (evolución
+    aditiva, nunca incompatibilidad); `descartes_linea`, líneas que no
+    son JSON válido dentro de una instantánea que sí lo es.
     """
-    try:
-        with path.open("rb") as handle:
-            handle.seek(offset_inicio)
-            return hashlib.sha256(handle.read(offset_fin - offset_inicio)).hexdigest()
-    except OSError:
-        return None
+
+    turnos: list[Turno]
+    eventos_no_reconocidos: int
+    descartes_linea: int
+    version_cli_observada: str | None
+
+
+def _sellar_fragmento(instantanea: bytes, offset_inicio: int, offset_fin: int) -> str:
+    """sha256 de los bytes [inicio, fin) de la instantánea (ADR-009 P4a).
+
+    Sello fragmento-only sobre la MISMA instantánea de la que salieron
+    los offsets (ADR-010 §5): antes se releía el archivo por rango, lo
+    que el ADR declaró no conforme — dos lecturas podían no ver los
+    mismos bytes. El tamaño no se sella aparte: es `fin - inicio` por
+    construcción, y los turnos teselan el archivo.
+    """
+    return hashlib.sha256(instantanea[offset_inicio:offset_fin]).hexdigest()
 
 
 def _proyecto_de_cwd(cwd: str) -> str | None:
@@ -91,23 +138,40 @@ def _proyecto_de_turn_context(evento: object) -> str | None | type(...) :
     return _proyecto_de_cwd(cwd)
 
 
-def _iter_eventos_con_offsets(path: Path) -> Iterator[tuple[object, int, int]]:
+def iter_lineas(instantanea: bytes) -> Iterator[tuple[bytes, int, int]]:
+    """(línea, offset_inicio, offset_fin) en bytes de la instantánea.
+
+    Corta **sólo** por `\n`, igual que iterar el descriptor de archivo:
+    `bytes.splitlines()` cortaría también por `\r`, `\v`, `\f` y otros
+    separadores, y eso movería offsets y sellos respecto de lo ya
+    guardado (JSON válido no lleva esos bytes crudos, pero la
+    equivalencia no debe depender de esa suposición).
+    """
     offset = 0
-    with path.open("rb") as handle:
-        for raw_line in handle:
-            inicio = offset
-            offset += len(raw_line)
-            line = raw_line.strip()
-            if not line:
-                continue
-            try:
-                evento = json.loads(line)
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                continue
-            yield evento, inicio, offset
+    total = len(instantanea)
+    while offset < total:
+        salto = instantanea.find(b"\n", offset)
+        fin = total if salto == -1 else salto + 1
+        yield instantanea[offset:fin], offset, fin
+        offset = fin
 
 
-_ROLES_CONVERSACION = {"user": "usuario", "assistant": "agente"}
+def _iter_eventos_con_offsets(
+    instantanea: bytes,
+) -> Iterator[tuple[object | None, int, int]]:
+    """Eventos JSON con sus offsets; `None` marca una línea descartada.
+
+    Las líneas en blanco no son ni evento ni descarte: no llevan
+    contenido que contar (SPEC-001 las ignora desde F2).
+    """
+    for raw_line, inicio, fin in iter_lineas(instantanea):
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            yield json.loads(line), inicio, fin
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            yield None, inicio, fin
 
 
 def _texto_de_response_item(evento: object) -> tuple[str, str] | None:
@@ -123,7 +187,7 @@ def _texto_de_response_item(evento: object) -> tuple[str, str] | None:
     payload = evento.get("payload")
     if not isinstance(payload, dict) or payload.get("type") != "message":
         return None
-    rol = _ROLES_CONVERSACION.get(payload.get("role"))
+    rol = ROLES_CONVERSACION.get(payload.get("role"))
     if rol is None:
         return None
     partes = payload.get("content")
@@ -139,27 +203,95 @@ def _texto_de_response_item(evento: object) -> tuple[str, str] | None:
 
 def _turn_id_si_cierre(evento: object) -> str | None:
     """Devuelve el turn_id sólo para el marcador empírico task_complete."""
-    if not isinstance(evento, dict) or evento.get("type") != "event_msg":
+    if not isinstance(evento, dict) or evento.get("type") != EVENTO_CIERRE:
         return None
     payload = evento.get("payload")
-    if not isinstance(payload, dict) or payload.get("type") != "task_complete":
+    if not isinstance(payload, dict) or payload.get("type") != PAYLOAD_CIERRE:
         return None
     turn_id = payload.get("turn_id")
     return turn_id if isinstance(turn_id, str) and turn_id else None
 
 
-def extraer_turnos(path: Path | str) -> list[Turno]:
-    """Extrae los turnos cerrados de un rollout completo, en orden."""
-    path = Path(path)
-    session_id = path.stem
+def casa_identidad(instantanea: bytes) -> bool:
+    """Predicado de identidad de la ficha (ADR-010 §1, alcance: 10 líneas).
+
+    Frontera de palabra completa por construcción del patrón; un
+    originator futuro que no la respete cae en `formato_desconocido`
+    (observable), nunca en un match por parecido.
+    """
+    for indice, (raw_line, _inicio, _fin) in enumerate(iter_lineas(instantanea)):
+        if indice >= LINEAS_ESCANEO_IDENTIDAD:
+            return False
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            evento = json.loads(line)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if not isinstance(evento, dict) or evento.get("type") != EVENTO_IDENTIDAD:
+            continue
+        payload = evento.get("payload")
+        if not isinstance(payload, dict):
+            return False
+        originator = payload.get("originator")
+        return isinstance(originator, str) and bool(PATRON_ORIGINATOR.match(originator))
+    return False
+
+
+def es_incompatible(instantanea: bytes) -> bool:
+    """Predicados positivos de incompatibilidad de la ficha v1: ninguno.
+
+    Declarado así en ADR-010 §8 y verificado (ronda 12, H-3):
+    `session_meta.payload` no declara versión del formato, no existe
+    firma de otra versión registrada y v1 no declara estructuras
+    obligatorias. `version_no_soportada` es inalcanzable para este
+    adaptador salvo por retiro (§8). Sin predicado positivo, no hay
+    incompatibilidad: devolver siempre False es la ficha, no un atajo.
+    """
+    return False
+
+
+def _cli_version(evento: object) -> str | None:
+    if not isinstance(evento, dict) or evento.get("type") != EVENTO_IDENTIDAD:
+        return None
+    payload = evento.get("payload")
+    if not isinstance(payload, dict):
+        return None
+    version = payload.get("cli_version")
+    return version if isinstance(version, str) and version else None
+
+
+def extraer_de_instantanea(instantanea: bytes, path: Path) -> Extraccion:
+    """Extrae los turnos cerrados de una instantánea ya materializada."""
+    session_id = path.stem  # decisión de ficha v1 por compatibilidad (ADR-010 §8)
     turnos: list[Turno] = []
     vistos: set[str] = set()
     texto_usuario_partes: list[str] = []
     texto_agente_partes: list[str] = []
     offset_inicio_turno = 0
     proyecto: str | None = None
+    eventos_no_reconocidos = 0
+    descartes_linea = 0
+    version_cli_observada: str | None = None
 
-    for evento, inicio, fin in _iter_eventos_con_offsets(path):
+    for evento, _inicio, fin in _iter_eventos_con_offsets(instantanea):
+        if evento is None:
+            descartes_linea += 1
+            continue
+
+        tipo = evento.get("type") if isinstance(evento, dict) else None
+        if isinstance(tipo, str) and tipo not in EVENTOS_DECLARADOS:
+            # Evolución aditiva del formato: se ignora para la extracción
+            # y se cuenta (ADR-010 §1, ronda 11c). Un evento sin `type` o
+            # con `type` no-string no cuenta: no se arbitra sobre formas
+            # corruptas de campo.
+            eventos_no_reconocidos += 1
+            continue
+
+        if version_cli_observada is None:
+            version_cli_observada = _cli_version(evento)
+
         nuevo_proyecto = _proyecto_de_turn_context(evento)
         if nuevo_proyecto is not ...:
             # turn_context: asigna (incluido None explícito = reset — el
@@ -199,11 +331,30 @@ def extraer_turnos(path: Path | str) -> list[Turno]:
                 offset_inicio=offset_inicio_turno,
                 offset_fin=fin,
                 proyecto=proyecto,
-                fragmento_sha256=_sellar_fragmento(path, offset_inicio_turno, fin),
+                fragmento_sha256=_sellar_fragmento(instantanea, offset_inicio_turno, fin),
             )
         )
         texto_usuario_partes = []
         texto_agente_partes = []
         offset_inicio_turno = fin
 
-    return turnos
+    return Extraccion(
+        turnos=turnos,
+        eventos_no_reconocidos=eventos_no_reconocidos,
+        descartes_linea=descartes_linea,
+        version_cli_observada=version_cli_observada,
+    )
+
+
+def extraer_turnos(path: Path | str) -> list[Turno]:
+    """Extrae los turnos cerrados de un rollout completo, en orden.
+
+    Entrada directa de SPEC-001: parsea lo que se le da, sin detección
+    (la selección por predicados es de SPEC-006, `parseo.parsear`). Un
+    error de I/O propaga, como antes de ADR-010; la traducción a
+    `entrada_corrupta` la hace la frontera.
+    """
+    path = Path(path)
+    from skopos.parseo import materializar_instantanea
+
+    return extraer_de_instantanea(materializar_instantanea(path), path).turnos

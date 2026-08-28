@@ -374,13 +374,27 @@ class SelloFragmentoTests(unittest.TestCase):
             turno.fragmento_sha256, hashlib.sha256(rango).hexdigest()
         )
 
-    def test_archivo_ilegible_al_sellar_deja_sello_none(self):
-        # SPEC-001/ADR-009: el sello degrada a None si el rango no puede
-        # leerse en ese momento (se sirve como sellado=false con chequeo
-        # de longitud). El turno en sí ya fue extraído del handle vivo.
-        from skopos.captura import _sellar_fragmento
+    def test_sello_se_computa_sobre_la_instantanea_no_releyendo_el_archivo(self):
+        # ADR-010 §5: el sello sale de los MISMOS bytes de los que
+        # salieron los offsets. Antes se relaía el archivo por rango
+        # (declarado no conforme): dos lecturas podían no ver lo mismo.
+        # Aquí el archivo crece después de materializar la instantánea y
+        # el sello sigue siendo el de la instantánea.
+        from skopos.captura import extraer_de_instantanea
+        from skopos.parseo import materializar_instantanea
 
-        self.assertIsNone(_sellar_fragmento(Path("/no/existe/rollout.jsonl"), 0, 10))
+        self._escribir([_mensaje("user", "hola"), _cierre("t1")])
+        instantanea = materializar_instantanea(self.path)
+        with self.path.open("ab") as handle:
+            handle.write(_linea(_cierre("t2")).encode("utf-8") + b"\n")
+
+        turno = extraer_de_instantanea(instantanea, self.path).turnos[0]
+        self.assertEqual(
+            turno.fragmento_sha256,
+            hashlib.sha256(instantanea[turno.offset_inicio : turno.offset_fin]).hexdigest(),
+        )
+        # y el sello no cubre lo añadido después de fijar N
+        self.assertNotIn(b"t2", instantanea[turno.offset_inicio : turno.offset_fin])
 
 
 if __name__ == "__main__":
