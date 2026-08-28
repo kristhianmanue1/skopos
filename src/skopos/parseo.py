@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from skopos import captura, claude_code
+from skopos import captura, claude_code, cline
 from skopos.captura import Turno
 from skopos.cursor import Cursor
 
@@ -135,9 +135,19 @@ FICHA_CLAUDE_CODE = Ficha(
     extraer=claude_code.extraer_de_instantanea,
 )
 
+FICHA_CLINE = Ficha(
+    id_ficha=cline.ID_FICHA,
+    cli_producto=cline.CLI_PRODUCTO,
+    version_parser=cline.VERSION_PARSER,
+    version_formato=cline.VERSION_FORMATO,
+    casa_identidad=cline.casa_identidad,
+    es_incompatible=cline.es_incompatible,
+    extraer=cline.extraer_de_instantanea,
+)
+
 # Registro de adaptadores (ADR-010 §8). Agregar uno es aditivo; retirar
 # uno exige ADR propio y deja su ficha con activa=False, nunca la borra.
-REGISTRO: tuple[Ficha, ...] = (FICHA_CODEX, FICHA_CLAUDE_CODE)
+REGISTRO: tuple[Ficha, ...] = (FICHA_CODEX, FICHA_CLAUDE_CODE, FICHA_CLINE)
 
 
 def materializar_instantanea(path: Path | str) -> bytes:
