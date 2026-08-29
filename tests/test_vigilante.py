@@ -86,6 +86,48 @@ class ReporteDeDescartesTests(unittest.TestCase):
         self.assertEqual(salida.getvalue(), "")
 
 
+class FuentesTests(unittest.TestCase):
+    """El vigilante mira una fuente por CLI, no sólo Codex."""
+
+    def test_las_fuentes_por_defecto_cubren_los_adaptadores_de_archivo(self):
+        from skopos.vigilante import FUENTES_POR_DEFECTO
+
+        rutas = {str(ruta): patron for ruta, patron in FUENTES_POR_DEFECTO}
+        codex = [r for r in rutas if ".codex" in r]
+        claude = [r for r in rutas if ".claude" in r]
+        cline = [r for r in rutas if ".cline" in r]
+        kimi = [r for r in rutas if ".kimi" in r]
+        self.assertEqual(len(codex), 1)
+        self.assertEqual(rutas[codex[0]], "*.jsonl")
+        self.assertEqual(rutas[claude[0]], "*.jsonl")
+        self.assertEqual(rutas[cline[0]], "*.messages.json")
+        self.assertEqual(rutas[kimi[0]], "wire.jsonl")
+        # opencode NO está: su extracción cuesta ~13 s por pasada y no hay
+        # lectura incremental para orígenes de filas todavía
+        self.assertEqual([r for r in rutas if "opencode" in r], [])
+
+    def test_cada_fuente_usa_su_patron(self):
+        from skopos.vigilante import descubrir_fuentes
+
+        with tempfile.TemporaryDirectory() as tmp:
+            raiz = Path(tmp)
+            (raiz / "a").mkdir(); (raiz / "b").mkdir()
+            jsonl = raiz / "a" / "x.jsonl"; jsonl.write_text("{}\n", encoding="utf-8")
+            (raiz / "a" / "y.messages.json").write_text("{}", encoding="utf-8")
+            mensajes = raiz / "b" / "z.messages.json"; mensajes.write_text("{}", encoding="utf-8")
+            hallados = descubrir_fuentes((
+                (raiz / "a", "*.jsonl"),
+                (raiz / "b", "*.messages.json"),
+            ))
+            self.assertEqual(hallados, {jsonl, mensajes})
+
+    def test_una_ruta_suelta_sigue_funcionando(self):
+        # forma histórica: ciclo(sessions_dir) con una sola ruta
+        from skopos.vigilante import _normalizar
+
+        self.assertEqual(_normalizar(Path("/x")), ((Path("/x"), "*.jsonl"),))
+
+
 class DescubrirRolloutsTests(unittest.TestCase):
     def test_directorio_inexistente_no_produce_error(self):
         self.assertEqual(descubrir_rollouts(Path("/no/existe/nada")), set())

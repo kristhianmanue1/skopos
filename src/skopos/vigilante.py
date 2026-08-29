@@ -36,18 +36,54 @@ from skopos.parseo import ResultadoParseo
 SESSIONS_DIR_POR_DEFECTO = Path.home() / ".codex" / "sessions"
 INTERVALO_POR_DEFECTO = 5.0
 
+# Fuentes vigiladas por defecto: una por CLI con adaptador registrado, con
+# el patrón que le corresponde. Antes sólo se vigilaba Codex, así que los
+# otros cuatro adaptadores existían pero el vigilante nunca les daba un
+# archivo — sólo se llegaba a ellos pasando rutas a mano a `skopos indexar`.
+#
+# **opencode queda fuera a propósito**: su extracción cuesta ~13 s por
+# pasada (3,909 turnos) porque no hay lectura incremental para orígenes de
+# filas — ADR-012 §d descartó el cursor midiendo el barrido crudo (0.7 s),
+# no la extracción completa. Repetir eso cada ciclo saturaría el vigilante.
+# Hasta que exista esa lectura incremental, opencode se indexa con
+# `skopos indexar` cuando se quiera.
+FUENTES_POR_DEFECTO: tuple[tuple[Path, str], ...] = (
+    (SESSIONS_DIR_POR_DEFECTO, "*.jsonl"),
+    (Path.home() / ".claude" / "projects", "*.jsonl"),
+    (Path.home() / ".cline" / "data" / "sessions", "*.messages.json"),
+    (Path.home() / ".kimi" / "sessions", "wire.jsonl"),
+)
 
-def descubrir_rollouts(sessions_dir: Path) -> set[Path]:
+
+def descubrir_rollouts(sessions_dir: Path, patron: str = "*.jsonl") -> set[Path]:
     if not sessions_dir.is_dir():
         return set()
-    return set(sessions_dir.rglob("*.jsonl"))
+    return set(sessions_dir.rglob(patron))
+
+
+def descubrir_fuentes(
+    fuentes: tuple[tuple[Path, str], ...],
+    descubrir: Callable[..., set[Path]] = descubrir_rollouts,
+) -> set[Path]:
+    """Une lo descubierto en cada fuente declarada."""
+    encontrados: set[Path] = set()
+    for directorio, patron in fuentes:
+        encontrados |= descubrir(directorio, patron)
+    return encontrados
+
+
+def _normalizar(fuentes) -> tuple[tuple[Path, str], ...]:
+    """Acepta una ruta suelta (forma histórica) o fuentes declaradas."""
+    if isinstance(fuentes, (str, Path)):
+        return ((Path(fuentes), "*.jsonl"),)
+    return tuple(fuentes)
 
 
 def ciclo(
-    sessions_dir: Path,
+    sessions_dir,
     *,
     coleccion: Collection,
-    descubrir: Callable[[Path], set[Path]] = descubrir_rollouts,
+    descubrir: Callable[..., set[Path]] = descubrir_rollouts,
     t0: datetime | None = None,
     on_diagnostico: Callable[[Path, ResultadoParseo], None] | None = None,
     cursores: AlmacenCursores | None = None,
@@ -69,7 +105,7 @@ def ciclo(
     histórico que se pidió recuperar.
     """
     resultados: list[ResultadoTurno] = []
-    descubiertos = sorted(descubrir(sessions_dir))
+    descubiertos = sorted(descubrir_fuentes(_normalizar(sessions_dir), descubrir))
     if cursores is not None:
         cursores.podar(descubiertos)
     for path in descubiertos:
@@ -98,7 +134,7 @@ def ciclo(
 
 
 def ejecutar(
-    sessions_dir: Path = SESSIONS_DIR_POR_DEFECTO,
+    sessions_dir=FUENTES_POR_DEFECTO,
     *,
     coleccion: Collection,
     intervalo: float = INTERVALO_POR_DEFECTO,
@@ -198,7 +234,14 @@ def _reportar_diagnosticos(diagnosticos: Counter) -> None:
 
 def watch_command(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="skopos watch")
-    parser.add_argument("--sessions-dir", type=Path, default=SESSIONS_DIR_POR_DEFECTO)
+    parser.add_argument(
+        "--sessions-dir",
+        type=Path,
+        nargs="*",
+        default=None,
+        help="directorios a vigilar (por defecto: uno por CLI con adaptador "
+        "registrado). Con rutas explícitas se usa el patrón *.jsonl",
+    )
     parser.add_argument("--intervalo", type=float, default=INTERVALO_POR_DEFECTO)
     parser.add_argument(
         "--solo-indice",
@@ -223,6 +266,11 @@ def watch_command(argv: list[str]) -> int:
     if args.solo_indice and args.sin_indice:
         print("error: --solo-indice y --sin-indice se contradicen", file=sys.stderr)
         return 1
+    fuentes = (
+        FUENTES_POR_DEFECTO
+        if not args.sessions_dir
+        else tuple((ruta, "*.jsonl") for ruta in args.sessions_dir)
+    )
     coleccion = coleccion_local()
     indice = None if args.sin_indice else coleccion_turnos()
     modo = (
@@ -231,8 +279,9 @@ def watch_command(argv: list[str]) -> int:
         else "desde ahora: sólo turnos cerrados a partir de este arranque (ADR-008); "
         "use --backfill para el histórico"
     )
+    vigiladas = ", ".join(str(ruta) for ruta, _ in fuentes)
     print(
-        f"skopos watch: vigilando {args.sessions_dir} cada {args.intervalo}s "
+        f"skopos watch: vigilando {vigiladas} cada {args.intervalo}s "
         f"— {modo}"
         + ("" if indice is None else "; indexando turnos observados (P-004)")
         + ("; SÓLO ÍNDICE: no se llama al modelo" if args.solo_indice else "")
@@ -240,7 +289,7 @@ def watch_command(argv: list[str]) -> int:
         file=sys.stderr,
     )
     ejecutar(
-        args.sessions_dir,
+        fuentes,
         coleccion=coleccion,
         intervalo=args.intervalo,
         on_ciclo=_reportar_ciclo,
