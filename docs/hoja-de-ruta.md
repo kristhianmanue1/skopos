@@ -43,13 +43,14 @@ se duplica aquí para no tener dos lugares que puedan desincronizarse.
 
 ## Trazabilidad entre sesiones
 
-Estado del ciclo guardado en AN-KLA local (`.an-kla/`, gitignorado —
-patrón de ektel): hecho `f-ciclo-multi-cli-2026-08-28`, que **sustituye**
-a `f-ciclo-multi-cli-2026-08-20`; transacción
-`0c89cb9e-9458-4101-a34d-f9b90a9d3a3d`, revisión
-`sha256:9e0667800db068c8dcff9a958f6d389b875ee05d16835892d2e1da6763362bd4`
-(revisión 2). Recuperable con
-`an-kla retrieve --query "ciclo multi-CLI" --budget 5000`.
+Estado guardado en AN-KLA local (`.an-kla/`, gitignorado — patrón de
+ektel), como cadena de supersedes: `f-ciclo-multi-cli-2026-08-20` →
+`f-ciclo-multi-cli-2026-08-28` → **`f-skopos-cierre-2026-08-28`**
+(vigente; transacción `6aa9579f-2761-43d8-a84a-9f5fe6580a51`, revisión 3
+`sha256:2c7dd9af073cdeb3263547f74625a78ec028e5d405fbdd17de4fc503459ba38b`).
+Recoge avances, **limitaciones vivas** y los dos patrones aprendidos del
+día. Recuperable con
+`an-kla retrieve --query "estado skopos limitaciones" --budget 6000`.
 
 ## Índice de turnos (P-004) e identidad de Codex
 
