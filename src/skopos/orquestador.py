@@ -16,7 +16,12 @@ from typing import Callable
 from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
-from skopos.almacenamiento import DocumentoInvalido, existe_turn_id, guardar_analisis
+from skopos.almacenamiento import (
+    DocumentoInvalido,
+    existe_turn_id,
+    guardar_analisis,
+    indexar_turno,
+)
 from skopos.analisis import Analisis, AnalisisFallido, analizar_turno
 from skopos.captura import Turno
 from skopos.cursor import Cursor
@@ -76,6 +81,8 @@ def procesar_rollout(
     on_diagnostico: Callable[[Path, ResultadoParseo], None] | None = None,
     cursor: Cursor | None = None,
     on_cursor: Callable[[Path, Cursor], None] | None = None,
+    indice: Collection | None = None,
+    on_indexado: Callable[[Turno, bool | None], None] | None = None,
     **kwargs_analisis,
 ) -> list[ResultadoTurno]:
     """Procesa los turnos cerrados de un rollout, uno por uno.
@@ -99,6 +106,14 @@ def procesar_rollout(
     análisis falló no está en Mongo, y adelantarlo significaría no
     volver a verlo nunca — el cursor pasaría de caché inofensiva a
     pérdida silenciosa de datos.
+
+    `indice` (P-004): si está presente, cada turno **dentro de la
+    ventana** se indexa antes de analizarse. Indexar no llama al modelo y
+    no depende de que el análisis funcione: un Ollama caído deja el turno
+    guardado como observación aunque no llegue a interpretarse. Los
+    turnos fuera de la ventana de ADR-008 **no** se indexan aquí — el
+    histórico es trabajo de `skopos indexar`, no un backfill encubierto
+    del vigilante.
     """
     parseo = parsear(path, cursor=cursor)
     if on_diagnostico is not None:
@@ -121,6 +136,16 @@ def procesar_rollout(
             # tampoco hay nada que reintentar en él
             _avanzar(turno)
             continue
+
+        if indice is not None:
+            # una escritura del índice que falle no puede tumbar el
+            # análisis: se reporta y se sigue (el índice es aditivo)
+            try:
+                insertado = indexar_turno(turno, coleccion=indice)
+            except (PyMongoError, DocumentoInvalido):
+                insertado = None
+            if on_indexado is not None:
+                on_indexado(turno, insertado)
 
         try:
             visto = ya_guardado(turno.turn_id, coleccion=coleccion)

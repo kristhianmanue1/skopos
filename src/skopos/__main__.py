@@ -5,12 +5,14 @@ from __future__ import annotations
 import sys
 
 from skopos import __version__
+from skopos.busqueda import buscar_command
 from skopos.cli import query_command, reanalizar_command
 from skopos.indexador import indexar_command
 from skopos.vigilante import watch_command
 
 COMANDOS = {"query": query_command, "watch": watch_command,
-            "reanalizar": reanalizar_command, "indexar": indexar_command}
+            "reanalizar": reanalizar_command, "indexar": indexar_command,
+            "buscar": buscar_command}
 
 _AYUDA = f"""skopos {__version__}
 
@@ -25,6 +27,9 @@ Comandos:
   indexar [RUTAS...] [--patron P] [--limite N] [--dry-run]
                              indexa turnos observados en skopos.turnos,
                              sin llamar al modelo (P-004)
+  buscar <texto> [--proyecto P] [--cli C] [--max N] [--tope-texto B]
+                             busca en los turnos observados; sirve texto
+                             redactado y acotado (ADR-009 P3+P5)
 
 `skopos <comando> --help` muestra los argumentos de cada uno."""
 

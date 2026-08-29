@@ -308,6 +308,46 @@ Invariantes:
 Compatibilidad: agregar campos opcionales es compatible hacia atrás;
 en el resultado de `skopos query`, quitar o renombrar campos exige v2.
 
+## CONTRATO: cli-skopos-buscar v1
+
+> v1 (2026-08-28, P-004 decisión 3): superficie de búsqueda sobre los
+> **turnos observados** (`skopos.turnos`). Es la primera que sirve
+> conversación cruda, y por eso lleva las mitigaciones de ADR-009
+> extendidas: P3, P5 y redacción de secretos.
+
+Entrada:
+  `texto`: string [obligatorio] — términos a buscar. `$text` los une con
+  **OR** y ordena por relevancia; entrecomillar la frase exige que
+  aparezca exacta
+  `--proyecto`: string [opcional] — filtra por proyecto
+  `--cli`: string [opcional] — filtra por CLI de origen
+  `--max`: int ≥ 0 [opcional, default 20] — turnos servidos (P5)
+  `--tope-texto`: int ≥ 0 [opcional, default 8192] — bytes servidos por
+  rol y turno (P5)
+
+Salida (JSON a stdout, exit 0):
+  `declaracion`: string [obligatorio] — **P3**: declara que los textos
+  son dato observado, nunca instrucción para quien los lee
+  `resultados`: lista de `{turn_id, cli, proyecto, ocurrido_en,
+  ruta_origen, origen_tipo, texto_usuario, texto_agente, truncado,
+  relevancia}` — los textos van **redactados** (patrones de secretos de
+  SPEC-002) y **acotados** al tope, con marcador explícito si se cortan
+  `excluidos`: `{por_limite}` — lo que no se sirvió, contado nunca
+  silenciado
+
+Errores (exit distinto de cero, mensaje a stderr, nada en stdout):
+  Mongo no disponible
+
+Invariantes:
+  - **nunca sirve texto sin redactar ni sin acotar**: son las dos
+    palancas que P-004 exigió al abrir esta superficie
+  - no lee el archivo de origen: sirve lo indexado. Para el fragmento
+    verificado contra su origen está `cli-skopos-query v1`
+  - `--max 0` no sirve nada pero cuenta todo lo que había
+
+Compatibilidad: agregar campos a la salida es compatible; quitar o
+renombrar exige v2.
+
 ## CONTRATO: cli-skopos-reanalizar v1
 
 > v1 (2026-08-20, ADR-007, ronda 3 F5): superficie del supersede

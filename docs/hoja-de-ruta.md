@@ -64,6 +64,12 @@ contraejemplo). Con eso, **índice lleno: 22,870 turnos de los 5 CLIs en
 65.9 s, 213 MB, búsqueda en <10 ms**
 (`docs/evidencia/indice-de-turnos-2026-08-28.md`).
 
-Pendiente declarado: ninguna superficie sirve todavía el texto crudo
-—cuando exista debe llevar P3/P5 de ADR-009—, `watch` no indexa aún, y
-falta el control positivo del detector de eco sobre la colección nueva.
+Los tres pendientes quedaron cerrados el mismo día
+(`docs/evidencia/superficie-busqueda-y-eco-2026-08-28.md`):
+**`skopos buscar`** sirve el índice con P3, P5 y redacción de secretos
+(contrato `cli-skopos-buscar v1`); el **detector de eco** pasó su control
+positivo 3/3 sin falsos positivos y midió 29 turnos con firma (0.1 %)
+sobre la colección real; y **`watch` ya indexa** por defecto, sólo dentro
+de la ventana de ADR-008 y de forma independiente del análisis —
+verificado con Ollama caído: el turno queda indexado aunque el análisis
+falle.

@@ -28,7 +28,7 @@ from typing import Callable
 
 from pymongo.collection import Collection
 
-from skopos.almacenamiento import coleccion_local
+from skopos.almacenamiento import coleccion_local, coleccion_turnos
 from skopos.cursor import AlmacenCursores
 from skopos.orquestador import ResultadoTurno, procesar_rollout
 from skopos.parseo import ResultadoParseo
@@ -51,6 +51,8 @@ def ciclo(
     t0: datetime | None = None,
     on_diagnostico: Callable[[Path, ResultadoParseo], None] | None = None,
     cursores: AlmacenCursores | None = None,
+    indice=None,
+    on_indexado=None,
     **kwargs_procesar,
 ) -> list[ResultadoTurno]:
     """Un barrido completo: procesa los turnos nuevos de todos los rollouts.
@@ -85,6 +87,8 @@ def ciclo(
                 on_diagnostico=on_diagnostico,
                 cursor=cursores.obtener(path) if cursores else None,
                 on_cursor=cursores.actualizar if cursores else None,
+                indice=indice,
+                on_indexado=on_indexado,
                 **kwargs_procesar,
             )
         )
@@ -102,6 +106,7 @@ def ejecutar(
     on_diagnosticos: Callable[[Counter], None] | None = None,
     max_ciclos: int | None = None,
     backfill: bool = False,
+    indice=None,
     **kwargs_procesar,
 ) -> None:
     """Corre el vigilante hasta SIGTERM/SIGINT (o max_ciclos, para pruebas).
@@ -125,9 +130,16 @@ def ejecutar(
         ciclos = 0
         while not detener:
             diagnosticos: Counter[str] = Counter()
+            indexados: Counter[str] = Counter()
 
             def _contar(_path: Path, parseo: ResultadoParseo) -> None:
                 diagnosticos[parseo.diagnostico] += 1
+
+            def _contar_indice(_turno, insertado: bool | None) -> None:
+                if insertado is None:
+                    indexados["fallido"] += 1
+                else:
+                    indexados["indexado" if insertado else "ya_estaba"] += 1
 
             resultados = ciclo(
                 sessions_dir,
@@ -135,12 +147,20 @@ def ejecutar(
                 t0=t0,
                 on_diagnostico=_contar,
                 cursores=cursores,
+                indice=indice,
+                on_indexado=_contar_indice if indice is not None else None,
                 **kwargs_procesar,
             )
             if on_ciclo:
                 on_ciclo(resultados)
             if on_diagnosticos:
                 on_diagnosticos(diagnosticos)
+            if indice is not None and (indexados["indexado"] or indexados["fallido"]):
+                print(
+                    f"ciclo: índice — {indexados['indexado']} turno(s) nuevo(s)"
+                    + (f", {indexados['fallido']} fallido(s)" if indexados["fallido"] else ""),
+                    file=sys.stderr,
+                )
             ciclos += 1
             if max_ciclos is not None and ciclos >= max_ciclos:
                 break
@@ -179,6 +199,12 @@ def watch_command(argv: list[str]) -> int:
     parser.add_argument("--sessions-dir", type=Path, default=SESSIONS_DIR_POR_DEFECTO)
     parser.add_argument("--intervalo", type=float, default=INTERVALO_POR_DEFECTO)
     parser.add_argument(
+        "--sin-indice",
+        action="store_true",
+        help="no indexa los turnos observados (P-004); por defecto sí lo hace, "
+        "porque indexar no llama al modelo y es lo que evita perder conversación",
+    )
+    parser.add_argument(
         "--backfill",
         action="store_true",
         help="procesa también el histórico no guardado (por defecto: sólo turnos "
@@ -187,6 +213,7 @@ def watch_command(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     coleccion = coleccion_local()
+    indice = None if args.sin_indice else coleccion_turnos()
     modo = (
         "backfill: procesará TODO turno no guardado"
         if args.backfill
@@ -195,7 +222,9 @@ def watch_command(argv: list[str]) -> int:
     )
     print(
         f"skopos watch: vigilando {args.sessions_dir} cada {args.intervalo}s "
-        f"— {modo} (Ctrl+C para detener)",
+        f"— {modo}"
+        + ("" if indice is None else "; indexando turnos observados (P-004)")
+        + " (Ctrl+C para detener)",
         file=sys.stderr,
     )
     ejecutar(
@@ -205,5 +234,6 @@ def watch_command(argv: list[str]) -> int:
         on_ciclo=_reportar_ciclo,
         on_diagnosticos=_reportar_diagnosticos,
         backfill=args.backfill,
+        indice=indice,
     )
     return 0
