@@ -98,6 +98,55 @@ class FronteraSpec006Tests(unittest.TestCase):
         self.assertEqual(vistos, ["ok"])
 
 
+class SoloIndiceTests(unittest.TestCase):
+    """Modo observación: indexa y no interpreta (P-004)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = Path(self.tmp.name) / "rollout-test.jsonl"
+        self.path.write_text(
+            "\n".join(_linea(e) for e in [
+                _session_meta(), _mensaje("user", "hola"), _cierre("t1"),
+            ]) + "\n",
+            encoding="utf-8",
+        )
+
+    def test_no_llama_al_modelo_ni_a_la_dedup_pero_si_indexa(self):
+        llamadas = []
+
+        class _Indice:
+            def __init__(self): self.docs = []
+            def insert_one(self, d): self.docs.append(d)
+
+        indice = _Indice()
+        resultados = procesar_rollout(
+            self.path,
+            coleccion=None,
+            analizar=lambda t, **k: llamadas.append("analizar"),
+            guardar=lambda a, **k: llamadas.append("guardar"),
+            ya_guardado=lambda tid, **k: llamadas.append("dedup") or False,
+            indice=indice,
+            solo_indice=True,
+        )
+        self.assertEqual(llamadas, [])          # ni modelo, ni dedup, ni guardado
+        self.assertEqual(resultados, [])        # no hay desenlace de analisis que reportar
+        self.assertEqual(len(indice.docs), 1)   # pero el turno quedo observado
+
+    def test_el_cursor_avanza_porque_no_hay_nada_que_reintentar(self):
+        from skopos.parseo import parsear
+
+        class _Indice:
+            def insert_one(self, d): pass
+
+        cursores = []
+        procesar_rollout(
+            self.path, coleccion=None, indice=_Indice(), solo_indice=True,
+            on_cursor=lambda ruta, c: cursores.append(c),
+        )
+        self.assertEqual(cursores[0].offset, parsear(self.path).turnos[-1].offset_fin)
+
+
 class AvanceDelCursorTests(unittest.TestCase):
     """ADR-011: el cursor es caché inofensiva; jamás pérdida silenciosa."""
 

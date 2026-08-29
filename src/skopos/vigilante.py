@@ -107,6 +107,7 @@ def ejecutar(
     max_ciclos: int | None = None,
     backfill: bool = False,
     indice=None,
+    solo_indice: bool = False,
     **kwargs_procesar,
 ) -> None:
     """Corre el vigilante hasta SIGTERM/SIGINT (o max_ciclos, para pruebas).
@@ -149,6 +150,7 @@ def ejecutar(
                 cursores=cursores,
                 indice=indice,
                 on_indexado=_contar_indice if indice is not None else None,
+                solo_indice=solo_indice,
                 **kwargs_procesar,
             )
             if on_ciclo:
@@ -199,6 +201,12 @@ def watch_command(argv: list[str]) -> int:
     parser.add_argument("--sessions-dir", type=Path, default=SESSIONS_DIR_POR_DEFECTO)
     parser.add_argument("--intervalo", type=float, default=INTERVALO_POR_DEFECTO)
     parser.add_argument(
+        "--solo-indice",
+        action="store_true",
+        help="observa sin interpretar: indexa los turnos y NO llama al modelo "
+        "(modo barato para dejarlo en segundo plano)",
+    )
+    parser.add_argument(
         "--sin-indice",
         action="store_true",
         help="no indexa los turnos observados (P-004); por defecto sí lo hace, "
@@ -212,6 +220,9 @@ def watch_command(argv: list[str]) -> int:
     )
     args = parser.parse_args(argv)
 
+    if args.solo_indice and args.sin_indice:
+        print("error: --solo-indice y --sin-indice se contradicen", file=sys.stderr)
+        return 1
     coleccion = coleccion_local()
     indice = None if args.sin_indice else coleccion_turnos()
     modo = (
@@ -224,6 +235,7 @@ def watch_command(argv: list[str]) -> int:
         f"skopos watch: vigilando {args.sessions_dir} cada {args.intervalo}s "
         f"— {modo}"
         + ("" if indice is None else "; indexando turnos observados (P-004)")
+        + ("; SÓLO ÍNDICE: no se llama al modelo" if args.solo_indice else "")
         + " (Ctrl+C para detener)",
         file=sys.stderr,
     )
@@ -235,5 +247,6 @@ def watch_command(argv: list[str]) -> int:
         on_diagnosticos=_reportar_diagnosticos,
         backfill=args.backfill,
         indice=indice,
+        solo_indice=args.solo_indice,
     )
     return 0

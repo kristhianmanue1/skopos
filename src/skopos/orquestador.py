@@ -83,6 +83,7 @@ def procesar_rollout(
     on_cursor: Callable[[Path, Cursor], None] | None = None,
     indice: Collection | None = None,
     on_indexado: Callable[[Turno, bool | None], None] | None = None,
+    solo_indice: bool = False,
     **kwargs_analisis,
 ) -> list[ResultadoTurno]:
     """Procesa los turnos cerrados de un rollout, uno por uno.
@@ -114,6 +115,14 @@ def procesar_rollout(
     turnos fuera de la ventana de ADR-008 **no** se indexan aquí — el
     histórico es trabajo de `skopos indexar`, no un backfill encubierto
     del vigilante.
+
+    `solo_indice`: observa sin interpretar — indexa y no llama al modelo
+    ni a la dedup de análisis. El cursor **sí avanza**: el turno quedó
+    guardado como observación, así que no hay nada que reintentar. La
+    consecuencia se declara: esos turnos no volverán a ofrecerse al
+    análisis por relectura; analizarlos será trabajo de una pasada sobre
+    el índice, que es la forma que P-004 eligió (recordar todo,
+    interpretar lo que haga falta).
     """
     parseo = parsear(path, cursor=cursor)
     if on_diagnostico is not None:
@@ -146,6 +155,10 @@ def procesar_rollout(
                 insertado = None
             if on_indexado is not None:
                 on_indexado(turno, insertado)
+
+        if solo_indice:
+            _avanzar(turno)
+            continue
 
         try:
             visto = ya_guardado(turno.turn_id, coleccion=coleccion)
