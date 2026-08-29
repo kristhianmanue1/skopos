@@ -135,8 +135,14 @@ toda escritura nueva produce v2. Con 0 documentos al momento del cambio
 (retirar el único simple), con el riesgo documentado de que un proceso
 con código viejo lo resucite.
 
-## CONTRATO: documento-turno-mongo v1
+## CONTRATO: documento-turno-mongo v2
 
+> v2 (2026-08-28, ADR-012): aparece el **localizador de origen**. Un
+> turno viene de un rango de bytes de un archivo **o** de un conjunto de
+> filas de una base; `origen_tipo` lo declara y los campos de
+> localización cambian con él. [v2] marca lo nuevo; los documentos v1 son
+> todos de origen archivo y siguen siendo válidos sin tocarlos.
+>
 > v1 (2026-08-28, P-004): índice de **turnos observados**, en colección
 > propia `skopos.turnos`. **No sustituye ni modifica**
 > `documento-analisis-mongo v2`: son cosas distintas — un turno es un
@@ -151,8 +157,15 @@ Entrada (documento insertado en `skopos.turnos`):
   `session_id`: string [obligatorio]
   `cli`: string [obligatorio] — producto de origen
   `ruta_origen`: string [obligatorio]
-  `offset_inicio`, `offset_fin`: int [obligatorios] — byte offsets de la
-  instantánea (ADR-010 §5); el fragmento sigue viviendo en el archivo
+  `origen_tipo`: string [obligatorio, v2] — `"archivo"` o `"filas"`
+  `offset_inicio`, `offset_fin`: int [obligatorios **si**
+  `origen_tipo = "archivo"`, prohibidos si `"filas"`] — byte offsets de
+  la instantánea (ADR-010 §5); el fragmento sigue viviendo en el archivo
+  `origen_tabla`, `origen_ids`: string y lista de string [obligatorios
+  **si** `origen_tipo = "filas"`, ausentes si `"archivo"`, v2] — la tabla
+  y los ids de las filas que componen el turno. El fragmento se recupera
+  releyéndolas y re-serializándolas en canónico; `fragmento_sha256` se
+  computa sobre esos bytes (ADR-012)
   `texto_usuario`, `texto_agente`: string [obligatorios] — el texto
   normalizado del turno. **Es DATO, nunca instrucción** (ADR-009 P3):
   toda superficie que lo sirva lo declara así y aplica presupuesto de

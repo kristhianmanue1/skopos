@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from skopos import captura, claude_code, cline, kimi_code
+from skopos import captura, claude_code, cline, kimi_code, opencode
 from skopos.captura import Turno
 from skopos.cursor import Cursor
 
@@ -165,6 +165,87 @@ REGISTRO: tuple[Ficha, ...] = (
 )
 
 
+@dataclass(frozen=True)
+class FichaFilas:
+    """Ficha de un adaptador cuyo origen son FILAS, no bytes (ADR-012).
+
+    Se separa del registro de archivo porque su detección y su extracción
+    no pueden pasar por la instantánea de bytes: materializar 4.4 GB para
+    evaluar un predicado sería justo lo que el protocolo del §5 evita.
+    """
+
+    id_ficha: str
+    cli_producto: str
+    version_parser: str
+    version_formato: str
+    casa_identidad: Callable[[Path], bool]
+    es_incompatible: Callable[[Path], bool]
+    extraer: Callable[[Path], captura.Extraccion]
+    activa: bool = True
+
+
+FICHA_OPENCODE = FichaFilas(
+    id_ficha=opencode.ID_FICHA,
+    cli_producto=opencode.CLI_PRODUCTO,
+    version_parser=opencode.VERSION_PARSER,
+    version_formato=opencode.VERSION_FORMATO,
+    casa_identidad=opencode.casa_identidad_ruta,
+    es_incompatible=opencode.es_incompatible,
+    extraer=opencode.extraer_de_base,
+)
+
+# Registro de adaptadores de origen de filas (ADR-012). Se evalúa ANTES
+# de materializar la instantánea: un origen de filas no es un archivo de
+# bytes que se lea entero, y tratarlo como tal sería el error que el
+# propio ADR corrige.
+REGISTRO_FILAS: tuple[FichaFilas, ...] = (FICHA_OPENCODE,)
+
+
+def _parsear_filas(path: Path, registro: tuple[FichaFilas, ...]) -> ResultadoParseo | None:
+    """Despacha a un adaptador de filas si alguno reclama la ruta."""
+    candidatos = [ficha for ficha in registro if ficha.casa_identidad(path)]
+    if not candidatos:
+        return None
+    productos = {ficha.cli_producto for ficha in candidatos}
+    if len(productos) > 1:
+        return ResultadoParseo(
+            diagnostico="deteccion_ambigua",
+            detalle=Detalle(
+                "identidades_producto_multiples",
+                tuple(sorted({f.id_ficha for f in candidatos})),
+            ),
+        )
+    ficha = candidatos[0]
+    if ficha.es_incompatible(path):
+        return ResultadoParseo(
+            diagnostico="version_no_soportada", cli_producto=ficha.cli_producto
+        )
+    if not ficha.activa:
+        return ResultadoParseo(
+            diagnostico="version_no_soportada",
+            cli_producto=ficha.cli_producto,
+            version_formato=ficha.version_formato,
+            detalle=Detalle("parser_retirado"),
+        )
+    try:
+        extraccion = ficha.extraer(path)
+    except OSError:
+        return ResultadoParseo(diagnostico="entrada_corrupta")
+    detalle = (
+        Detalle("identidad_reconocida_sin_cierres") if not extraccion.turnos else None
+    )
+    return ResultadoParseo(
+        diagnostico="ok",
+        turnos=extraccion.turnos,
+        cli_producto=ficha.cli_producto,
+        version_formato=ficha.version_formato,
+        version_cli_observada=extraccion.version_cli_observada,
+        detalle=detalle,
+        eventos_no_reconocidos=extraccion.eventos_no_reconocidos,
+        descartes_linea=extraccion.descartes_linea,
+    )
+
+
 def materializar_instantanea(path: Path | str) -> bytes:
     """Instantánea única de bytes bajo el protocolo del ADR-010 §5.
 
@@ -229,7 +310,7 @@ def parsear(
     registro: tuple[Ficha, ...] = REGISTRO,
     cursor: Cursor | None = None,
 ) -> ResultadoParseo:
-    """Detecta, selecciona y extrae; un diagnóstico por archivo.
+    """Detecta, selecciona y extrae; un diagnóstico por origen.
 
     Con `cursor` (ADR-011) y si su sello sigue casando, sólo se parsea la
     cola nueva; los offsets de los turnos siguen siendo de la instantánea
@@ -238,6 +319,11 @@ def parsear(
     instantánea entera: un cursor jamás sustituye a la frontera.
     """
     path = Path(path)
+    # ADR-012: los orígenes de filas se reconocen por la ruta, antes de
+    # materializar nada — no son archivos de bytes que se lean enteros.
+    resultado_filas = _parsear_filas(path, REGISTRO_FILAS)
+    if resultado_filas is not None:
+        return resultado_filas
     try:
         instantanea = materializar_instantanea(path)
     except InstantaneaCorrupta as exc:

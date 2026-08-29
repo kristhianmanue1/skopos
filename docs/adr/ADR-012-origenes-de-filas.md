@@ -1,6 +1,6 @@
 # ADR-012: orígenes de filas — cómo se sella un turno que no vive en un archivo de texto
 
-Estado: **propuesto** — pendiente de decisión 🔒 del dueño. Habilitaría
+Estado: **aceptado** — decisión 🔒 del dueño, 2026-08-28. Habilita
 el adaptador de **opencode**, último CLI de la fase B de P-003.
 Extiende ADR-010; no lo revierte.
 
@@ -136,5 +136,15 @@ arranque de ADR-008.
 
 ## Firma de decisión
 
-- Dueño: **pendiente**. Evidencia medida el 2026-08-28 en esta sesión;
-  no se implementa nada hasta la 🔒.
+- Dueño: decisión 🔒 comunicada en canal del agente · Fecha:
+  **2026-08-28** · Sobre la evidencia medida ese día.
+- **Implementado el mismo día**: `src/skopos/opencode.py`, registro de
+  fichas de filas en `parseo.py`, localizador en `Turno` y en
+  `documento-turno-mongo v2`. Evidencia:
+  `docs/evidencia/ficha-opencode-2026-08-28.md`.
+- **Nota de alcance**: `documento-analisis-mongo` **no** se subió a v3
+  todavía. La ruta de análisis (Ollama) aún no procesa orígenes de
+  filas, así que subir ese contrato hoy sería declarar una forma que
+  nada produce. Se hará cuando el análisis alcance a opencode — el
+  contrato de turnos, que es el que sí recibe estos documentos, ya está
+  en v2.

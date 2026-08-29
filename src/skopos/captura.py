@@ -55,6 +55,13 @@ PAYLOAD_CIERRE = "task_complete"
 ROLES_CONVERSACION = {"user": "usuario", "assistant": "agente"}
 
 
+# Localizador de origen (ADR-012): un turno viene de un rango de bytes de
+# un archivo, o de un conjunto de filas de una base. Los cuatro
+# adaptadores de archivo usan el primero y no cambian.
+ORIGEN_ARCHIVO = "archivo"
+ORIGEN_FILAS = "filas"
+
+
 @dataclass(frozen=True)
 class Turno:
     turn_id: str
@@ -63,11 +70,17 @@ class Turno:
     texto_agente: str
     timestamp_cierre: str | None
     ruta_origen: str
-    offset_inicio: int
-    offset_fin: int
+    # `None` sólo en orígenes de filas: una fila no tiene rango de bytes
+    # estable, y fingir uno sería mentir en un campo que otros
+    # componentes usan para releer (ADR-012).
+    offset_inicio: int | None
+    offset_fin: int | None
     cli: str = CLI_PRODUCTO
     proyecto: str | None = None
     fragmento_sha256: str | None = None  # sello P4a (ADR-009)
+    origen_tipo: str = ORIGEN_ARCHIVO
+    origen_tabla: str | None = None  # sólo en orígenes de filas
+    origen_ids: tuple[str, ...] | None = None  # filas que componen el turno
 
 
 @dataclass(frozen=True)

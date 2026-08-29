@@ -235,12 +235,19 @@ def _documento_turno(turno: Turno) -> dict:
         "session_id": turno.session_id,
         "cli": turno.cli,
         "ruta_origen": turno.ruta_origen,
-        "offset_inicio": turno.offset_inicio,
-        "offset_fin": turno.offset_fin,
+        "origen_tipo": turno.origen_tipo,
         "texto_usuario": turno.texto_usuario,
         "texto_agente": turno.texto_agente,
         "indexado_en": datetime.now(timezone.utc).isoformat(),
     }
+    # ADR-012: los offsets son del origen de archivo; en el de filas van
+    # los ids que componen el turno. Nunca los dos, nunca ninguno.
+    if turno.offset_inicio is not None and turno.offset_fin is not None:
+        documento["offset_inicio"] = turno.offset_inicio
+        documento["offset_fin"] = turno.offset_fin
+    if turno.origen_ids:
+        documento["origen_tabla"] = turno.origen_tabla
+        documento["origen_ids"] = list(turno.origen_ids)
     if turno.timestamp_cierre:
         documento["ocurrido_en"] = turno.timestamp_cierre
     if turno.proyecto:
