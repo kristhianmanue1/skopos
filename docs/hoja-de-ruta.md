@@ -47,12 +47,17 @@ se duplica aquí para no tener dos lugares que puedan desincronizarse.
 
 Estado guardado en AN-KLA local (`.an-kla/`, gitignorado — patrón de
 ektel), como cadena de supersedes: `f-ciclo-multi-cli-2026-08-20` →
-`f-ciclo-multi-cli-2026-08-28` → **`f-skopos-cierre-2026-08-28`**
-(vigente; transacción `6aa9579f-2761-43d8-a84a-9f5fe6580a51`, revisión 3
-`sha256:2c7dd9af073cdeb3263547f74625a78ec028e5d405fbdd17de4fc503459ba38b`).
-Recoge avances, **limitaciones vivas** y los dos patrones aprendidos del
-día. Recuperable con
-`an-kla retrieve --query "estado skopos limitaciones" --budget 6000`.
+`f-ciclo-multi-cli-2026-08-28` → `f-skopos-cierre-2026-08-28` →
+**`f-skopos-cierre-2026-09-06`**
+(vigente; transacción escrita con AN-KLA b22 el 2026-09-06, revisión
+`sha256:b9ebf2c4a25493cbff3993c01d94d02084a6ff5e0457ca806f68bfa7fd2c680a`).
+Recoge el cierre de hoy: hito 19 (ADR-013, opencode en vivo), hito 20
+(ADR-014, análisis multi-proveedor), release v0.1.0 y las limitaciones
+vivas. Recuperable con
+`an-kla retrieve --query "adr-013 opencode watch multi-proveedor release" --budget 2500`.
+Nota de versión: la instalación de AN-KLA para skopos quedó en
+**0.1.0b22** (venv local); los almacenes de otros proyectos y el PATH
+siguen en versiones anteriores por decisión del dueño.
 
 ## Índice de turnos (P-004) e identidad de Codex
 
