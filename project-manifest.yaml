@@ -1,0 +1,54 @@
+schema: pinax/project-manifest/v1
+id: skopos
+proposito: >
+  Memoria observable de sesiones de CLIs de IA: captura de turnos, análisis
+  temático local con Ollama, almacenamiento consultable en MongoDB local,
+  recuperación por tema y vigilante en vivo, con acceso al fragmento completo
+  de origen cuando hace falta.
+consumidor_principal: agente
+
+ofrece:
+  - captura de turnos de CLIs de IA hacia documentos estructurados (SPEC-001)
+  - análisis temático local vía API HTTP de Ollama, sin servicios externos (SPEC-002)
+  - almacenamiento consultable en MongoDB local (SPEC-003)
+  - recuperación por tema por CLI, con acceso al fragmento completo de origen (SPEC-004)
+  - vigilante en vivo con arranque "desde ahora" y backfill explícito (SPEC-005, ADR-008)
+  - reanálisis de un turno con supersede explícito (ADR-007)
+  - pipeline verificado con datos reales (28 turnos, ~19.6 s/turno, 0 fallos)
+  - contratos de parser por CLI aceptados (ADR-010 + SPEC-006) como base de la extensión multi-CLI
+
+no_ofrece:
+  - fuente para sesiones de prime-agent (hoy sin parser; la ampliación multi-CLI está cerrada documentalmente pero sin implementar)
+  - retención, expiración ni borrado selectivo de lo capturado
+  - redacción garantizada de secretos en fragmento_completo (evidencia cruda por diseño)
+  - búsqueda semántica (la recuperación usa $text de MongoDB, ADR-006)
+  - garantía de exactitud del análisis producido por el LLM local
+  - ejecución de código o intervención sobre los CLIs observados
+
+publica:
+  - { tipo: contrato, id: skopos/rollout-jsonl-de-codex, version: v1 }
+  - { tipo: contrato, id: skopos/documento-turno-mongo, version: v2 }
+  - { tipo: contrato, id: skopos/documento-analisis-mongo, version: v2 }
+  - { tipo: contrato, id: skopos/config-dominio, version: v1 }
+  - { tipo: contrato, id: skopos/cli-skopos-query, version: v1 }
+  - { tipo: contrato, id: skopos/cli-skopos-buscar, version: v1 }
+  - { tipo: contrato, id: skopos/cli-skopos-reanalizar, version: v1 }
+  - { tipo: contrato, id: skopos/consulta-escrubery-cli, version: v1 }
+
+consume:
+  - { tipo: externo, id: mongodb-local, uso: "almacenamiento de turnos y análisis; instalación y operación locales", requerido: true }
+  - { tipo: externo, id: ollama-local, uso: "motor de análisis temático vía API HTTP local (qwen3:8b)", requerido: true }
+  - { tipo: proyecto, id: escrubery, uso: "canal alternativo de obtención de conversaciones (REQ-10); ensayo pendiente", requerido: false }
+
+fronteras_de_confianza:
+  - el análisis temático es salida de un LLM local y no se verifica contra el fragmento de origen
+  - fragmento_completo conserva el texto original sin redactar; la redacción de secretos es defensa por patrón sólo en campos derivados
+  - watch procesa sólo turnos cerrados desde su arranque; el histórico exige backfill explícito
+  - el soporte multi-CLI está aceptado a nivel contractual, no implementado; cada parser nuevo requiere su propia verificación
+  - lo capturado incluye rutas absolutas del sistema del usuario y permanece en almacenamiento local sin exposición externa
+
+pospuesto:
+  - implementación de parsers multi-CLI (autorización y plan de fase propios pendientes)
+  - lectura por sesión, fecha o rango
+  - borrado selectivo y política de retención
+  - búsqueda semántica si $text resulta insuficiente en uso real
