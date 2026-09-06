@@ -55,13 +55,17 @@ push se reporta. El resto de esta lista sigue exigiendo autorización
 
 ## Límites de tamaño
 
-Por declaración (Skevi no está vendorizado en este repo, ver README
-"Decisiones de cascarón"): 800 líneas por archivo de texto, 200 para este
-archivo, 300 para `README.md`. Sin gate automatizado corriendo todavía.
+Heredados de Skevi (800 líneas por archivo de texto, 200 para este
+archivo, 300 para `README.md`) y comprobados por el **gate de Skevi**
+(ADR-015): `python3 scripts/check_sizes.py` — verdes o no se declara
+terminado. Config del proyecto en `skevi-gate.json`; exención nueva se
+escribe ahí, no en la costumbre.
 
 ## Verificación antes de declarar terminado
 
 1. `python3 -m unittest discover -s tests` en verde.
-2. Diff leído completo, sin cambios fuera del alcance de la tarea.
-3. Si el cambio toca specs/contratos (`docs/`), la implementación y los
+2. `python3 scripts/check_sizes.py && python3 scripts/check_plans.py`
+   en verde (gate de Skevi, ADR-015).
+3. Diff leído completo, sin cambios fuera del alcance de la tarea.
+4. Si el cambio toca specs/contratos (`docs/`), la implementación y los
    tests quedan consistentes con lo que esos documentos prometen.

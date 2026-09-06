@@ -1,0 +1,19 @@
+{
+  "required": [
+    "AGENTS.md",
+    "README.md",
+    "CLAUDE.md",
+    "LICENSE",
+    "pyproject.toml",
+    "project-manifest.yaml",
+    "skevi-gate.json",
+    "docs/guia-rapida.md",
+    "docs/hoja-de-ruta.md",
+    "docs/f0-analisis-y-requerimientos.md",
+    "docs/f1-maquina-estados.md",
+    "docs/specs/f1-specs.md",
+    "docs/contratos/f1-contratos.md",
+    "scripts/check_sizes.py",
+    "scripts/check_plans.py"
+  ]
+}

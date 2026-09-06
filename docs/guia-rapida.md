@@ -52,6 +52,7 @@ ollama list                                            # confirma qwen3:8b
 cd /Users/krisnova/www/aria/skopos
 source .venv/bin/activate
 python3 -m unittest discover -s tests   # 253 tests, ~30 s si Mongo está arriba
+python3 scripts/check_sizes.py && python3 scripts/check_plans.py   # gate de Skevi (ADR-015)
 python3 -m skopos                        # ayuda + comandos
 ```
 

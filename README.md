@@ -103,7 +103,10 @@ python3 -m unittest discover -s tests
   vendorizada — no se copió el estándar/guía completos de Skevi a este
   repo. Límites de tamaño de archivo: se heredan los valores por defecto
   del estándar de Skevi (800 líneas genérico, 200 `AGENTS.md`, 300
-  `README.md`) por declaración, sin gate automatizado propio todavía.
+  `README.md`) y se comprueban con el **gate de Skevi** (ADR-015):
+  `python3 scripts/check_sizes.py && python3 scripts/check_plans.py`,
+  configurado en `skevi-gate.json` (canon propio de skopos; gate de
+  planes E1-E5 inactivo hasta que haya un plan nuevo que lo conforme).
 
 ## Próximos pasos
 
