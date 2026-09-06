@@ -1,14 +1,19 @@
-"""Analiza un turno con un modelo de IA local (SPEC-002).
+"""Analiza un turno con un modelo de IA (SPEC-002 + ADR-014).
 
-Implementa SPEC-002 (docs/specs/f1-specs.md): llama a Ollama vía su API
-HTTP local (ADR-001) para extraer tema/resumen/entidades, y opcionalmente
-enriquece el resultado con una ficha de escrubery (ADR-004) — sin bloquear
-si escrubery falla o no está disponible.
+Implementa SPEC-002 (docs/specs/f1-specs.md): llama a un modelo para
+extraer tema/resumen/entidades, y opcionalmente enriquece el resultado
+con una ficha de escrubery (ADR-004) — sin bloquear si escrubery falla
+o no está disponible.
+
+Proveedor (ADR-014, 🔒 2026-09-06): por defecto Ollama local
+(ADR-001); configurable por entorno a cualquier API compatible-OpenAI
+(local o remota — la remota exige decreto del dueño, ver ADR-014 §c).
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import urllib.error
@@ -46,6 +51,14 @@ redactar_secretos = _redactar_secretos
 
 MODELO_POR_DEFECTO = "qwen3:8b"
 URL_OLLAMA_POR_DEFECTO = "http://localhost:11434"
+API_POR_DEFECTO = "ollama"
+
+# Variables de entorno del proveedor (ADR-014 §b). La API key vive SOLO
+# en el entorno: jamás en el repo, jamás en logs.
+ENV_API = "SKOPOS_LLM_API"
+ENV_BASE_URL = "SKOPOS_LLM_BASE_URL"
+ENV_MODELO = "SKOPOS_LLM_MODELO"
+ENV_API_KEY = "SKOPOS_LLM_API_KEY"
 
 _ESQUEMA_RESPUESTA = {
     "type": "object",
@@ -151,6 +164,68 @@ def _llamar_ollama(
         raise ErrorModelo(f"respuesta de Ollama no es JSON válido: {exc}") from exc
 
 
+def _des_cercar(texto: str) -> str:
+    """Quita cercados ```json ... ``` que algunos modelos añaden pese a
+    pedirse JSON puro. Tolerante: sin cercado, devuelve tal cual."""
+    texto = texto.strip()
+    if texto.startswith("```"):
+        primera = texto.split("\n", 1)
+        texto = primera[1] if len(primera) == 2 else ""
+        if texto.rstrip().endswith("```"):
+            texto = texto.rstrip()[:-3]
+    return texto.strip()
+
+
+def _llamar_openai_compat(
+    prompt: str, *, modelo: str, base_url: str, timeout: float,
+    api_key: str | None = None,
+) -> dict:
+    """POST {base_url}/chat/completions (API compatible-OpenAI, ADR-014).
+
+    `base_url` es el prefijo ANTERIOR a /chat/completions
+    (http://localhost:11434/v1, https://api.z.ai/api/paas/v4, ...).
+    Sin `response_format`: el soporte es disparo entre proveedores — el
+    prompt pide JSON y la validación de skopos respalda (ADR-014 §d).
+    """
+    encabezados = {"Content-Type": "application/json"}
+    if api_key:
+        encabezados["Authorization"] = f"Bearer {api_key}"
+    payload = json.dumps(
+        {
+            "model": modelo,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+        }
+    ).encode("utf-8")
+    peticion = urllib.request.Request(
+        f"{base_url}/chat/completions",
+        data=payload,
+        headers=encabezados,
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(peticion, timeout=timeout) as respuesta:
+            cuerpo = json.loads(respuesta.read())
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise ErrorInfraestructura(f"el proveedor no respondió: {exc}") from exc
+    try:
+        contenido = cuerpo["choices"][0]["message"]["content"]
+        return json.loads(_des_cercar(contenido))
+    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+        raise ErrorModelo(f"respuesta del proveedor no es JSON válido: {exc}") from exc
+
+
+def _configuracion_proveedor() -> tuple[str, str | None, str | None, str | None]:
+    """Lee el proveedor del entorno (ADR-014 §b). Nunca devuelve la key
+    hacia fuera de este módulo."""
+    return (
+        os.environ.get(ENV_API, API_POR_DEFECTO).strip().lower(),
+        os.environ.get(ENV_BASE_URL),
+        os.environ.get(ENV_MODELO),
+        os.environ.get(ENV_API_KEY),
+    )
+
+
 def _ficha_escrubery(cli: str, *, script: str, timeout: float) -> dict | None:
     """Consulta escrubery para el CLI observado; None si falla (ADR-004)."""
     try:
@@ -184,9 +259,32 @@ def analizar_turno(
     timeout: float = 120.0,
     llamar_modelo: Callable[..., dict] | None = None,
 ) -> Analisis:
-    """Produce un Analisis a partir de un Turno (SPEC-002)."""
+    """Produce un Analisis a partir de un Turno (SPEC-002, ADR-014).
+
+    Proveedor: `llamar_modelo` inyectado manda (tests); si no, el entorno
+    (SKOPOS_LLM_*; ADR-014 §b) decide entre ollama y compatible-OpenAI.
+    Las variables de entorno sólo pisan `modelo`/`base_url` cuando éstos
+    vienen con sus valores por defecto: un argumento explícito del
+    llamador gana al entorno, y el entorno al default del módulo.
+    """
     prompt = _construir_prompt(turno, dominio_config)
-    invocar = llamar_modelo or _llamar_ollama
+    if llamar_modelo is not None:
+        invocar = llamar_modelo
+    else:
+        api, base_entorno, modelo_entorno, api_key = _configuracion_proveedor()
+        if modelo == MODELO_POR_DEFECTO and modelo_entorno:
+            modelo = modelo_entorno
+        if base_url == URL_OLLAMA_POR_DEFECTO and base_entorno:
+            base_url = base_entorno
+        if api == "openai":
+            def invocar(prompt: str, *, modelo: str, base_url: str,
+                        timeout: float) -> dict:
+                return _llamar_openai_compat(
+                    prompt, modelo=modelo, base_url=base_url,
+                    timeout=timeout, api_key=api_key,
+                )
+        else:
+            invocar = _llamar_ollama
     resultado = invocar(prompt, modelo=modelo, base_url=base_url, timeout=timeout)
 
     if not isinstance(resultado, dict):

@@ -9,7 +9,10 @@ consumidor_principal: agente
 
 ofrece:
   - captura de turnos de CLIs de IA hacia documentos estructurados (SPEC-001)
-  - análisis temático local vía API HTTP de Ollama, sin servicios externos (SPEC-002)
+  - análisis temático con LLM (SPEC-002; ADR-014): Ollama local por defecto,
+    proveedor configurable por entorno vía API compatible-OpenAI — un
+    proveedor remoto sólo con decreto explícito del dueño y saca el contenido
+    de la máquina
   - almacenamiento consultable en MongoDB local (SPEC-003)
   - recuperación por tema por CLI, con acceso al fragmento completo de origen (SPEC-004)
   - vigilante en vivo con arranque "desde ahora" y backfill explícito (SPEC-005, ADR-008)
@@ -41,7 +44,9 @@ consume:
   - { tipo: proyecto, id: escrubery, uso: "canal alternativo de obtención de conversaciones (REQ-10); ensayo pendiente", requerido: false }
 
 fronteras_de_confianza:
-  - el análisis temático es salida de un LLM local y no se verifica contra el fragmento de origen
+  - el análisis temático es salida de un LLM y no se verifica contra el fragmento de origen
+  - proveedor del análisis local por defecto (Ollama); remoto sólo por decreto
+    del dueño y con la API key fuera del repo (ADR-014 §c)
   - fragmento_completo conserva el texto original sin redactar; la redacción de secretos es defensa por patrón sólo en campos derivados
   - watch procesa sólo turnos cerrados desde su arranque; el histórico exige backfill explícito
   - el soporte multi-CLI está aceptado a nivel contractual, no implementado; cada parser nuevo requiere su propia verificación
