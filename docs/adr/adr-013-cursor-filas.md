@@ -111,13 +111,19 @@ opencode — la conexión sigue siendo de sólo lectura.
 - Dueño: decisión 🔒 **"aceptado y adelante"** · Fecha: **2026-09-06** ·
   Sobre las mediciones de esta misma sesión (reproducibles con
   `skopos.opencode.extraer_de_base` y sqlite3 contra la base real).
-- **Implementado el mismo día**, con una salvedad de diseño registrada:
-  la §a decía "marca de agua = mensaje de usuario abierto más antiguo";
-  la implementación la simplificó a `max_visto + 1` **sin perder la
-  garantía** — la ventana siguiente re-deriva cada turno abierto desde
-  su abridor, buscado hacia atrás por el índice cubriente
-  (`_abridor_previo`, ≤ 200 filas por sesión activa), de modo que el
-  sello canónico se computa siempre sobre las filas completas del
-  turno. Verificación sobre la base real: sellos de la delta
-  **byte-idénticos** a los de la lectura completa (43/43 en la ventana
-  de prueba), delta 24 h en 91.8 ms.
+- **Implementado el mismo día**, con la mecánica final: la marca avanza
+  (`max_visto + 1`) y el turno abierto se re-deriva **completo** —
+  `_abridor_previo` (sólo usuario; ≤ 200 filas hacia atrás por sesión
+  activa) localiza su abridor y `_segmento_previo` trae TODAS sus filas
+  desde ahí, de modo que el sello canónico se computa siempre sobre las
+  filas completas del turno. `no_reconocidos` se propaga al ciclo y se
+  reporta: ninguna fila cae sin registro.
+- **Ronda adversarial del cierre (subagente independiente):
+  `fix-and-retry` → corregido antes de declarar.** El BLOCKER que
+  encontró: la primera implementación (`max_visto + 1` + abridor que
+  aceptaba assistant, sin segmento previo) perdía entero y en silencio
+  los turnos cuya respuesta cruzaba 2+ ciclos — exactamente el caso de
+  uso del watch. Los tests que lo reproducen entraron con el fix
+  (`test_respuesta_que_cruza_ciclos_sella_completo`). Verificación
+  sobre la base real tras el fix: sellos de la delta byte-idénticos a
+  los de la lectura completa; delta 24 h en ~0.2 s.

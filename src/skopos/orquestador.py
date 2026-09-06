@@ -241,19 +241,23 @@ def procesar_base_filas(
     on_indexado: Callable[[Turno, bool | None], None] | None = None,
     solo_indice: bool = False,
     **kwargs_analisis,
-) -> tuple[list[ResultadoTurno], int | None]:
+) -> tuple[list[ResultadoTurno], int | None, int]:
     """Procesa los turnos cerrados que aporta una pasada delta de filas.
 
     Es el gemelo de `procesar_rollout` para orígenes de filas (ADR-013):
     mismo pipeline por turno (`_ejecutar_pipeline`), distinto mecanismo
     de avance — la **marca de agua** (`marca` → `extraer_delta`) en vez
-    del byte offset. La marca que se devuelve es la nueva propuesta de
-    la delta, **salvo que algún turno haya fallado**: entonces se
-    devuelve la marca recibida, para que la ventana completa se vuelva a
-    ofrecer en el siguiente ciclo y lo fallido no se pierda nunca (la
-    misma regla de congelamiento de ADR-011, con otra unidad de avance).
-    El dedup en Mongo hace idempotente el re-tránsito de lo ya guardado
-    (ADR-005): re-ofrecer cuesta consultas, jamás duplicados.
+    del byte offset. Devuelve `(resultados, nueva_marca,
+    no_reconocidos)`: la marca es la nueva propuesta de la delta
+    **salvo que algún turno haya fallado** — entonces se devuelve la
+    marca recibida, para que la ventana completa se vuelva a ofrecer en
+    el siguiente ciclo y lo fallido no se pierda nunca (la misma regla
+    de congelamiento de ADR-011, con otra unidad de avance). El dedup en
+    Mongo hace idempotente el re-tránsito de lo ya guardado (ADR-005):
+    re-ofrecer cuesta consultas, jamás duplicados. `no_reconocidos` son
+    las filas que la pasada no pudo atribuir a un turno derivable — el
+    llamador debe reportarlas, nunca tragarlas (hallazgo HIGH de la
+    ronda adversarial del 2026-09-06).
 
     `marca=None` es cold start o backfill: la lectura completa (18 s
     medidos), que es exactamente lo que el encargo pide releer.
@@ -282,4 +286,6 @@ def procesar_base_filas(
             if resultado.estado == "fallido":
                 congelado = True
 
-    return resultados, (marca if congelado else marca_propuesta)
+    return (resultados,
+            marca if congelado else marca_propuesta,
+            extraccion.eventos_no_reconocidos)

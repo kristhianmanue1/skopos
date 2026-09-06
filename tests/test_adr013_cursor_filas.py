@@ -172,6 +172,54 @@ class TestDelta(unittest.TestCase):
             self.assertEqual(turno.texto_agente,
                              completa[turno.turn_id].texto_agente)
 
+    def test_respuesta_que_cruza_ciclos_sella_completo(self):
+        """BLOCKER de la ronda adversarial (2026-09-06): una respuesta que
+        tarda más de 2 ciclos deja filas del turno bajo la marca — el
+        sello del turno cerrado debe cubrirlas TODAS (igual a completa).
+        """
+        base = _base_temporal(self, "cruza.db")
+        con = sqlite3.connect(base)
+        # ciclo 1: sólo el user; la marca nace en max+1
+        con.execute(
+            "INSERT INTO message (id, session_id, time_created, data) VALUES "
+            "('b1','s1',?, '{\"role\": \"user\"}')", (self.t,))
+        con.commit()
+        con.close()
+        _, marca1 = extraer_delta(base, None)
+        self.assertGreater(marca1, self.t)
+
+        # ciclo 2: primera parte de la respuesta (queda bajo la marca 2)
+        con = sqlite3.connect(base)
+        con.execute(
+            "INSERT INTO message (id, session_id, time_created, data) VALUES "
+            "('b2','s1',?, '{\"role\": \"assistant\"}')", (self.t + 2000,))
+        con.commit()
+        con.close()
+        extraer_delta(base, marca1)
+
+        # ciclo 3: el resto de la respuesta (cruzó 2 marcas) + cierre user
+        con = sqlite3.connect(base)
+        con.execute(
+            "INSERT INTO message (id, session_id, time_created, data) VALUES "
+            "('b3','s1',?, '{\"role\": \"assistant\"}')", (self.t + 12000,))
+        con.execute(
+            "INSERT INTO message (id, session_id, time_created, data) VALUES "
+            "('b4','s1',?, '{\"role\": \"user\"}')", (self.t + 13000,))
+        con.commit()
+        con.close()
+        tercera, _ = extraer_delta(base, marca1 + 1)
+        cerrados = {t_.turn_id for t_ in tercera.turnos}
+        self.assertIn("opencode:b1", cerrados)
+        completa = {t_.turn_id: t_ for t_ in extraer_de_base(base).turnos}
+        sello = next(t_ for t_ in tercera.turnos
+                     if t_.turn_id == "opencode:b1").fragmento_sha256
+        self.assertEqual(sello, completa["opencode:b1"].fragmento_sha256)
+        self.assertEqual(
+            len(next(t_ for t_ in tercera.turnos
+                     if t_.turn_id == "opencode:b1").origen_ids),
+            len(completa["opencode:b1"].origen_ids),
+        )  # 3 filas: b1, b2, b3 — ni una menos
+
     def test_abridor_previo_cruza_la_ventana(self):
         """El turno abierto en s2 cierra DESPUÉS: la delta debe sellarlo
         completo aunque su abridor quede bajo la marca de agua."""

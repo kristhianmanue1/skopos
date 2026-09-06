@@ -285,9 +285,11 @@ def _abridor_previo(con: sqlite3.Connection, sid: str,
     Es el abridor del turno que pudo quedar abierto cruzando la ventana:
     sin él, la delta no podría sellar ese turno al cerrar. Recorre hacia
     atrás con el índice cubriente y resuelve el rol en Python (JSON1 no
-    se da por supuesto). None si en las últimas MAX_BUSQUEDA_ABRIDOR
-    filas no hay usuario — caso degenerado que la delta cuenta como no
-    reconocido en lugar de perderlo en silencio.
+    se da por supuesto). SOLO usuario: un assistant previo no abre turno
+    (hallazgo BLOCKER de la ronda adversarial del 2026-09-06). None si en
+    las últimas MAX_BUSQUEDA_ABRIDOR filas no hay usuario — caso
+    degenerado que la delta cuenta como no reconocido en lugar de
+    perderlo en silencio.
     """
     filas = con.execute(
         "SELECT id, session_id, time_created, data FROM message "
@@ -300,9 +302,27 @@ def _abridor_previo(con: sqlite3.Connection, sid: str,
             mensaje = json.loads(datos)
         except (TypeError, json.JSONDecodeError):
             continue
-        if mensaje.get("role") in ROLES_CONVERSACION:
+        if mensaje.get("role") == "user":
             return (mensaje_id, sid_f, creado, datos)
     return None
+
+
+def _segmento_previo(con: sqlite3.Connection, sid: str, t_abridor: int,
+                     marca_ms: int) -> list[tuple]:
+    """TODAS las filas del turno abierto entre su abridor y la marca.
+
+    La marca avanza (max_visto+1) pero el turno abierto se re-deriva
+    completo: sin este segmento, las filas del turno que quedaron bajo
+    la marca faltarian del sello (hallazgo BLOCKER de la ronda
+    adversarial del 2026-09-06: respuestas que cruzan 2+ ciclos). El
+    rango va por el índice cubriente (session_id, time_created, id).
+    """
+    return con.execute(
+        "SELECT id, session_id, time_created, data FROM message "
+        "WHERE session_id = ? AND time_created >= ? AND time_created < ? "
+        "ORDER BY time_created, id",
+        (sid, t_abridor, marca_ms),
+    ).fetchall()
 
 
 def extraer_delta(path: Path,
@@ -377,10 +397,11 @@ def extraer_delta(path: Path,
                 # en silencio (ADR-013 §b)
                 derivador.no_reconocidos += len(filas_por_sesion[sid])
             else:
-                abridores.append(abridor)
-        # los abridores entran al frente del bloque de su sesión
-        for abridor in abridores:
-            filas_por_sesion[abridor[1]].insert(0, abridor)
+                # el turno abierto se re-deriva COMPLETO: todas sus filas
+                # desde el abridor, incluidas las que quedaron bajo la
+                # marca (fix del BLOCKER de la ronda adversarial)
+                segmento = _segmento_previo(con, sid, int(abridor[2]), marca_ms)
+                filas_por_sesion[sid] = segmento + filas_por_sesion[sid]
 
         ids: list[str] = [fila[0] for filas in filas_por_sesion.values()
                           for fila in filas]

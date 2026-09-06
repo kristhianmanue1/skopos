@@ -140,7 +140,7 @@ def ciclo(
     if fuente_filas is not None and fuente_filas.is_file():
         from skopos.orquestador import procesar_base_filas
 
-        resultados_nuevos, nueva_marca = procesar_base_filas(
+        resultados_nuevos, nueva_marca, no_reconocidos = procesar_base_filas(
             fuente_filas,
             coleccion=coleccion,
             marca=cursores.obtener_marca(fuente_filas) if cursores else None,
@@ -150,6 +150,12 @@ def ciclo(
             **kwargs_procesar,
         )
         resultados.extend(resultados_nuevos)
+        if no_reconocidos:
+            print(
+                f"ciclo: filas de {fuente_filas.name} no atribuibles a un turno "
+                f"derivable — {no_reconocidos} (nunca silencioso, ADR-013 §b)",
+                file=sys.stderr,
+            )
         if cursores is not None and nueva_marca is not None:
             cursores.actualizar_marca(fuente_filas, nueva_marca)
     if cursores is not None:
