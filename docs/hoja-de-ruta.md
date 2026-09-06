@@ -49,13 +49,21 @@ se duplica aquí para no tener dos lugares que puedan desincronizarse.
 Estado guardado en AN-KLA local (`.an-kla/`, gitignorado — patrón de
 ektel), como cadena de supersedes: `f-ciclo-multi-cli-2026-08-20` →
 `f-ciclo-multi-cli-2026-08-28` → `f-skopos-cierre-2026-08-28` →
-**`f-skopos-cierre-2026-09-06`**
+`f-skopos-cierre-2026-09-06` →
+**`f-skopos-cierre-p005-2026-09-06`**
 (vigente; transacción escrita con AN-KLA b22 el 2026-09-06, revisión
-`sha256:b9ebf2c4a25493cbff3993c01d94d02084a6ff5e0457ca806f68bfa7fd2c680a`).
-Recoge el cierre de hoy: hito 19 (ADR-013, opencode en vivo), hito 20
-(ADR-014, análisis multi-proveedor), release v0.1.0 y las limitaciones
-vivas. Recuperable con
-`an-kla retrieve --query "adr-013 opencode watch multi-proveedor release" --budget 2500`.
+`sha256:5f98fb3d9a83ca583045f45889086db77153e15b7fa98fc7f595dc0e1be8a761`,
+autoridad `tool_observed` vía `attest` — clave y whitelist creadas en
+esta sesión).
+Recoge el cierre de la sesión del 2026-09-05/06: propuesta **P-005
+"syndesmos"** (plugin independiente tejedor de contexto skopos ↔
+AN-KLA; commit `a4a74ea`, issue de seguimiento
+`kristhianmanue1/skopos#2`), las dos hipótesis de memoria refutadas
+con medición (AN-KLA insuficiente y perecedera; la memoria de skopos
+sin capa de análisis y sin el presente) y el dato que destraba la
+integración: 448 turnos con `commit-write-plan` como anclas curadas.
+Recuperable con
+`an-kla retrieve --query "syndesmos p-005 tejedor" --budget 1500`.
 Nota de versión: la instalación de AN-KLA para skopos quedó en
 **0.1.0b22** (venv local); los almacenes de otros proyectos y el PATH
 siguen en versiones anteriores por decisión del dueño.
