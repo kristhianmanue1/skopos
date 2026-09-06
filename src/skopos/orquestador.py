@@ -70,6 +70,75 @@ def _contenido_insuficiente(turno: Turno) -> bool:
     return len(turno.texto_usuario) + len(turno.texto_agente) < LONGITUD_MINIMA_CONTENIDO
 
 
+def _ejecutar_pipeline(
+    turno: Turno,
+    *,
+    coleccion: Collection,
+    analizar: Callable[..., Analisis],
+    guardar: Callable[..., dict],
+    ya_guardado: Callable[..., bool],
+    desde: datetime | None,
+    indice: Collection | None,
+    on_indexado: Callable[[Turno, bool | None], None] | None,
+    solo_indice: bool,
+    **kwargs_analisis,
+) -> tuple[ResultadoTurno | None, bool]:
+    """El destino de UN turno: ventana → índice → dedup → análisis → guardado.
+
+    Devuelve `(resultado, avanzar)`. `resultado=None` significa "no hay
+    nada que reportar" (fuera de ventana, u observación en solo_indice).
+    `avanzar=False` exactamente cuando el turno terminó en `fallido`:
+    lo que falló debe ofrecerse de nuevo (ADR-011). El avance concreto
+    es cosa de cada llamada: byte offset en archivos, marca de agua en
+    orígenes de filas (ADR-013).
+    """
+    if not _cerrado_desde(turno, desde):
+        # histórico no invitado (ADR-008): no se procesa, pero
+        # tampoco hay nada que reintentar en él
+        return None, True
+
+    if indice is not None:
+        # una escritura del índice que falle no puede tumbar el
+        # análisis: se reporta y se sigue (el índice es aditivo)
+        try:
+            insertado = indexar_turno(turno, coleccion=indice)
+        except (PyMongoError, DocumentoInvalido):
+            insertado = None
+        if on_indexado is not None:
+            on_indexado(turno, insertado)
+
+    if solo_indice:
+        return None, True
+
+    try:
+        visto = ya_guardado(turno.turn_id, coleccion=coleccion)
+    except PyMongoError as exc:
+        return ResultadoTurno(turno.turn_id, "fallido", f"dedup falló: {exc}"), False
+    if visto:
+        return ResultadoTurno(turno.turn_id, "omitido"), True
+
+    if _contenido_insuficiente(turno):
+        return (
+            ResultadoTurno(turno.turn_id, "omitido", "sin contenido significativo"),
+            True,
+        )
+
+    try:
+        analisis = analizar(turno, **kwargs_analisis)
+    except AnalisisFallido as exc:
+        return ResultadoTurno(turno.turn_id, "fallido", str(exc)), False
+
+    try:
+        guardar(analisis, coleccion=coleccion)
+    except DuplicateKeyError:
+        # otro proceso guardó este turn_id entre el chequeo y esta escritura
+        return ResultadoTurno(turno.turn_id, "omitido", "duplicado concurrente"), True
+    except (PyMongoError, DocumentoInvalido) as exc:
+        return ResultadoTurno(turno.turn_id, "fallido", str(exc)), False
+
+    return ResultadoTurno(turno.turn_id, "guardado"), True
+
+
 def procesar_rollout(
     path: Path | str,
     *,
@@ -134,72 +203,83 @@ def procesar_rollout(
     avance: int | None = None  # hasta dónde puede avanzar el cursor (ADR-011)
     congelado = False  # un fallido congela el avance: hay que reintentarlo
 
-    def _avanzar(turno: Turno) -> None:
-        nonlocal avance
-        if not congelado:
-            avance = turno.offset_fin
-
     for turno in parseo.turnos:
-        if not _cerrado_desde(turno, desde):
-            # histórico no invitado (ADR-008): no se procesa, pero
-            # tampoco hay nada que reintentar en él
-            _avanzar(turno)
-            continue
-
-        if indice is not None:
-            # una escritura del índice que falle no puede tumbar el
-            # análisis: se reporta y se sigue (el índice es aditivo)
-            try:
-                insertado = indexar_turno(turno, coleccion=indice)
-            except (PyMongoError, DocumentoInvalido):
-                insertado = None
-            if on_indexado is not None:
-                on_indexado(turno, insertado)
-
-        if solo_indice:
-            _avanzar(turno)
-            continue
-
-        try:
-            visto = ya_guardado(turno.turn_id, coleccion=coleccion)
-        except PyMongoError as exc:
-            resultados.append(ResultadoTurno(turno.turn_id, "fallido", f"dedup falló: {exc}"))
-            congelado = True
-            continue
-        if visto:
-            resultados.append(ResultadoTurno(turno.turn_id, "omitido"))
-            _avanzar(turno)
-            continue
-
-        if _contenido_insuficiente(turno):
-            resultados.append(
-                ResultadoTurno(turno.turn_id, "omitido", "sin contenido significativo")
-            )
-            _avanzar(turno)
-            continue
-
-        try:
-            analisis = analizar(turno, **kwargs_analisis)
-        except AnalisisFallido as exc:
-            resultados.append(ResultadoTurno(turno.turn_id, "fallido", str(exc)))
-            congelado = True
-            continue
-
-        try:
-            guardar(analisis, coleccion=coleccion)
-        except DuplicateKeyError:
-            # otro proceso guardó este turn_id entre el chequeo y esta escritura
-            resultados.append(ResultadoTurno(turno.turn_id, "omitido", "duplicado concurrente"))
-            _avanzar(turno)
-            continue
-        except (PyMongoError, DocumentoInvalido) as exc:
-            resultados.append(ResultadoTurno(turno.turn_id, "fallido", str(exc)))
-            congelado = True
-            continue
-
-        resultados.append(ResultadoTurno(turno.turn_id, "guardado"))
-        _avanzar(turno)
+        resultado, avanzar = _ejecutar_pipeline(
+            turno,
+            coleccion=coleccion,
+            analizar=analizar,
+            guardar=guardar,
+            ya_guardado=ya_guardado,
+            desde=desde,
+            indice=indice,
+            on_indexado=on_indexado,
+            solo_indice=solo_indice,
+            **kwargs_analisis,
+        )
+        if resultado is not None:
+            resultados.append(resultado)
+            if resultado.estado == "fallido":
+                congelado = True
+        if avanzar and not congelado:
+            avance = turno.offset_fin
 
     if on_cursor is not None and avance is not None and parseo.instantanea is not None:
         on_cursor(Path(path), Cursor(avance, sellar_prefijo(parseo.instantanea, avance)))
     return resultados
+
+
+def procesar_base_filas(
+    path: Path | str,
+    *,
+    coleccion: Collection,
+    marca: int | None,
+    analizar: Callable[..., Analisis] = analizar_turno,
+    guardar: Callable[..., dict] = guardar_analisis,
+    ya_guardado: Callable[..., bool] = existe_turn_id,
+    desde: datetime | None = None,
+    indice: Collection | None = None,
+    on_indexado: Callable[[Turno, bool | None], None] | None = None,
+    solo_indice: bool = False,
+    **kwargs_analisis,
+) -> tuple[list[ResultadoTurno], int | None]:
+    """Procesa los turnos cerrados que aporta una pasada delta de filas.
+
+    Es el gemelo de `procesar_rollout` para orígenes de filas (ADR-013):
+    mismo pipeline por turno (`_ejecutar_pipeline`), distinto mecanismo
+    de avance — la **marca de agua** (`marca` → `extraer_delta`) en vez
+    del byte offset. La marca que se devuelve es la nueva propuesta de
+    la delta, **salvo que algún turno haya fallado**: entonces se
+    devuelve la marca recibida, para que la ventana completa se vuelva a
+    ofrecer en el siguiente ciclo y lo fallido no se pierda nunca (la
+    misma regla de congelamiento de ADR-011, con otra unidad de avance).
+    El dedup en Mongo hace idempotente el re-tránsito de lo ya guardado
+    (ADR-005): re-ofrecer cuesta consultas, jamás duplicados.
+
+    `marca=None` es cold start o backfill: la lectura completa (18 s
+    medidos), que es exactamente lo que el encargo pide releer.
+    """
+    from skopos.opencode import extraer_delta
+
+    extraccion, marca_propuesta = extraer_delta(Path(path), marca)
+
+    resultados: list[ResultadoTurno] = []
+    congelado = False
+    for turno in extraccion.turnos:
+        resultado, _avanzar = _ejecutar_pipeline(
+            turno,
+            coleccion=coleccion,
+            analizar=analizar,
+            guardar=guardar,
+            ya_guardado=ya_guardado,
+            desde=desde,
+            indice=indice,
+            on_indexado=on_indexado,
+            solo_indice=solo_indice,
+            **kwargs_analisis,
+        )
+        if resultado is not None:
+            resultados.append(resultado)
+            if resultado.estado == "fallido":
+                congelado = True
+
+    return resultados, (marca if congelado else marca_propuesta)

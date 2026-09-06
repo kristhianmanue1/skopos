@@ -1,8 +1,12 @@
 # ADR-013: cursor incremental para orígenes de filas — opencode entra al vigilante
 
-Estado: **propuesto** — espera decisión 🔒 del dueño. Revoca el §d de
-ADR-012 en el punto exacto que declara ("eso sería otro ADR, con su
-propia evidencia"); no toca nada más de ADR-012.
+Estado: **aceptado** — decisión 🔒 del dueño, 2026-09-06. Implementado el
+mismo día: marca de agua en `skopos-cursores/v2` (`cursor.py`),
+`extraer_delta` sobre la máquina de estados única (`opencode.py`),
+`procesar_base_filas` en el orquestador y `FUENTE_FILAS_POR_DEFECTO` en
+el vigilante. Revoca el §d de ADR-012 en el punto exacto que declara
+("eso sería otro ADR, con su propia evidencia"); no toca nada más de
+ADR-012.
 
 ## Contexto
 
@@ -104,6 +108,16 @@ opencode — la conexión sigue siendo de sólo lectura.
 
 ## Firma de decisión
 
-- Dueño: decisión 🔒 pendiente · Propuesto: 2026-09-06, sobre las
-  mediciones de esta misma sesión (reproducibles con
+- Dueño: decisión 🔒 **"aceptado y adelante"** · Fecha: **2026-09-06** ·
+  Sobre las mediciones de esta misma sesión (reproducibles con
   `skopos.opencode.extraer_de_base` y sqlite3 contra la base real).
+- **Implementado el mismo día**, con una salvedad de diseño registrada:
+  la §a decía "marca de agua = mensaje de usuario abierto más antiguo";
+  la implementación la simplificó a `max_visto + 1` **sin perder la
+  garantía** — la ventana siguiente re-deriva cada turno abierto desde
+  su abridor, buscado hacia atrás por el índice cubriente
+  (`_abridor_previo`, ≤ 200 filas por sesión activa), de modo que el
+  sello canónico se computa siempre sobre las filas completas del
+  turno. Verificación sobre la base real: sellos de la delta
+  **byte-idénticos** a los de la lectura completa (43/43 en la ventana
+  de prueba), delta 24 h en 91.8 ms.

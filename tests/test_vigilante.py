@@ -211,6 +211,7 @@ class CicloTests(unittest.TestCase):
             max_ciclos=2,
             on_ciclo=lambda resultados: (ciclos_vistos.append(resultados), _llegar_un_turno(resultados)),
             analizar=self._analizar_fake,
+            fuente_filas=None,  # aislado: este test no vigila la base real de opencode
         )
         self.assertEqual(len(ciclos_vistos), 2)
         self.assertEqual(ciclos_vistos[0], [])  # nada al arranque (desde ahora)

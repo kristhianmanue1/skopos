@@ -41,18 +41,19 @@ INTERVALO_POR_DEFECTO = 5.0
 # otros cuatro adaptadores existían pero el vigilante nunca les daba un
 # archivo — sólo se llegaba a ellos pasando rutas a mano a `skopos indexar`.
 #
-# **opencode queda fuera a propósito**: su extracción cuesta ~13 s por
-# pasada (3,909 turnos) porque no hay lectura incremental para orígenes de
-# filas — ADR-012 §d descartó el cursor midiendo el barrido crudo (0.7 s),
-# no la extracción completa. Repetir eso cada ciclo saturaría el vigilante.
-# Hasta que exista esa lectura incremental, opencode se indexa con
-# `skopos indexar` cuando se quiera.
+# **opencode ya no es excepción** (ADR-013, 🔒 2026-09-06): su base entra
+# como FUENTE DE FILAS con lectura incremental por marca de agua — la
+# ventana delta cuesta milisegundos (7.2 ms/24 h medidos) y reemplaza la
+# extracción completa de ~18 s que la tenía fuera. Sin marca de agua
+# (cold start) la primera pasada es completa y degradada: caché, nunca
+# pérdida (el dedup de Mongo manda, ADR-005/ADR-011).
 FUENTES_POR_DEFECTO: tuple[tuple[Path, str], ...] = (
     (SESSIONS_DIR_POR_DEFECTO, "*.jsonl"),
     (Path.home() / ".claude" / "projects", "*.jsonl"),
     (Path.home() / ".cline" / "data" / "sessions", "*.messages.json"),
     (Path.home() / ".kimi" / "sessions", "wire.jsonl"),
 )
+FUENTE_FILAS_POR_DEFECTO = Path.home() / ".local" / "share" / "opencode" / "opencode.db"
 
 
 def descubrir_rollouts(sessions_dir: Path, patron: str = "*.jsonl") -> set[Path]:
@@ -89,6 +90,7 @@ def ciclo(
     cursores: AlmacenCursores | None = None,
     indice=None,
     on_indexado=None,
+    fuente_filas: Path | None = None,
     **kwargs_procesar,
 ) -> list[ResultadoTurno]:
     """Un barrido completo: procesa los turnos nuevos de todos los rollouts.
@@ -103,11 +105,18 @@ def ciclo(
     Se pasa **sólo fuera de backfill**: un backfill es por definición
     "reléelo todo", y honrar cursores ahí saltaría precisamente el
     histórico que se pidió recuperar.
+
+    `fuente_filas` (ADR-013): la base de opencode, procesada al final
+    del ciclo por marca de agua. Sin cursores (backfill) la marca es
+    None y la lectura es completa — coherente con "reléelo todo".
     """
     resultados: list[ResultadoTurno] = []
     descubiertos = sorted(descubrir_fuentes(_normalizar(sessions_dir), descubrir))
     if cursores is not None:
-        cursores.podar(descubiertos)
+        vivas = set(descubiertos)
+        if fuente_filas is not None:
+            vivas.add(fuente_filas)
+        cursores.podar(vivas)
     for path in descubiertos:
         if t0 is not None:
             try:
@@ -128,6 +137,21 @@ def ciclo(
                 **kwargs_procesar,
             )
         )
+    if fuente_filas is not None and fuente_filas.is_file():
+        from skopos.orquestador import procesar_base_filas
+
+        resultados_nuevos, nueva_marca = procesar_base_filas(
+            fuente_filas,
+            coleccion=coleccion,
+            marca=cursores.obtener_marca(fuente_filas) if cursores else None,
+            desde=t0,
+            indice=indice,
+            on_indexado=on_indexado,
+            **kwargs_procesar,
+        )
+        resultados.extend(resultados_nuevos)
+        if cursores is not None and nueva_marca is not None:
+            cursores.actualizar_marca(fuente_filas, nueva_marca)
     if cursores is not None:
         cursores.guardar()
     return resultados
@@ -144,6 +168,7 @@ def ejecutar(
     backfill: bool = False,
     indice=None,
     solo_indice: bool = False,
+    fuente_filas: Path | None = FUENTE_FILAS_POR_DEFECTO,
     **kwargs_procesar,
 ) -> None:
     """Corre el vigilante hasta SIGTERM/SIGINT (o max_ciclos, para pruebas).
@@ -187,6 +212,7 @@ def ejecutar(
                 indice=indice,
                 on_indexado=_contar_indice if indice is not None else None,
                 solo_indice=solo_indice,
+                fuente_filas=fuente_filas,
                 **kwargs_procesar,
             )
             if on_ciclo:
@@ -280,6 +306,8 @@ def watch_command(argv: list[str]) -> int:
         "use --backfill para el histórico"
     )
     vigiladas = ", ".join(str(ruta) for ruta, _ in fuentes)
+    if not args.sessions_dir:
+        vigiladas += f" + {FUENTE_FILAS_POR_DEFECTO} (filas, ADR-013)"
     print(
         f"skopos watch: vigilando {vigiladas} cada {args.intervalo}s "
         f"— {modo}"
