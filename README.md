@@ -14,7 +14,8 @@ de diseño están en `docs/`, no aquí — este README es el contrato de
 arranque: cómo se construye, corre y prueba.
 
 **Estado:** F3 — pipeline completo funcionando de punta a punta con datos
-reales: captura (SPEC-001) → análisis vía Ollama local (SPEC-002) →
+reales: captura (SPEC-001) → análisis con LLM (SPEC-002; Ollama local
+por defecto, multi-proveedor vía ADR-014) →
 almacenamiento en MongoDB local (SPEC-003) → consulta por CLI (SPEC-004) →
 vigilante en vivo (SPEC-005). Verificado contra rollouts reales de Codex,
 no sólo fixtures sintéticos.
@@ -87,9 +88,12 @@ python3 -m unittest discover -s tests
 - **Gestor de paquetes:** `pip` + `venv` estándar. Dependencia declarada:
   `pymongo>=4.17,<5` (confirmada contra MongoDB 8.3.7 local). Sin
   lockfile todavía — una sola dependencia directa no lo justifica aún.
-- **Modelo de análisis:** Ollama local vía su API HTTP
-  (`urllib` de stdlib, sin cliente HTTP nuevo como dependencia), modelo
-  `qwen3:8b`.
+- **Modelo de análisis:** proveedor configurable por entorno (ADR-014) —
+  **Ollama local por defecto** vía su API HTTP (`urllib` de stdlib, sin
+  cliente HTTP nuevo como dependencia), modelo `qwen3:8b`. Cualquier API
+  compatible-OpenAI (LM Studio, vLLM, z.ai, OpenRouter…) entra por
+  `SKOPOS_LLM_*` — proveedor remoto sólo con decreto explícito (la key
+  vive en el entorno, jamás en el repo; ver `docs/adr/adr-014`).
 - **Estructura:** `src/skopos/` por paquete instalable
   (`pyproject.toml`, `setuptools`), `tests/` con `unittest` de la
   biblioteca estándar — sin dependencias de testing nuevas.
@@ -103,25 +107,24 @@ python3 -m unittest discover -s tests
 
 ## Próximos pasos
 
-**Decisión del dueño (2026-08-20): Skopos será multi-CLI** (Claude Code,
-Kimi CLI, Qwen CLI y otros). El ciclo que prepara ese salto — orden,
-dependencias y decisiones pendientes del dueño (🔒) — está en
-`docs/propuestas/P-002-ajuste-ciclo-precondiciones.md`:
+**Estado (2026-09-06):** el ciclo multi-CLI de P-002 está CERRADO — los
+5 CLIs (codex, claude-code, cline, kimi-code, opencode) se capturan,
+indexan y vigilan en vivo (hitos 13–19). El análisis es multi-proveedor
+(ADR-014, hito 20). El mapa completo, en `docs/hoja-de-ruta.md`; el
+detalle de decisiones, en `docs/adr/` (14 ADRs).
 
-1. **C-9 · eje de proyecto** (y eje CLI real) en el documento, la captura
-   y los índices.
-2. **C-8 · ADR** de superficie de mutación o retención (🔒 elección del
-   dueño entre tres alternativas).
-3. **C-10 · cursor de ingesta** desempaquetado: decisión 8 de arranque
-   (🔒) + ADR de lectura incremental como extensión de ADR-005.
-4. **C-6 · `fragmento_completo`**: decisión sobre cinco palancas (🔒).
-5. **C-5 · detector de eco** sobre un corpus piloto (requiere 3).
-6. Ensayo del canal escrubery contra el repo real (paralelo, REQ-10).
-7. Contrato de parser por CLI — precondiciones 1–5 y ensayo escrubery
-   cerrados; **ADR-010 + SPEC-006 aceptados 🔒 por el dueño el
-   2026-08-21** (rondas adversariales 10–18; ronda 17 = gate final
-   PROCEED). Fase 7 cerrada **documentalmente**; la implementación
-   multi-CLI queda pendiente de autorización y plan de fase propios.
+**Cola viva (en orden sugerido):**
+
+1. **Analizar desde el índice** — interpretar turnos del índice P-004
+   sin re-leeer archivos; habilita re-análisis masivo (con ADR-014, un
+   proveedor rápido lo baja de años a horas) y el salto de
+   `documento-analisis-mongo` a v3.
+2. **LaunchAgent para `watch`** — sobrevivir reinicios (hoy es proceso
+   suelto, ver ADR-013/hoja-de-ruta hito 19).
+3. **`skopos read`** (hito 9, diferido) y **embeddings** (hito 11,
+   condicional a que `$text` se quede corto).
+4. **Parser qwen-code** — diferido por el dueño: sin marca de cierre de
+   turno (ver `docs/evidencia/reconocimiento-qwen-2026-08-28.md`).
 
 Diferidos: `skopos read` por sesión/fecha/rango (lo prepara el índice
 `ocurrido_en` de C-9); precargar `qwen3:8b` antes de uso interactivo

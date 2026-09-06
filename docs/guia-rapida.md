@@ -6,9 +6,10 @@
 
 ## Qué es Skopos, en una frase
 
-Observa turnos de un CLI de IA (Codex), los analiza con un modelo local
-(Ollama) y los guarda recuperables por tema en MongoDB local, con acceso
-al fragmento completo de origen.
+Observa turnos de un CLI de IA (Codex), los analiza con un modelo
+(Ollama local por defecto — multi-proveedor vía ADR-014) y los guarda
+recuperables por tema en MongoDB local, con acceso al fragmento
+completo de origen.
 
 ## Estado ahora mismo
 
@@ -36,7 +37,7 @@ No asumas el contenido de un documento que no leíste — si vas a tocar
 | Módulo | Spec | Qué hace |
 |---|---|---|
 | `src/skopos/captura.py` | SPEC-001 | Lee un rollout de Codex, extrae turnos con texto real |
-| `src/skopos/analisis.py` | SPEC-002 | Llama a Ollama, produce tema/resumen/entidades |
+| `src/skopos/analisis.py` | SPEC-002 | Llama al proveedor de análisis (Ollama por defecto; multi-proveedor, ADR-014) |
 | `src/skopos/almacenamiento.py` | SPEC-003 | Guarda/busca en MongoDB local |
 | `src/skopos/orquestador.py` | — (conecta 001→002→003) | Máquina de estados de un turno |
 | `src/skopos/cli.py` | SPEC-004 | `skopos query <tema>` |
@@ -50,7 +51,7 @@ brew services start mongodb/brew/mongodb-community   # si no está corriendo
 ollama list                                            # confirma qwen3:8b
 cd /Users/krisnova/www/aria/skopos
 source .venv/bin/activate
-python3 -m unittest discover -s tests   # 53 tests, ~5s si Mongo/Ollama están arriba
+python3 -m unittest discover -s tests   # 253 tests, ~30 s si Mongo está arriba
 python3 -m skopos                        # ayuda + comandos
 ```
 
