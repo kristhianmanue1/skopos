@@ -9,7 +9,8 @@ consumidor_principal: agente
 
 ofrece:
   - captura de turnos de CLIs de IA hacia documentos estructurados (SPEC-001)
-  - análisis temático con LLM (SPEC-002; ADR-014): Ollama local por defecto,
+  - >-
+    análisis temático con LLM (SPEC-002; ADR-014): Ollama local por defecto,
     proveedor configurable por entorno vía API compatible-OpenAI — un
     proveedor remoto sólo con decreto explícito del dueño y saca el contenido
     de la máquina
