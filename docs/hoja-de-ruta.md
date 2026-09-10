@@ -49,12 +49,19 @@ se duplica aquí para no tener dos lugares que puedan desincronizarse.
 Estado guardado en AN-KLA local (`.an-kla/`, gitignorado — patrón de
 ektel), como cadena de supersedes: `f-ciclo-multi-cli-2026-08-20` →
 `f-ciclo-multi-cli-2026-08-28` → `f-skopos-cierre-2026-08-28` →
-`f-skopos-cierre-2026-09-06` →
-**`f-skopos-cierre-p005-2026-09-06`**
-(vigente; transacción escrita con AN-KLA b22 el 2026-09-06, revisión
-`sha256:5f98fb3d9a83ca583045f45889086db77153e15b7fa98fc7f595dc0e1be8a761`,
-autoridad `tool_observed` vía `attest` — clave y whitelist creadas en
-esta sesión).
+`f-skopos-cierre-2026-09-06` → `f-skopos-cierre-p005-2026-09-06` →
+**`f-skopos-cierre-h2-2026-09-10`**
+(vigente; transacción escrita con AN-KLA b22 el 2026-09-10, revisión
+`sha256:3699363dba8f78278594830475b9805ca02c0fcdcdd0eead63b4042b46aa6851`,
+autoridad `tool_observed` vía `attest`).
+Recoge la sesión del 2026-09-10: corrección H-2 de ARIA F0.1 (baseline
+sanitation) — `project-manifest.yaml` era YAML inválido (`:` sin
+proteger en la línea 12, reproducido antes del cambio con PyYAML y
+Psych); corrección mínima con escalar bloque `>-`, semántica
+byte-idéntica verificada; `pinax.py validate` OK y `pinax build` vuelve
+a cosechar a skopos (commit `def9bb9`). Hallazgos incidentales no
+corregidos: 9 proyectos de Aria sin manifiesto (`missing_manifest`) y
+el venv de pinax sin PyYAML instalado.
 Recoge el cierre de la sesión del 2026-09-05/06: propuesta **P-005
 "syndesmos"** (plugin independiente tejedor de contexto skopos ↔
 AN-KLA; commit `a4a74ea`, issue de seguimiento
