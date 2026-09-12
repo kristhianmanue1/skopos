@@ -32,6 +32,28 @@ python3 -m skopos analyze --help                          # filtros y ventana
 # analyze admite --project, --cli, --anchor, --since, --until, --limit, --dry-run
 ```
 
+## Proveedor de análisis: local o remoto (ADR-014, enmienda de ADR-017)
+
+Los dos caminos conviven y se eligen sin tocar código:
+
+| Camino | Cómo se activa | Ritmo medido |
+|---|---|---|
+| **Local** (default) | sin variables `SKOPOS_LLM_*` en el entorno | ~195 s/turno sobre anclas grandes |
+| **Remoto** | `source ~/.skopos-env` antes de invocar skopos | ~6 s/turno |
+
+`~/.skopos-env` vive **fuera del repo**, con permisos `600`: la API key
+jamás se commitea (ADR-014 §c). Declara `SKOPOS_LLM_API=openai`, la
+`BASE_URL`, el `MODELO` y la `API_KEY`. Sin ese archivo cargado, skopos
+usa Ollama local byte-idéntico.
+
+`modelo_analisis` registra por turno cuál se usó, así que un corpus
+mixto siempre es distinguible.
+
+Advertencia deliberada: lo que se manda al proveedor es el **texto crudo
+del turno**. La redacción de secretos actúa sobre campos derivados, no
+sobre el prompt. Con proveedor remoto, ahí viajan rutas absolutas y lo
+que haya pasado por la terminal.
+
 `watch` arranca "desde ahora" por defecto (ADR-008): sólo procesa turnos
 cerrados a partir de su arranque; el histórico exige `--backfill`
 explícito.

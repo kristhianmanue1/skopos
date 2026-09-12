@@ -73,6 +73,11 @@ conjuntos es en sí un dato a medir por separado.
 
 ### (d) Se corre en local, con `qwen3:8b`
 
+> **ENMENDADO el mismo día — ver "Enmienda (d'), 🔒 2026-09-12" al final.**
+> El piloto se corre con proveedor remoto por decreto del dueño. Lo que
+> sigue se conserva porque su razonamiento sobre la frontera no caducó;
+> lo que cambió fue el costo del lado local, no el valor del material.
+
 Nada sale de la máquina. ADR-014 permite decretar proveedor remoto, y
 este **no** es el caso para estrenarlo: las anclas son el material más
 deliberado del corpus, de an-kla-memory, argos, pinax y kratos. Tres
@@ -153,3 +158,83 @@ que habría que superseder.
 
 Dueño, 2026-09-12, sobre P-006 §7: seis preguntas, seis recomendaciones
 del agente aceptadas sin variantes. Evidencia de la sesión en P-006 §1.
+
+
+## Enmienda (d'): el piloto se corre con proveedor remoto 🔒 2026-09-12
+
+**Decreto del dueño, 2026-09-12**, mismo día que (d) y sustituyéndolo
+sólo para esta corrida. ADR-014 §c exige decreto explícito para salir de
+local; queda dado aquí.
+
+### Qué lo cambió
+
+(d) se decidió estimando el costo local en ~3 h. La medición real lo
+desmintió por dos lados a la vez:
+
+| Medida | Estimado en (d) | Real |
+|---|---|---|
+| Ritmo con `qwen3:8b` | 19.6 s/turno | **195 s/turno** |
+| Piloto de 129 anclas en local | ~3 h | **~7 h** |
+| Contexto de llama-server | no considerado | **4096 tokens** |
+| Anclas que caben en ese contexto | — | **42 %** (54/130) |
+
+El segundo renglón es el que pesa. Las anclas tienen mediana de 17,164
+caracteres contra 4,794 del turno típico — son grandes justamente porque
+son turnos donde pasó algo. Con `-c 4096` y `--context-shift`, más de la
+mitad se analizaba **con el principio del prompt descartado en
+silencio**: primero las instrucciones, después `<texto_usuario>`. Un
+piloto así no habría medido si la capa interpretada sirve; habría
+medido el recorte.
+
+Arreglarlo en local exigía subir `num_ctx` a 32K, que en un M2 de 16 GB
+deja la máquina en ~9 GB entre modelo y caché KV.
+
+### La medición del lado remoto
+
+`glm-5.3-flash` vía Z.ai, camino compatible-OpenAI de ADR-014, probado
+con un turno **sintético** antes de tocar dato real:
+
+- **4.1 s** de punta a punta, JSON válido, `modelo_analisis` registrando
+  el proveedor real como manda ADR-014;
+- ~6.4 s/turno en la corrida: **129 anclas en ~14 minutos** contra 7 h;
+- sin caché KV local, el contexto deja de ser restricción y las anclas
+  entran enteras — **el defecto que motivó la enmienda desaparece, no se
+  mitiga**.
+
+### Lo que la enmienda NO dice
+
+- **No revoca el razonamiento de (d).** El material sigue siendo el más
+  deliberado del corpus y sigue viajando **crudo**: la redacción de
+  secretos de skopos actúa sobre campos derivados, no sobre lo que entra
+  al prompt. Ahí van rutas absolutas y lo que haya pasado por la
+  terminal. Eso se acepta a sabiendas, no se niega.
+- **No autoriza el corpus completo.** 25,909 turnos a 4 s son ~29 h
+  serial y eso vuelve viable lo que en local eran semanas, pero es
+  decisión propia — y la recomendación del agente es que antes exista
+  una capa de redacción sobre el prompt, hoy inexistente.
+- **No cambia el default.** Sin variables de entorno, skopos sigue
+  usando Ollama local byte-idéntico (ADR-014 §b). Remoto es opt-in por
+  entorno, nunca por código.
+
+### Nota técnica que conviene no perder
+
+`glm-5.3-flash` es modelo de razonamiento: gasta tokens en
+`reasoning_content` antes de producir `content`. El adaptador funciona
+porque **no manda `max_tokens`**. Si alguien lo añadiera sin pensarlo,
+todas las respuestas volverían vacías — observado con `max_tokens: 20`,
+donde los 20 se fueron en razonamiento y `content` llegó en blanco.
+
+### Los dos caminos, a elección
+
+La capacidad ya existía desde ADR-014; lo que faltaba era tenerla a
+mano. Queda así:
+
+| Camino | Cómo se activa |
+|---|---|
+| **Local** (default) | sin variables `SKOPOS_LLM_*` en el entorno |
+| **Remoto** | `source ~/.skopos-env` antes de invocar skopos |
+
+`~/.skopos-env` vive **fuera del repo** con permisos `600` — la key
+jamás se commitea (ADR-014 §c). Cambiar de camino es cargar o no cargar
+ese archivo; no hay nada que editar en el código, y `modelo_analisis`
+deja registrado por turno cuál se usó.
