@@ -12,7 +12,7 @@ from __future__ import annotations
 import sys
 
 from skopos import __version__
-from skopos.analizador import analyze_command
+from skopos.analyzer import analyze_command
 from skopos.busqueda import buscar_command
 from skopos.cli import query_command, reanalizar_command
 from skopos.indexador import indexar_command
