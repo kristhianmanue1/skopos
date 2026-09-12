@@ -87,7 +87,11 @@ ordene: mientras exista, esta operación es reversible.
 - No confirma la causa de §4 de P-007 (el acumulador entre archivos).
   Se reparó sin diagnosticar, como recomendaba la propuesta: el remedio
   era el mismo en cualquier caso.
-- No añade la invariante de §6.4 (`offset_fin` ≤ tamaño del archivo al
-  indexar). **Sigue pendiente**, y es lo único que impide que el defecto
-  vuelva en silencio.
+- La invariante de §6.4 quedó **implementada** después de escribir esto:
+  `indexar_turno` rechaza un turno cuyo `offset_fin` exceda el tamaño de
+  su archivo o que termine antes de empezar. El corpus reconstruido la
+  pasa entero (0 rechazos) y no cuesta nada apreciable — 18.4 s contra
+  23.4 s de la corrida equivalente previa. Lo que NO se puede verificar
+  (archivo borrado, sin permisos, ruta sintética) pasa: no verificable
+  no es lo mismo que inválido.
 - No decide qué pasa con los 44 huérfanos ni ejecuta los 18 `reanalyze`.

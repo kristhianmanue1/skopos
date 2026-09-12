@@ -3,10 +3,14 @@
 Estado: **REPARADO 🔒 2026-09-12** — reconstrucción autorizada y
 ejecutada el mismo día (`docs/evidencia/reconstruccion-indice-2026-09-12.md`):
 0/12,156 offsets rotos y 300/300 sellos verificados sobre el índice nuevo,
-sin perder un solo turno. Quedan abiertas la pregunta 4 (invariante al
-indexar, **pendiente**) y la 5 (qué hacer con 44 análisis huérfanos, **sin
+sin perder un solo turno. Queda abierta sólo la pregunta 5 (qué hacer con 44 análisis huérfanos, **sin
 decidir**); las preguntas 1, 2 y 3 se resolvieron reconstruyendo con
-renombrado reversible.
+renombrado reversible, y la 4 —la invariante al indexar— quedó
+**implementada** el mismo día en `indexar_turno`: un turno cuyo
+`offset_fin` excede el tamaño de su archivo, o que termina antes de
+empezar, se rechaza en vez de guardarse. Medido sobre el corpus real:
+0 rechazos y sin costo apreciable (18.4 s contra 23.4 s de la corrida
+equivalente previa).
 
 Estado original: **propuesta — no decidida. Hallazgo registrado, sin corregir.**
 No implementa nada: documenta lo medido (§1), acota el alcance (§2),

@@ -7,6 +7,8 @@ test_analisis.py).
 
 from __future__ import annotations
 
+import os
+import tempfile
 import unittest
 
 import pymongo
@@ -15,14 +17,17 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 from skopos.almacenamiento import (
     DocumentoInvalido,
     TurnoInexistente,
+    _offsets_imposibles,
     buscar_por_tema,
     coleccion_local,
     existe_turn_id,
     guardar_analisis,
+    indexar_turno,
     superseder_documento,
     version_vigente,
 )
 from skopos.analisis import Analisis
+from skopos.captura import Turno
 
 DB_DE_PRUEBA = "skopos_test"
 
@@ -298,6 +303,56 @@ class SupersedeTests(unittest.TestCase):
                     superseder_documento(
                         "v8", {prohibida: "otra-cosa"}, coleccion=self.coleccion
                     )
+
+
+class OffsetsImposiblesTests(unittest.TestCase):
+    """Invariante de escritura de P-007 §6.4: el guardián en la entrada."""
+
+    def setUp(self):
+        self.temporal = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False)
+        self.temporal.write(b"x" * 1000)
+        self.temporal.close()
+        self.addCleanup(os.unlink, self.temporal.name)
+
+    def _turno(self, **kwargs):
+        base = dict(
+            turn_id="cli:sesion:turno", session_id="sesion",
+            texto_usuario="u", texto_agente="a", timestamp_cierre=None,
+            ruta_origen=self.temporal.name, offset_inicio=0, offset_fin=1000,
+        )
+        base.update(kwargs)
+        return Turno(**base)
+
+    def test_rango_dentro_del_archivo_pasa(self):
+        self.assertIsNone(_offsets_imposibles(self._turno()))
+
+    def test_fin_mas_alla_del_eof_es_imposible(self):
+        # el caso exacto de P-007: 9,033 turnos escritos así en silencio
+        motivo = _offsets_imposibles(self._turno(offset_fin=14_536_234))
+        self.assertIn("excede el tamaño", motivo)
+
+    def test_fin_anterior_al_inicio_es_imposible(self):
+        motivo = _offsets_imposibles(self._turno(offset_inicio=500, offset_fin=100))
+        self.assertIn("anterior a offset_inicio", motivo)
+
+    def test_origen_de_filas_no_tiene_rango_que_validar(self):
+        # ADR-012: una fila no tiene offsets y eso no es un defecto
+        turno = self._turno(offset_inicio=None, offset_fin=None,
+                            origen_tipo="filas")
+        self.assertIsNone(_offsets_imposibles(turno))
+
+    def test_archivo_inconsultable_no_se_declara_invalido(self):
+        # no verificable != inválido: no se inventa un veredicto
+        turno = self._turno(ruta_origen="/no/existe.jsonl", offset_fin=10**9)
+        self.assertIsNone(_offsets_imposibles(turno))
+
+    def test_indexar_turno_rechaza_en_vez_de_guardar(self):
+        coleccion = coleccion_local(db=DB_DE_PRUEBA, nombre="turnos_invariante")
+        self.addCleanup(coleccion.drop)
+        with self.assertRaises(DocumentoInvalido) as ctx:
+            indexar_turno(self._turno(offset_fin=10**9), coleccion=coleccion)
+        self.assertIn("offsets imposibles", str(ctx.exception))
+        self.assertEqual(coleccion.count_documents({}), 0)
 
 
 if __name__ == "__main__":
