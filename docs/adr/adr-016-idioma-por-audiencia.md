@@ -5,6 +5,12 @@ aceptado"), tras el análisis de nomenclatura de la misma fecha.
 Supersede la línea "Español" de la sección Convenciones de `AGENTS.md`
 en lo que toca a identificadores; la conserva para la prosa.
 
+**Precisión posterior:** ADR-018 sustituye la elección de español para
+identificadores internos nuevos de §(b), y por tanto el alcance de la
+alternativa «todo en inglés». El resto de este documento conserva su valor
+histórico y sus reglas compatibles: alias y contratos legados no se migran.
+Ver [ADR-018](adr-018-codigo-ingles-comunicacion-humana.md).
+
 ## Contexto
 
 El dueño observó que el código y los comandos deberían estar en inglés.

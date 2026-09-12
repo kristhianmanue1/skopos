@@ -4,45 +4,52 @@ Skopos (Σκοπός)
 
 Significado: Observador, meta, objetivo o vigilante. Aunque tiene una 'k' intermedia, la cadencia y el inicio suave le dan cierta similitud.
 
-Observa turnos de un CLI de IA (Codex, para empezar), analiza lo dicho y
-lo guarda de forma recuperable por tema, con acceso al fragmento completo
-de origen cuando hace falta.
+Captura turnos de Codex, Claude Code, Cline, Kimi Code y OpenCode.
+Los indexa en MongoDB y permite analizarlos con un LLM para recuperarlos
+por tema. `query` comprueba longitud y sello del fragmento de origen cuando
+el sello existe; acepta legado sin sello y lo marca `sellado:false`.
+`search` devuelve texto indexado, redactado y acotado, sin releer el origen
+ni verificar su sello. Hay una limitación histórica abierta en P-007.
 
 Construido siguiendo el método de
 [Skevi](https://github.com/kristhianmanue1/Skevi) (F0→F3). Las decisiones
 de diseño están en `docs/`, no aquí — este README es el contrato de
 arranque: cómo se construye, corre y prueba.
 
-**Estado:** F3 — pipeline completo funcionando de punta a punta con datos
-reales: captura (SPEC-001) → análisis con LLM (SPEC-002; Ollama local
-por defecto, multi-proveedor vía ADR-014) →
-almacenamiento en MongoDB local (SPEC-003) → consulta por CLI (SPEC-004) →
-vigilante en vivo (SPEC-005). Verificado contra rollouts reales de Codex,
-no sólo fixtures sintéticos.
+**Estado documental verificado el 2026-09-12:** implementados parsers
+multi-CLI, índice, consultas, vigilancia incremental y `analyze` para crear
+el primer análisis de turnos ya indexados. Ollama es el proveedor por
+defecto; ADR-014 permite otro proveedor con autorización. Este estado del
+código no certifica que Mongo/Ollama estén activos ni cierra corridas en vivo.
 
 ```bash
-python3 -m skopos query "<tema>"
+python3 -m skopos query "<tema>"                          # análisis temáticos
+python3 -m skopos search "<texto>"                        # turnos indexados
+python3 -m skopos index --help                            # indexación sin LLM
 python3 -m skopos watch [--sessions-dir DIR] [--intervalo SEGUNDOS] [--backfill]
 python3 -m skopos reanalyze <turn_id> [--solo-redaccion]    # supersede (ADR-007)
-python3 -m skopos analyze [--project P] [--anchor PATRON] [--limit N] [--dry-run]
-                                                            # analiza turnos ya
-                                                            # indexados (ADR-017)
+python3 -m skopos analyze --help                          # filtros y ventana
+# analyze admite --project, --cli, --anchor, --since, --until, --limit, --dry-run
 ```
 
 `watch` arranca "desde ahora" por defecto (ADR-008): sólo procesa turnos
 cerrados a partir de su arranque; el histórico exige `--backfill`
 explícito.
 
-**Prueba de escala real** (sesión de hoy, 28 turnos, 1.2MB): 42,958
-caracteres de conversación real (~13 min de conversación según
-`ocurrido_en`) tardaron 548.8s (~9min, ~19.6s/turno) en procesarse
-completos — captura + análisis con `qwen3:8b` + guardado en Mongo, 0
-fallos. Referencia útil para estimar cuánto tardaría un backfill de
-sesiones grandes (la mayor en este entorno tiene ~23,700 líneas).
+`analyze` omite los turnos que ya tienen análisis; `reanalyze` crea una
+nueva versión explícita. `reanalyze`, `index` y `search` conservan los alias
+`reanalizar`, `indexar` y `buscar`. Los flags legados españoles siguen
+vigentes: consulta `<comando> --help` antes de invocar el comando.
 
-Modelo de análisis confirmado: `qwen3:8b` (sucesor de `qwen2.5:7b`,
-descargado y probado end-to-end). MongoDB local instalado vía Homebrew
-(`mongodb-community`, tap `mongodb/brew`) y corriendo como servicio.
+**Limitación abierta:** P-007 registra offsets históricos que impiden releer
+el fragmento original de parte del índice. La comprobación niega el fragmento
+cuando falla su sello. La reparación y la causa siguen pendientes; esta
+actualización no modifica los datos. Ver la propuesta en `docs/propuestas/`.
+
+**Idioma:** ADR-018 establece identificadores nuevos en inglés y comunicación,
+producto, documentación y comentarios en español por defecto. La persona
+puede elegir el idioma de la conversación sin cambiar la política persistente.
+Los nombres existentes se preservan por compatibilidad.
 
 ## Documentación de diseño
 
@@ -96,12 +103,12 @@ python3 -m unittest discover -s tests
   cliente HTTP nuevo como dependencia), modelo `qwen3:8b`. Cualquier API
   compatible-OpenAI (LM Studio, vLLM, z.ai, OpenRouter…) entra por
   `SKOPOS_LLM_*` — proveedor remoto sólo con decreto explícito (la key
-  vive en el entorno, jamás en el repo; ver `docs/adr/adr-014`).
+  vive en el entorno, jamás en el repo; ver `docs/adr/adr-014-analisis-multi-proveedor.md`).
 - **Estructura:** `src/skopos/` por paquete instalable
   (`pyproject.toml`, `setuptools`), `tests/` con `unittest` de la
   biblioteca estándar — sin dependencias de testing nuevas.
-- **Linter/CI:** ninguno todavía. Se decide cuando el proyecto tenga más
-  de un módulo implementado y valga la pena automatizarlo.
+- **Verificación:** unittest y gates locales de Skevi. No se introduce
+  linter ni CI en esta revisión documental.
 - **Adopción de Skevi:** por referencia (este README y `docs/`), no
   vendorizada — no se copió el estándar/guía completos de Skevi a este
   repo. Límites de tamaño de archivo: se heredan los valores por defecto
@@ -113,39 +120,31 @@ python3 -m unittest discover -s tests
 
 ## Próximos pasos
 
-**Estado (2026-09-06):** el ciclo multi-CLI de P-002 está CERRADO — los
-5 CLIs (codex, claude-code, cline, kimi-code, opencode) se capturan,
-indexan y vigilan en vivo (hitos 13–19). El análisis es multi-proveedor
-(ADR-014, hito 20). El mapa completo, en `docs/hoja-de-ruta.md`; el
-detalle de decisiones, en `docs/adr/` (14 ADRs).
+El estado detallado y la procedencia de cada hito están en
+`docs/hoja-de-ruta.md`; las decisiones viven en `docs/adr/`.
 
-**Cola viva (en orden sugerido):**
-
-1. **Analizar desde el índice** — interpretar turnos del índice P-004
-   sin re-leeer archivos; habilita re-análisis masivo (con ADR-014, un
-   proveedor rápido lo baja de años a horas) y el salto de
-   `documento-analisis-mongo` a v3.
-2. **LaunchAgent para `watch`** — sobrevivir reinicios (hoy es proceso
-   suelto, ver ADR-013/hoja-de-ruta hito 19).
-3. **`skopos read`** (hito 9, diferido) y **embeddings** (hito 11,
-   condicional a que `$text` se quede corto).
-4. **Parser qwen-code** — diferido por el dueño: sin marca de cierre de
-   turno (ver `docs/evidencia/reconocimiento-qwen-2026-08-28.md`).
-
-Diferidos: `skopos read` por sesión/fecha/rango (lo prepara el índice
-`ocurrido_en` de C-9); precargar `qwen3:8b` antes de uso interactivo
-(latencia percibida, no corrección); búsqueda semántica si `$text`
-(ADR-006) resulta insuficiente en uso real.
+1. **P-007:** decidir y verificar una reparación del índice histórico.
+   No se autoriza reindexar ni borrar documentos por leer esta lista.
+2. **Evaluar la corrida de `analyze`:** el comando está implementado
+   (ADR-017); la hoja de ruta registra un piloto acotado a siete días.
+   Verificar su resultado antes de diseñar `curated-anchor`/`context-block`
+   o dar por resuelta la propuesta P-005. No se declara aquí su finalización.
+3. **Persistencia de `watch` tras reinicio:** seguimiento de LaunchAgent,
+   sin configuración o activación en esta revisión.
+4. **Ampliación de orígenes:** prime-agent y otras conversaciones requieren
+   diseño propio; qwen-code permanece diferido por falta de cierre de turno.
+5. **Lectura por sesión/rango y búsqueda semántica:** `read` sigue diferido;
+   embeddings son condicionales a insuficiencia de `$text` en uso real.
 
 ## Riesgos conocidos, aceptados por ahora (no resueltos en esta ronda)
 
 - **Sin retención ni borrado.** Los documentos guardados no expiran ni
-  hay comando para borrarlos selectivamente (más allá de vaciar la
-  colección a mano, como se hizo hoy). Las conversaciones capturadas
+  hay comando para borrarlos selectivamente (la
+  manipulación manual de colecciones no constituye una política de retención). Las conversaciones capturadas
   quedan indefinidamente en Mongo, incluidas rutas absolutas del sistema
-  de archivos del usuario. Aceptado explícitamente por ahora — todo
-  corre local, sin exposición externa; se revisita si `metadata_cli`/otro
-  consumidor externo (REQ-10, F0) se activa de verdad.
+  de archivos del usuario. Riesgo registrado desde el diseño inicial. El proyecto
+  usa almacenamiento local; la salida hacia un proveedor remoto o un
+  consumidor externo exige revisar este riesgo (ADR-014, REQ-10).
 - **Redacción de secretos es defensa por patrón, no garantía.** Cubre
   formatos conocidos (API keys de OpenAI/Anthropic, AWS, GitHub, Slack,
   JWT) en `tema`/`resumen`/`entidades`; no cubre secretos con formato
@@ -167,11 +166,16 @@ validación de borde ausente pese a que el contrato la prometía). Detalle
 completo en los ADR/CONTRATO/SPEC actualizados y en `tests/` (8 tests
 nuevos de regresión, uno por hallazgo corregido).
 
-## Datos operativos medidos (para dimensionar lo anterior)
+## Mediciones históricas y límites de verificación
 
-- Sesión real de hoy (28 turnos, 1.2MB, 42,958 caracteres, ~13min de
-  conversación real): 548.8s de procesamiento total, ~19.6s/turno, 0
-  fallos.
-- La sesión más grande del entorno de desarrollo tiene ~23,700 líneas —
-  a ese ritmo, un backfill completo del historial tomaría horas, no
-  minutos. Esto es lo que hace urgente el punto 1 de arriba.
+La medición inicial de 28 turnos registró 548.8 s, aproximadamente
+19.6 s/turno. Es evidencia de ese caso, no capacidad actual garantizada.
+La hoja de ruta del 2026-09-12 registra cerca de 90 s/turno para anclas
+grandes. `analyze --dry-run` todavía usa la constante de 19.6 s/turno y
+no descuenta análisis existentes: su estimación puede ser inadecuada para
+ese corpus. Esta revisión documenta el límite; no recalibra el código.
+
+Las pruebas dependientes de MongoDB/Ollama pueden saltarse si los servicios
+no están disponibles; el runner informa los skips. Una corrida sin esas
+integraciones no acredita el funcionamiento end-to-end. La verificación de
+esta actualización queda en `docs/evidencia/reconciliacion-documental-2026-09-12.md`.

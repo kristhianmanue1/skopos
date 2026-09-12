@@ -36,6 +36,18 @@
 | 24 | P-005 reformulada como contrato (`curated-anchor`, `context-block`) en vez de tercer proyecto — se escribe **después** de la primera corrida del hito 23, por la regla que siguió ADR-010: el contrato generaliza una instancia viva, no la precede | Pendiente del hito 23 | — |
 | 25 | Ampliación a conversaciones de cualquier origen (prime, agentes en runtimes y sandboxes), más allá de CLIs con rollout en disco — anunciada por el dueño el 2026-09-12. **Sin diseñar**: exige su propio análisis. Fuerza `documento-turno-mongo v3`, que nacerá en inglés por ADR-016 | Anunciado, sin análisis | — |
 
+## Actualización documental del 2026-09-12
+
+ADR-018 sustituye la política del hito 22 **sólo para identificadores
+internos nuevos**: inglés; español predeterminado para comunicación,
+producto y comentarios. El hito 22 conserva la decisión histórica de
+ADR-016. No se migraron campos, flags ni módulos existentes.
+
+La guía rápida, README y manifiesto se reconciliaron con la implementación
+local de parsers, comandos y P-007. Las cifras y corridas de los hitos son
+observaciones fechadas: esta revisión no las convierte en mediciones actuales.
+Ver `docs/evidencia/reconciliacion-documental-2026-09-12.md`.
+
 ## Criterio de cierre por hito
 
 Igual que en F3 de Skevi: un hito no se cierra por declaración, se cierra
@@ -56,7 +68,8 @@ ektel), como cadena de supersedes: `f-ciclo-multi-cli-2026-08-20` →
 `f-ciclo-multi-cli-2026-08-28` → `f-skopos-cierre-2026-08-28` →
 `f-skopos-cierre-2026-09-06` → `f-skopos-cierre-p005-2026-09-06` →
 **`f-skopos-cierre-h2-2026-09-10`**
-(vigente; transacción escrita con AN-KLA b22 el 2026-09-10, revisión
+(último registro descrito por esta sección; transacción escrita con AN-KLA
+b22 el 2026-09-10, revisión
 `sha256:3699363dba8f78278594830475b9805ca02c0fcdcdd0eead63b4042b46aa6851`,
 autoridad `tool_observed` vía `attest`).
 Recoge la sesión del 2026-09-10: corrección H-2 de ARIA F0.1 (baseline
@@ -77,8 +90,8 @@ integración: 448 turnos con `commit-write-plan` como anclas curadas.
 Recuperable con
 `an-kla retrieve --query "syndesmos p-005 tejedor" --budget 1500`.
 Nota de versión: la instalación de AN-KLA para skopos quedó en
-**0.1.0b22** (venv local); los almacenes de otros proyectos y el PATH
-siguen en versiones anteriores por decisión del dueño.
+**0.1.0b22** (venv local, nuevamente comprobado el 2026-09-12). Esta
+revisión no actualiza el paquete ni afirma el estado de otros proyectos.
 
 ## Índice de turnos (P-004) e identidad de Codex
 
