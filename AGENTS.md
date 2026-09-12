@@ -27,9 +27,15 @@ falta y por qué.
 
 ## Convenciones
 
-- Español, Python 3.9+, `unittest` de la biblioteca estándar para tests
-  (sin pytest ni otro runner, para no declarar una dependencia nueva sin
+- Python 3.9+, `unittest` de la biblioteca estándar para tests (sin
+  pytest ni otro runner, para no declarar una dependencia nueva sin
   necesidad).
+- **Idioma por audiencia (ADR-016)**: *inglés* en la frontera —nombres
+  de comando, flags, campos de documento e ids de contrato publicados—;
+  *español* adentro: módulos, funciones, variables, comentarios, `docs/`
+  y mensajes de commit. Superficie nueva nace en inglés sin período de
+  gracia; los campos ya almacenados se renombran dentro del `v3` que la
+  ampliación exigirá, no antes.
 - Un módulo por frontera de F1 (`captura.py` ↔ SPEC-001, etc.) — no
   mezcles responsabilidades de specs distintas en un archivo.
 - Cero placeholders: no crees un módulo para una SPEC hasta implementarla

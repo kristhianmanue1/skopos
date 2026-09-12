@@ -1,8 +1,11 @@
 # P-006: análisis sobre turnos ya indexados (y el ancla curada)
 
-Estado: **propuesta — no decidida. Insumo para rondas de consenso y
-adversariales.** No implementa nada: pide decisiones (§7) y registra
-evidencia medida hoy (§1).
+Estado: **DECIDIDA — 🔒 2026-09-12.** Las seis preguntas de §7 quedaron
+resueltas el mismo día ("aceptadas tus recomendaciones"), sin variantes.
+La decisión vive en **ADR-017** (puerta índice→análisis) y el idioma de
+los nombres en **ADR-016**. Este documento se conserva como el insumo
+que la produjo: la evidencia de §1 y el razonamiento de §5 no se
+duplican en el ADR.
 Fecha: 2026-09-12.
 Origen: sesión del 2026-09-12 con el dueño. Análisis de estado del
 proyecto que destapó un hueco no registrado (§2) y una reformulación de
@@ -21,7 +24,8 @@ fallar ni acertar.
 | Documentos en `skopos.analisis` | **8**, el último del 2026-08-22 | Mongo |
 | Vigilante | **caído**; último turno indexado 2026-09-07T21:49Z (5 días de cola) | `pgrep` + Mongo |
 | Cola recuperada en esta sesión | 1,542 turnos codex + 449 claude-code | `skopos indexar` |
-| Turnos indexados (después) | **25,032** | Mongo |
+| Cola de opencode (fuente de filas, sólo vía `watch --backfill`) | +877 turnos | Mongo |
+| Turnos indexados (después) | **25,909** | Mongo |
 | Anclas `commit-write-plan` | **560** (eran 448 el 2026-09-06 — el corpus crece) | regex sobre `texto_usuario`/`texto_agente` |
 | Anclas por CLI | codex-cli 400, opencode 115, claude-code 45 | Mongo |
 | Anclas por proyecto | an-kla-memory 82, argos 64, pinax 63, kratos 47, eduEMD 45, … | Mongo |
@@ -37,7 +41,7 @@ Hoy **no existe camino para analizar un turno que ya está en el
 - `reanalizar` hace **supersede** de un análisis existente (ADR-007):
   necesita que ya haya uno, no crea el primero.
 
-Consecuencia: 25,032 turnos observados y 8 interpretados. `skopos
+Consecuencia: 25,909 turnos observados y 8 interpretados. `skopos
 query` —SPEC-004, la razón de ser declarada del proyecto— no tiene qué
 servir. **Esto no es un defecto de implementación: es una consecuencia
 no escrita de haber separado índice y análisis en el hito 18.** La
@@ -52,11 +56,11 @@ agregado es el que no se revisó.
 Un comando que **seleccione turnos del índice y los mande al análisis**,
 sin tocar la política de `watch` ni la de `reanalizar`.
 
-Forma de trabajo (nombre tentativo `skopos analizar`):
+Forma de trabajo (`skopos analyze` — inglés en la frontera, ADR-016):
 
 ```
-skopos analizar [--proyecto P] [--cli C] [--ancla PATRON]
-                [--desde FECHA] [--hasta FECHA] [--limite N] [--dry-run]
+skopos analyze [--project P] [--cli C] [--anchor PATRON]
+               [--since FECHA] [--until FECHA] [--limit N] [--dry-run]
 ```
 
 - Selecciona sobre `skopos.turnos` por los ejes que ya existen
@@ -75,7 +79,7 @@ se detuvo y decidió deliberadamente que eso merecía preservarse**. Es un
 conjunto curado que ya existe y no costó etiquetar: el ~2 % del corpus,
 marcado por intención humana real, sin coste de anotación.
 
-Esa es la diferencia con "analizar los 25,032": 3 horas locales contra
+Esa es la diferencia con "analizar los 25,909": 3 horas locales contra
 semanas, y el subconjunto con la mayor densidad de señal por turno.
 
 Se propone llamarlo **ancla curada**: *un turno que lleva evidencia de
@@ -106,8 +110,8 @@ Por eso se propone partir el contrato en dos mitades de madurez distinta:
 
 | Contrato | Madurez | Cuándo |
 |---|---|---|
-| `skopos/ancla-curada/v1` — qué hace que un mensaje sea ancla, y qué se publica de él | semántica casi asentada; la evidencia está medida (§1) | puede escribirse con lo que hay |
-| `skopos/bloque-de-contexto/v1` — presupuesto, frescura, referencia viva, redacción, qué pasa cuando la fuente cambió debajo | **sin experiencia operativa** | después de que este comando corra y se use |
+| `skopos/curated-anchor/v1` — qué hace que un mensaje sea ancla, y qué se publica de él | semántica casi asentada; la evidencia está medida (§1) | puede escribirse con lo que hay |
+| `skopos/context-block/v1` — presupuesto, frescura, referencia viva, redacción, qué pasa cuando la fuente cambió debajo | **sin experiencia operativa** | después de que este comando corra y se use |
 
 Riesgo honesto de la vía contractual: **un contrato sin consumidor de
 referencia es un monólogo.** Exige que AN-KLA (u otro) acepte
@@ -123,7 +127,7 @@ disco. Eso merece su propio análisis y **no se diseña aquí**.
 
 Pero impone una restricción que es gratis ahora y cara después:
 
-- `ancla-curada` se define sobre **un mensaje o turno observado**, no
+- `curated-anchor` se define sobre **un mensaje o turno observado**, no
   sobre un rollout de CLI. Nada en el contrato puede presuponer
   archivo, offsets ni `cli_producto`.
 - El localizador de origen ya tiene los dos casos resueltos —archivo
@@ -133,26 +137,36 @@ Pero impone una restricción que es gratis ahora y cara después:
 - La evidencia de "preservación deliberada" debe poder venir de otra
   señal que no sea un patrón de texto de AN-KLA.
 
-Si `ancla-curada` nace atada a CLIs, la ampliación la supersedará antes
+Si `curated-anchor` nace atada a CLIs, la ampliación la supersedará antes
 de usarla.
 
-## 7. Preguntas para las rondas (decisión del dueño)
+## 7. Preguntas para las rondas — RESUELTAS 🔒 2026-09-12
 
-1. ¿Se autoriza el comando nuevo (`skopos analizar` o el nombre que se
-   decida)? Es superficie de CLI nueva: contrato `cli-skopos-analizar v1`
-   a publicar en el manifiesto.
+> Las seis se decidieron como recomendó el agente, sin variantes. Se
+> conservan con su respuesta al lado; el desarrollo está en ADR-017.
+
+1. ¿Se autoriza el comando nuevo (`skopos analyze`)? Es superficie de
+   CLI nueva: contrato `cli-skopos-analyze v1` a publicar en el
+   manifiesto. → **SÍ.** ADR-017 (a).
 2. ¿Confirma la regla "no toca turnos con análisis previo", dejando el
    supersede como territorio exclusivo de `reanalizar` (ADR-007)?
+   → **SÍ.** ADR-017 (b).
 3. ¿El primer corpus son las 560 anclas `commit-write-plan`, o se
-   amplía a `plan-write` (587) desde el arranque?
+   amplía a `plan-write` (587) desde el arranque? → **Sólo las 560**;
+   `plan-write` queda fuera por señal más ruidosa. ADR-017 (c).
 4. ¿Se corre en local con `qwen3:8b` (~3 h, nada sale de la máquina) o
-   se decreta proveedor remoto vía ADR-014? **Recomendado: local.**
-5. ¿`ancla-curada` se escribe como contrato en esta ronda, o se espera
+   se decreta proveedor remoto vía ADR-014? → **Local.** ADR-017 (d).
+5. ¿`curated-anchor` se escribe como contrato en esta ronda, o se espera
    a tener las 560 interpretadas y se escribe describiendo lo que se
-   vio? (recomendado: escribirlo **después**, por §5).
+   vio? → **Después de la primera corrida.** ADR-017 (e).
 6. ¿Se registra ADR para la puerta índice→análisis? Toca un supuesto de
    ADR-008 (el análisis ocurre sólo en la ventana del vigilante), y ese
-   supuesto quedaría explícitamente acotado a `watch`.
+   supuesto quedaría explícitamente acotado a `watch`. → **SÍ**, y la
+   ventana queda acotada a `watch`. ADR-017 (f).
+
+Decisión de idioma tomada en la misma sesión (**ADR-016**): los nombres
+de comando, flags y contratos de esta propuesta pasan a inglés; la
+prosa, los módulos y `docs/` siguen en español.
 
 ## 8. Relación con decisiones cerradas
 
