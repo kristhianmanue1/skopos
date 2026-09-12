@@ -55,15 +55,34 @@ Sobre los 156 análisis, el estado del fragmento quedó así:
 
 Dos poblaciones distintas, con remedio distinto:
 
-**(a) 18 análisis vivos con offsets rancios.** Su `turn_id` sobrevivió a
+**(a) 18 análisis vivos con offsets rancios — RESUELTO el mismo día.** Su `turn_id` sobrevivió a
 la reconstrucción, pero el documento de análisis guarda **su propia
 copia** de `offset_inicio`/`offset_fin` (`_documento`), tomada cuando el
 índice aún estaba mal. El turno de al lado está sano; el análisis apunta
 al sitio viejo.
 
-Remedio: `skopos reanalyze <turn_id>` — es exactamente el caso para el
-que existe ADR-007, y deja la versión vieja como auditoría en vez de
-pisarla.
+Remedio aplicado: `skopos reanalyze` sobre los 18. En modo completo
+re-extrae el turno del archivo por la frontera de SPEC-006 y **recomputa
+las referencias de origen** desde el turno fresco (ADR-007, "salvo en
+modo completo"), que es justo lo que hacía falta. 16 a la primera; 2
+fallaron por JSON con basura detrás —fallo del modelo, no del dato— y
+salieron al reintentar.
+
+Resultado sobre los 112 análisis con turno vivo:
+
+| Estado | Antes de reanalizar | Después |
+|---|---|---|
+| `truncado` (se sirve, acotado por P5) | 62 | **80** |
+| `integro` | 7 | **7** |
+| `origen_de_filas` (sin fragmento por diseño) | 25 | 25 |
+| `integridad_fallida` | 18 | **0** |
+
+**Cero fallos de integridad.** La colección quedó con 174 documentos
+para 156 `turn_id`: los 18 de diferencia son las versiones viejas, que
+ADR-007 conserva como auditoría en vez de pisarlas.
+
+Comprobado con el comando real: `query "contrato"` devuelve el análisis
+de syndesmos con **36,147 bytes** de fragmento íntegro verificado.
 
 **(b) 44 análisis huérfanos**, todos de codex-cli: su turno ya no existe
 bajo ninguna segmentación. Conservan texto válido pero no tienen
