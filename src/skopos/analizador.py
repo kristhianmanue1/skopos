@@ -59,6 +59,13 @@ CAMPOS_DE_TEXTO = ("texto_usuario", "texto_agente")
 REINTENTOS_POR_DEFECTO = 3
 ESPERA_BASE_SEGUNDOS = 5.0
 
+# Pausa proactiva entre peticiones. Por defecto 0: el endpoint del plan
+# aguantó 135 seguidas sin un solo rechazo, así que imponer espera a todo
+# el mundo sería pagar por un problema que ese camino no tiene. Se sube
+# cuando el proveedor cobra por tasa — molestarlo menos termina antes que
+# reintentar a ciegas.
+PAUSA_POR_DEFECTO = 0.0
+
 
 class Resumen(Counter):
     """Conteos de una corrida, por destino de cada turno."""
@@ -219,6 +226,8 @@ def analizar_seleccion(
     *,
     analisis_coleccion: Collection,
     on_progreso: Callable[[int, dict, str], None] | None = None,
+    pausa: float = PAUSA_POR_DEFECTO,
+    dormir: Callable[[float], None] = time.sleep,
     **kwargs,
 ) -> Resumen:
     """Corre la selección completa. Una corrida larga se puede interrumpir.
@@ -230,9 +239,12 @@ def analizar_seleccion(
     """
     resumen = Resumen()
     for indice, documento in enumerate(documentos, start=1):
+        if pausa and indice > 1:
+            dormir(pausa)
         try:
             destino = analizar_documento(
-                documento, analisis_coleccion=analisis_coleccion, **kwargs
+                documento, analisis_coleccion=analisis_coleccion,
+                dormir=dormir, **kwargs
             )
         except KeyboardInterrupt:
             resumen["interrumpido"] = 1
@@ -261,6 +273,9 @@ def analyze_command(argv: list[str]) -> int:
     parser.add_argument("--until", default=None, help="ocurrido_en <= (ISO 8601)")
     parser.add_argument("--limit", type=int, default=None,
                         help="máximo de turnos a procesar")
+    parser.add_argument("--pause", type=float, default=PAUSA_POR_DEFECTO,
+                        help="segundos de espera entre peticiones; súbelo si "
+                             "el proveedor cobra por tasa")
     parser.add_argument("--dry-run", action="store_true",
                         help="cuenta y estima el costo sin llamar al modelo")
     args = parser.parse_args(argv)
@@ -285,6 +300,7 @@ def analyze_command(argv: list[str]) -> int:
         seleccionar(filtro, indice=indice, limite=args.limit),
         analisis_coleccion=analisis_coleccion,
         on_progreso=_progreso,
+        pausa=args.pause,
     )
     _imprimir(resumen, time.time() - inicio)
     fallos = resumen["fallido_infraestructura"] + resumen["fallido_modelo"]

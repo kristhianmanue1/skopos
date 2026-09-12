@@ -249,6 +249,22 @@ class AnalizarSeleccion(unittest.TestCase):
         self.assertEqual(resumen["interrumpido"], 1)
         self.assertEqual(len(self.coleccion.guardados), 1)
 
+    def test_pausa_proactiva_espera_entre_peticiones_no_antes_de_la_primera(self):
+        esperas = []
+        analizar_seleccion(
+            [DOC_ARCHIVO, DOC_FILAS], pausa=2.0, dormir=esperas.append,
+            **{k: v for k, v in self._opciones().items() if k != "dormir"},
+        )
+        self.assertEqual(esperas, [2.0])  # 2 turnos → 1 pausa, no 2
+
+    def test_sin_pausa_no_se_duerme(self):
+        esperas = []
+        analizar_seleccion(
+            [DOC_ARCHIVO, DOC_FILAS], dormir=esperas.append,
+            **{k: v for k, v in self._opciones().items() if k != "dormir"},
+        )
+        self.assertEqual(esperas, [])
+
     def test_progreso_se_reporta_por_turno(self):
         vistos = []
         analizar_seleccion(

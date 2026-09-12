@@ -131,6 +131,25 @@ def _construir_prompt(turno: Turno, dominio_config: dict | None) -> str:
     return "\n".join(instrucciones)
 
 
+TOPE_DETALLE_HTTP = 300
+
+
+def _detalle_http(exc: "urllib.error.HTTPError") -> str:
+    """El mensaje que el proveedor puso en el cuerpo, no sólo el status.
+
+    Sin esto, un `429` de Z.ai por endpoint equivocado —cuyo cuerpo dice
+    `code 1113, Insufficient balance`— se lee como "Too Many Requests" y
+    se diagnostica como límite de tasa. Pasó el 2026-09-12 y costó dos
+    rondas (`docs/evidencia/piloto-anclas-2026-09-12.md`). El cuerpo se
+    acota: es entrada ajena y no tiene por qué ser corta.
+    """
+    try:
+        crudo = exc.read().decode("utf-8", errors="replace").strip()
+    except Exception:  # el cuerpo ya se consumió, o no hay
+        return exc.reason if isinstance(exc.reason, str) else str(exc.reason)
+    return crudo[:TOPE_DETALLE_HTTP] or str(exc.reason)
+
+
 def _llamar_ollama(
     prompt: str, *, modelo: str, base_url: str, timeout: float
 ) -> dict:
@@ -156,6 +175,10 @@ def _llamar_ollama(
     try:
         with urllib.request.urlopen(peticion, timeout=timeout) as respuesta:
             cuerpo = json.loads(respuesta.read())
+    except urllib.error.HTTPError as exc:
+        raise ErrorInfraestructura(
+            f"Ollama respondió {exc.code}: {_detalle_http(exc)}"
+        ) from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise ErrorInfraestructura(f"Ollama no respondió: {exc}") from exc
     try:
@@ -206,6 +229,10 @@ def _llamar_openai_compat(
     try:
         with urllib.request.urlopen(peticion, timeout=timeout) as respuesta:
             cuerpo = json.loads(respuesta.read())
+    except urllib.error.HTTPError as exc:
+        raise ErrorInfraestructura(
+            f"el proveedor respondió {exc.code}: {_detalle_http(exc)}"
+        ) from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise ErrorInfraestructura(f"el proveedor no respondió: {exc}") from exc
     try:
