@@ -18,6 +18,9 @@ ofrece:
   - recuperación por tema por CLI, con acceso al fragmento completo de origen (SPEC-004)
   - vigilante en vivo con arranque "desde ahora" y backfill explícito (SPEC-005, ADR-008)
   - reanálisis de un turno con supersede explícito (ADR-007)
+  - >-
+    análisis de turnos ya indexados que aún no lo tienen (ADR-017);
+    no toca los que ya tienen análisis — eso es reanalizar
   - pipeline verificado con datos reales (28 turnos, ~19.6 s/turno, 0 fallos)
   - contratos de parser por CLI aceptados (ADR-010 + SPEC-006) como base de la extensión multi-CLI
 
@@ -41,6 +44,7 @@ publica:
   - { tipo: contrato, id: skopos/cli-skopos-query, version: v1 }
   - { tipo: contrato, id: skopos/cli-skopos-buscar, version: v1 }
   - { tipo: contrato, id: skopos/cli-skopos-reanalizar, version: v1 }
+  - { tipo: contrato, id: skopos/cli-skopos-analyze, version: v1 }
   - { tipo: contrato, id: skopos/consulta-escrubery-cli, version: v1 }
 
 consume:

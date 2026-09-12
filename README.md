@@ -23,7 +23,10 @@ no sólo fixtures sintéticos.
 ```bash
 python3 -m skopos query "<tema>"
 python3 -m skopos watch [--sessions-dir DIR] [--intervalo SEGUNDOS] [--backfill]
-python3 -m skopos reanalizar <turn_id> [--solo-redaccion]   # supersede (ADR-007)
+python3 -m skopos reanalyze <turn_id> [--solo-redaccion]    # supersede (ADR-007)
+python3 -m skopos analyze [--project P] [--anchor PATRON] [--limit N] [--dry-run]
+                                                            # analiza turnos ya
+                                                            # indexados (ADR-017)
 ```
 
 `watch` arranca "desde ahora" por defecto (ADR-008): sólo procesa turnos
