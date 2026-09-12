@@ -1,6 +1,14 @@
 # P-007: offsets irrecuperables en el índice (el fragmento no se puede releer)
 
-Estado: **propuesta — no decidida. Hallazgo registrado, sin corregir.**
+Estado: **REPARADO 🔒 2026-09-12** — reconstrucción autorizada y
+ejecutada el mismo día (`docs/evidencia/reconstruccion-indice-2026-09-12.md`):
+0/12,156 offsets rotos y 300/300 sellos verificados sobre el índice nuevo,
+sin perder un solo turno. Quedan abiertas la pregunta 4 (invariante al
+indexar, **pendiente**) y la 5 (qué hacer con 44 análisis huérfanos, **sin
+decidir**); las preguntas 1, 2 y 3 se resolvieron reconstruyendo con
+renombrado reversible.
+
+Estado original: **propuesta — no decidida. Hallazgo registrado, sin corregir.**
 No implementa nada: documenta lo medido (§1), acota el alcance (§2),
 descarta lo que NO es (§3) y pide decisiones (§6).
 Fecha: 2026-09-12.
