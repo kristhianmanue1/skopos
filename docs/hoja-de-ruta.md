@@ -67,31 +67,28 @@ Estado guardado en AN-KLA local (`.an-kla/`, gitignorado — patrón de
 ektel), como cadena de supersedes: `f-ciclo-multi-cli-2026-08-20` →
 `f-ciclo-multi-cli-2026-08-28` → `f-skopos-cierre-2026-08-28` →
 `f-skopos-cierre-2026-09-06` → `f-skopos-cierre-p005-2026-09-06` →
-**`f-skopos-cierre-h2-2026-09-10`**
-(último registro descrito por esta sección; transacción escrita con AN-KLA
-b22 el 2026-09-10, revisión
-`sha256:3699363dba8f78278594830475b9805ca02c0fcdcdd0eead63b4042b46aa6851`,
-autoridad `tool_observed` vía `attest`).
-Recoge la sesión del 2026-09-10: corrección H-2 de ARIA F0.1 (baseline
-sanitation) — `project-manifest.yaml` era YAML inválido (`:` sin
-proteger en la línea 12, reproducido antes del cambio con PyYAML y
-Psych); corrección mínima con escalar bloque `>-`, semántica
-byte-idéntica verificada; `pinax.py validate` OK y `pinax build` vuelve
-a cosechar a skopos (commit `def9bb9`). Hallazgos incidentales no
-corregidos: 9 proyectos de Aria sin manifiesto (`missing_manifest`) y
-el venv de pinax sin PyYAML instalado.
-Recoge el cierre de la sesión del 2026-09-05/06: propuesta **P-005
-"syndesmos"** (plugin independiente tejedor de contexto skopos ↔
-AN-KLA; commit `a4a74ea`, issue de seguimiento
-`kristhianmanue1/skopos#2`), las dos hipótesis de memoria refutadas
-con medición (AN-KLA insuficiente y perecedera; la memoria de skopos
-sin capa de análisis y sin el presente) y el dato que destraba la
-integración: 448 turnos con `commit-write-plan` como anclas curadas.
+`f-skopos-cierre-h2-2026-09-10` → **`f-skopos-cierre-2026-09-12`**
+(vigente; revisión `sha256:4f64274cd71eb04b58525ba5999e6e31f3d0dd86ef40275405f4bf8829284da8`,
+nº 8, autoridad `tool_observed` con recibo `attest` verificado).
+Coexiste con `f-skopos-documentation-language-2026-09-12`, escrita por
+otra sesión el mismo día: no se sustituyen, cubren cosas distintas.
+
+Recoge la sesión del 2026-09-12 completa: ADR-016, ADR-017 y su
+enmienda (d'), P-006 decidida, el piloto de 135/135 anclas, P-007
+reparado con el índice reconstruido, y lo que queda abierto — los 44
+análisis huérfanos, P-005 como contrato, y la ampliación del hito 25.
+
 Recuperable con
-`an-kla retrieve --query "syndesmos p-005 tejedor" --budget 1500`.
-Nota de versión: la instalación de AN-KLA para skopos quedó en
-**0.1.0b22** (venv local, nuevamente comprobado el 2026-09-12). Esta
-revisión no actualiza el paquete ni afirma el estado de otros proyectos.
+`an-kla retrieve --query "skopos cierre piloto anclas P-007" --budget 6000`.
+**Ojo con el presupuesto**: el registro cuesta 4,364 bytes, así que con
+los 1,500–2,500 habituales de arranque queda fuera por presupuesto y no
+aparece. Es un ejemplo vivo de lo que midió P-005 §1 — AN-KLA sabe qué
+importa pero entrega poco —, y un argumento más para el tejedor.
+
+Nota de versión: la instalación de AN-KLA para skopos sigue en
+**0.1.0b22** (venv local); hay 0.1.0-beta.28 publicada. Los almacenes de
+otros proyectos y el PATH siguen en versiones anteriores por decisión
+del dueño.
 
 ## Índice de turnos (P-004) e identidad de Codex
 
