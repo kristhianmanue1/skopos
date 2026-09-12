@@ -22,7 +22,11 @@ ofrece:
   - contratos de parser por CLI aceptados (ADR-010 + SPEC-006) como base de la extensión multi-CLI
 
 no_ofrece:
-  - fuente para sesiones de prime-agent (hoy sin parser; la ampliación multi-CLI está cerrada documentalmente pero sin implementar)
+  - >-
+    fuente para sesiones de prime-agent (hoy sin parser; la ampliación
+    multi-CLI ya está implementada para codex-cli, claude-code, opencode,
+    cline y kimi-code — hito 18, cerrado el 2026-08-28; prime-agent sigue
+    pendiente en el issue #1, y qwen-code diferido por decisión del dueño)
   - retención, expiración ni borrado selectivo de lo capturado
   - redacción garantizada de secretos en fragmento_completo (evidencia cruda por diseño)
   - búsqueda semántica (la recuperación usa $text de MongoDB, ADR-006)
