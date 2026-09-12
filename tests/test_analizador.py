@@ -4,7 +4,7 @@ import unittest
 
 from pymongo.errors import DuplicateKeyError, OperationFailure
 
-from skopos.analisis import Analisis, ErrorModelo
+from skopos.analisis import Analisis, ErrorInfraestructura, ErrorModelo
 from skopos.analizador import (
     analizar_documento,
     analizar_seleccion,
@@ -132,6 +132,7 @@ class AnalizarDocumento(unittest.TestCase):
             analisis_coleccion=self.coleccion, analizar=self._analizar,
             guardar=self._guardar,
             ya_analizado=lambda tid, *, coleccion: tid in coleccion.ya,
+            dormir=lambda segundos: None,
         )
         opciones.update(kwargs)
         return analizar_documento(documento, **opciones)
@@ -155,10 +156,50 @@ class AnalizarDocumento(unittest.TestCase):
     def test_documento_sin_turn_id_es_invalido(self):
         self.assertEqual(self._correr({"texto_usuario": "x"}), "invalido")
 
-    def test_fallo_del_modelo_no_tumba_la_corrida(self):
+    def test_fallo_del_modelo_no_se_reintenta(self):
+        # analisis.py: reintentar lo mismo probablemente falle igual, y
+        # gastar tres llamadas para confirmarlo quema cuota ajena
+        intentos = []
+
         def _reventar(turno, **kwargs):
+            intentos.append(1)
             raise ErrorModelo("sin JSON")
-        self.assertEqual(self._correr(DOC_ARCHIVO, analizar=_reventar), "fallido")
+        self.assertEqual(
+            self._correr(DOC_ARCHIVO, analizar=_reventar, dormir=lambda s: None),
+            "fallido_modelo",
+        )
+        self.assertEqual(len(intentos), 1)
+
+    def test_429_del_proveedor_se_reintenta_y_puede_salir_bien(self):
+        # el 28 % de fallos de la primera corrida del piloto fue esto
+        intentos = []
+
+        def _intermitente(turno, **kwargs):
+            intentos.append(1)
+            if len(intentos) < 3:
+                raise ErrorInfraestructura("HTTP Error 429: Too Many Requests")
+            return _analisis(turno)
+        esperas = []
+        self.assertEqual(
+            self._correr(DOC_ARCHIVO, analizar=_intermitente,
+                         dormir=esperas.append),
+            "analizado",
+        )
+        self.assertEqual(len(intentos), 3)
+        self.assertEqual(esperas, [5.0, 15.0])  # espera creciente
+
+    def test_proveedor_caido_agota_reintentos_y_se_distingue(self):
+        intentos = []
+
+        def _caido(turno, **kwargs):
+            intentos.append(1)
+            raise ErrorInfraestructura("timeout")
+        self.assertEqual(
+            self._correr(DOC_ARCHIVO, analizar=_caido, reintentos=2,
+                         dormir=lambda s: None),
+            "fallido_infraestructura",
+        )
+        self.assertEqual(len(intentos), 3)  # 1 intento + 2 reintentos
 
     def test_duplicado_concurrente_cuenta_como_ya_analizado(self):
         def _duplicado(analisis, *, coleccion):
@@ -184,6 +225,7 @@ class AnalizarSeleccion(unittest.TestCase):
             analizar=lambda turno, **k: _analisis(turno),
             guardar=lambda a, *, coleccion: coleccion.guardados.append(a),
             ya_analizado=lambda tid, *, coleccion: tid in coleccion.ya,
+            dormir=lambda segundos: None,
         )
         base.update(kwargs)
         return base

@@ -37,7 +37,12 @@ from skopos.almacenamiento import (
     existe_turn_id,
     guardar_analisis,
 )
-from skopos.analisis import Analisis, AnalisisFallido, analizar_turno
+from skopos.analisis import (
+    Analisis,
+    AnalisisFallido,
+    ErrorInfraestructura,
+    analizar_turno,
+)
 from skopos.captura import Turno
 
 # Medido en el entorno real con qwen3:8b (README, ADR-014). Sólo se usa
@@ -45,6 +50,14 @@ from skopos.captura import Turno
 SEGUNDOS_POR_TURNO = 19.6
 
 CAMPOS_DE_TEXTO = ("texto_usuario", "texto_agente")
+
+# `analisis.py` ya distingue lo reintentable (ErrorInfraestructura: red,
+# timeout, 429 del proveedor) de lo que no lo es (ErrorModelo: respondió
+# pero sin campos válidos). Honrar esa distinción es del llamador, y no
+# hacerlo costó 37 de 133 anclas en la primera corrida del piloto — todas
+# por HTTP 429, todas recuperables con esperar.
+REINTENTOS_POR_DEFECTO = 3
+ESPERA_BASE_SEGUNDOS = 5.0
 
 
 class Resumen(Counter):
@@ -124,6 +137,30 @@ def seleccionar(
     return cursor
 
 
+def _analizar_con_reintentos(
+    turno,
+    *,
+    analizar: Callable[..., Analisis],
+    reintentos: int,
+    dormir: Callable[[float], None],
+    **kwargs_analisis,
+) -> Analisis:
+    """Reintenta sólo lo reintentable, con espera creciente.
+
+    `ErrorModelo` no se reintenta: el contrato de `analisis.py` dice que
+    volver a preguntar lo mismo probablemente falle igual, y gastar tres
+    llamadas para confirmarlo es quemar cuota ajena.
+    """
+    for intento in range(reintentos + 1):
+        try:
+            return analizar(turno, **kwargs_analisis)
+        except ErrorInfraestructura:
+            if intento == reintentos:
+                raise
+            dormir(ESPERA_BASE_SEGUNDOS * (3 ** intento))
+    raise AssertionError("inalcanzable")
+
+
 def analizar_documento(
     documento: dict,
     *,
@@ -131,6 +168,8 @@ def analizar_documento(
     analizar: Callable[..., Analisis] = analizar_turno,
     guardar: Callable[..., dict] = guardar_analisis,
     ya_analizado: Callable[..., bool] = existe_turn_id,
+    reintentos: int = REINTENTOS_POR_DEFECTO,
+    dormir: Callable[[float], None] = time.sleep,
     **kwargs_analisis,
 ) -> str:
     """El destino de UN turno del índice. Devuelve el conteo que le toca.
@@ -155,9 +194,15 @@ def analizar_documento(
         return "sin_contenido"
 
     try:
-        analisis = analizar(turno, **kwargs_analisis)
+        analisis = _analizar_con_reintentos(
+            turno, analizar=analizar, reintentos=reintentos, dormir=dormir,
+            **kwargs_analisis,
+        )
+    except ErrorInfraestructura:
+        # agotó los reintentos: el proveedor sigue sin responder
+        return "fallido_infraestructura"
     except AnalisisFallido:
-        return "fallido"
+        return "fallido_modelo"
 
     try:
         guardar(analisis, coleccion=analisis_coleccion)
@@ -242,7 +287,8 @@ def analyze_command(argv: list[str]) -> int:
         on_progreso=_progreso,
     )
     _imprimir(resumen, time.time() - inicio)
-    return 1 if resumen["fallido"] else 0
+    fallos = resumen["fallido_infraestructura"] + resumen["fallido_modelo"]
+    return 1 if fallos else 0
 
 
 def _dry_run(filtro: dict, *, indice: Collection, limite: int | None) -> int:
