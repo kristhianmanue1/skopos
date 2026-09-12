@@ -46,6 +46,12 @@ jamás se commitea (ADR-014 §c). Declara `SKOPOS_LLM_API=openai`, la
 `BASE_URL`, el `MODELO` y la `API_KEY`. Sin ese archivo cargado, skopos
 usa Ollama local byte-idéntico.
 
+Con Z.ai, **el endpoint importa**: un GLM Coding Plan cubre
+`https://api.z.ai/api/coding/paas/v4`, no `https://api.z.ai/api/paas/v4`
+— esta última es la API estándar, de pago por uso contra el saldo de la
+cuenta, y responde `429 / code 1113` cuando no hay saldo. El status 429
+se lee como límite de tasa y no lo es (`docs/evidencia/piloto-anclas-2026-09-12.md`).
+
 `modelo_analisis` registra por turno cuál se usó, así que un corpus
 mixto siempre es distinguible.
 

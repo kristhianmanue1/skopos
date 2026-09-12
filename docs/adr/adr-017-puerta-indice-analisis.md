@@ -191,8 +191,10 @@ deja la máquina en ~9 GB entre modelo y caché KV.
 
 ### La medición del lado remoto
 
-`glm-5.3-flash` vía Z.ai, camino compatible-OpenAI de ADR-014, probado
-con un turno **sintético** antes de tocar dato real:
+`glm-5.3-flash` vía Z.ai contra `https://api.z.ai/api/coding/paas/v4`
+—el endpoint que cubre el Coding Plan; la API estándar `/api/paas/v4` se
+paga aparte y responde `429 / 1113` sin saldo—, camino compatible-OpenAI
+de ADR-014, probado con un turno **sintético** antes de tocar dato real:
 
 - **4.1 s** de punta a punta, JSON válido, `modelo_analisis` registrando
   el proveedor real como manda ADR-014;
