@@ -64,6 +64,36 @@ un trámite: nada se empuja sin la suite en verde y el diff leído, y todo
 push se reporta. El resto de esta lista sigue exigiendo autorización
 **cada vez**.
 
+## Memoria entre sesiones (AN-KLA)
+
+El estado al cierre de cada sesión vive en `.an-kla/` (gitignorado), como
+cadena de supersedes; el registro vigente y su revisión están en
+`docs/hoja-de-ruta.md`. Para tomar contexto al arrancar:
+
+```bash
+.venv/bin/an-kla retrieve --query "<tema>" --budget 6000
+```
+
+**Pide 6000, no 2500.** El presupuesto lo elige quien consulta, no el
+almacén, y un registro que no cabe **se excluye entero y en silencio** —
+en `retrieve` es todo o nada por registro, no se sirve resumido. Pedir
+poco no devuelve una versión corta: devuelve nada, y parece memoria
+vacía. El cierre del 2026-09-12 cuesta 4,364 B y con 2500 no aparece.
+
+No es que los registros hayan engordado por descuido: la representación
+la gobierna la **autoridad**, no el autor. Una escritura con recibo
+`attest` verificado (`tool_observed`) habilita `full`; una autoridad
+derivada queda topada en `summary` por el propio motor. El detalle que
+un registro se gana depende de la evidencia que trae.
+
+Escribir requiere `plan-write` + `commit-write-plan`. Dos trampas que ya
+costaron tiempo: el recibo de `attest` va como evidencia
+`kind: attestation_receipt`, que **sólo existe en `write-authority-v2`**
+(con v1 falla siempre con `cli_privileged_authority_unresolved`); y
+`proposal_sha256` es el digest **canónico** del JSON
+(`an_kla.write_policy.digest_json`), no el sha256 de los bytes del
+archivo.
+
 ## Límites de tamaño
 
 Heredados de Skevi (800 líneas por archivo de texto, 200 para este

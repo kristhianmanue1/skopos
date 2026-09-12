@@ -62,7 +62,13 @@ source .venv/bin/activate
 python3 -m unittest discover -s tests   # el runner informa conteos y skips
 python3 scripts/check_sizes.py && python3 scripts/check_plans.py   # gate de Skevi (ADR-015)
 python3 -m skopos                        # ayuda + comandos
+.venv/bin/an-kla retrieve --query "<tema>" --budget 6000   # contexto de sesiones previas
 ```
+
+Sobre el `--budget 6000`: lo elige quien consulta, y un registro que no
+cabe se excluye **entero y en silencio**. Pedir 2500 con un registro de
+4,364 B no devuelve una versión corta — devuelve nada, y se confunde con
+memoria vacía. Ver AGENTS.md §"Memoria entre sesiones".
 
 ## Idioma y compatibilidad
 
