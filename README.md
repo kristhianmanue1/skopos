@@ -23,13 +23,14 @@ defecto; ADR-014 permite otro proveedor con autorización. Este estado del
 código no certifica que Mongo/Ollama estén activos ni cierra corridas en vivo.
 
 ```bash
-python3 -m skopos query "<tema>"                          # análisis temáticos
+python3 -m skopos query "<tema>" [--no-evidence]          # análisis temáticos
 python3 -m skopos search "<texto>"                        # turnos indexados
 python3 -m skopos index --help                            # indexación sin LLM
 python3 -m skopos watch [--sessions-dir DIR] [--intervalo SEGUNDOS] [--backfill]
 python3 -m skopos reanalyze <turn_id> [--solo-redaccion]    # supersede (ADR-007)
 python3 -m skopos analyze --help                          # filtros y ventana
 # analyze admite --project, --cli, --anchor, --since, --until, --limit, --dry-run
+# --no-evidence sirve sólo tema y resumen: 16 KB en vez de 512 por consulta
 ```
 
 ## Proveedor de análisis: local o remoto (ADR-014, enmienda de ADR-017)

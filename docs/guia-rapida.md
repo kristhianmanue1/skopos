@@ -62,6 +62,7 @@ source .venv/bin/activate
 python3 -m unittest discover -s tests   # el runner informa conteos y skips
 python3 scripts/check_sizes.py && python3 scripts/check_plans.py   # gate de Skevi (ADR-015)
 python3 -m skopos                        # ayuda + comandos
+python3 -m skopos query "<tema>" --no-evidence   # contexto interpretado, sin evidencia cruda
 .venv/bin/an-kla retrieve --query "<tema>" --budget 6000   # contexto de sesiones previas
 ```
 
