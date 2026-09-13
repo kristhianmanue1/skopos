@@ -31,10 +31,22 @@
 | 20 | Análisis multi-proveedor (**ADR-014, 🔒 2026-09-06**; enmienda parcial de ADR-001 y del manifest): adaptador compatible-OpenAI en stdlib (`_llamar_openai_compat`, parseo tolerante de cercados), proveedor por entorno `SKOPOS_LLM_API/BASE_URL/MODELO/API_KEY` — Ollama local sigue siendo el default byte-idéntico; remoto sólo por decreto (la key vive en el entorno, jamás en el repo). Precedencia argumento > entorno > default; `modelo_analisis` registra el proveedor real. Watch reiniciado el mismo día con las 5 fuentes (opencode en vivo desde ADR-013) | Cerrado | `c1579bc` |
 | 21 | Gate de Skevi adoptado (**ADR-015, 🔒 2026-09-06**): `scripts/check_sizes.py` + `check_plans.py` copiados verbatim desde skevi (HEAD `910cdc4`, clon sincronizado), canon propio en `skevi-gate.json` (`required` reemplaza; límites 800/200/300 heredados sin redeclarar). Primera corrida: 118 archivos en límites, 0 incumplimientos. Gate de planes E1-E5 inactivo (clave `plans` ausente, fail-closed): el único plan existente es registro de ciclo cerrado; el primer plan nuevo deberá conformarlo y declarar la clave. AGENTS/README/guía actualizados — la verificación exige el gate en verde junto a la suite | Cerrado | `7eb1922` |
 | 22 | Idioma por audiencia (**ADR-016, 🔒 2026-09-12**): inglés en comandos, flags, campos e ids de contrato; español en módulos, funciones, comentarios, `docs/` y commits. Los 25,909 campos almacenados **no** se migran hoy: se renombran dentro del `v3` que exigirá la ampliación a conversaciones de cualquier origen, para no pagar dos migraciones. Alias en inglés para `reanalizar`/`indexar`/`buscar`, sin retirar los actuales | **Implementado** — `analyze`/`reanalyze`/`index`/`search` vivos, alias viejos avisan por stderr | — |
-| 23 | Puerta índice→análisis, `skopos analyze` (**ADR-017, 🔒 2026-09-12**, sobre P-006 §7): los turnos indexados eran inalcanzables para el análisis —`indexar` no llama al modelo, `watch` sólo cubre su ventana, `reanalizar` supersede uno existente—, con 25,909 observados y **8 interpretados**. Primer corpus: las **560 anclas `commit-write-plan`** (~3 h serial, local con `qwen3:8b`). No toca turnos con análisis previo; la ventana de ADR-008 queda acotada a `watch` | **Implementado** — 19 tests nuevos (272 en total), `analyze` corrido contra el corpus real y `skopos query` sirviendo resultados por primera vez; primera corrida acotada a **ventana de 7 días** por decisión del dueño (2026-09-12): 129 anclas en vez de 608, y —por P-007— las únicas con offsets sanos, así que el piloto evalúa la capa interpretada con su evidencia cruda. Ritmo real medido: ~90 s/turno, no 19.6 (las anclas son turnos grandes; la constante de `--dry-run` quedó mal calibrada) | — |
-| 23.1 | **Hallazgo P-007** — offsets irrecuperables en la parte del índice construida el 2026-08-29: el desfase crece turno a turno (firma de un acumulador que no se reinició por archivo) y el 78 % de una muestra cae fuera del EOF, así que `fragmento_completo` (ADR-009 P3, hito 16) se niega. **No es pérdida de contenido ni duplicados** (595 textos distintos de 608): el índice está segmentado distinto, no inflado. La ingesta con el parser de hoy nace sana (0/400 rotos). Registrado sin corregir: reparar exige decidir qué pasa con 25,909 documentos | Propuesta abierta | — |
+| 23 | Puerta índice→análisis, `skopos analyze` (**ADR-017, 🔒 2026-09-12**, sobre P-006 §7): los turnos indexados eran inalcanzables para el análisis —`indexar` no llama al modelo, `watch` sólo cubre su ventana, `reanalizar` supersede uno existente—, con 25,909 observados y **8 interpretados**. Primer corpus: las **560 anclas `commit-write-plan`** (~3 h serial, local con `qwen3:8b`). No toca turnos con análisis previo; la ventana de ADR-008 queda acotada a `watch` | **Implementado** — 19 tests nuevos (272 en total), `analyze` corrido contra el corpus real y `skopos query` sirviendo resultados por primera vez; primera corrida acotada a **ventana de 7 días** por decisión del dueño (2026-09-12): 129 anclas en vez de 608, y —por P-007— las únicas con offsets sanos, así que el piloto evalúa la capa interpretada con su evidencia cruda. **Piloto cerrado: 135/135 anclas, 0 fallos** (`docs/evidencia/piloto-anclas-2026-09-12.md`) — `skopos.analisis` pasa de 8 a 151 documentos y `skopos query` sirve resultados por primera vez. Hicieron falta cuatro pases (contexto local insuficiente, endpoint de Z.ai equivocado, reintento ausente); ninguno duplicó nada gracias a la idempotencia de (b). Destapó un fallo en `query`: reventaba con análisis de opencode por asumir offsets enteros — corregido con el estado `origen_de_filas` | `pendiente` |
+| 23.1 | **Hallazgo P-007** — offsets irrecuperables en la parte del índice construida el 2026-08-29: el desfase crece turno a turno (firma de un acumulador que no se reinició por archivo) y el 78 % de una muestra cae fuera del EOF, así que `fragmento_completo` (ADR-009 P3, hito 16) se niega. **No es pérdida de contenido ni duplicados** (595 textos distintos de 608): el índice está segmentado distinto, no inflado. La ingesta con el parser de hoy nace sana (0/400 rotos). **REPARADO el mismo día** (`docs/evidencia/reconstruccion-indice-2026-09-12.md`): índice reconstruido de 26,007 a 16,974 turnos —los 9,033 de diferencia eran artefactos de la segmentación vieja, 0 turnos perdidos— con **0/12,156 offsets rotos y 300/300 sellos verificados**. El corpus anterior queda en `turnos_respaldo_20260912`, así que la operación es reversible. **Invariante de escritura implementada** el mismo día (`indexar_turno` rechaza offsets imposibles; 0 rechazos sobre el corpus, sin costo). Los 18 análisis con offsets rancios **resueltos con `reanalyze`** (supersede de ADR-007, que recomputa referencias de origen): 0 fallos de integridad sobre los 112 con turno vivo. Pendiente sólo qué hacer con los 44 huérfanos | — |
 | 24 | P-005 reformulada como contrato (`curated-anchor`, `context-block`) en vez de tercer proyecto — se escribe **después** de la primera corrida del hito 23, por la regla que siguió ADR-010: el contrato generaliza una instancia viva, no la precede | Pendiente del hito 23 | — |
 | 25 | Ampliación a conversaciones de cualquier origen (prime, agentes en runtimes y sandboxes), más allá de CLIs con rollout en disco — anunciada por el dueño el 2026-09-12. **Sin diseñar**: exige su propio análisis. Fuerza `documento-turno-mongo v3`, que nacerá en inglés por ADR-016 | Anunciado, sin análisis | — |
+
+## Actualización documental del 2026-09-12
+
+ADR-018 sustituye la política del hito 22 **sólo para identificadores
+internos nuevos**: inglés; español predeterminado para comunicación,
+producto y comentarios. El hito 22 conserva la decisión histórica de
+ADR-016. No se migraron campos, flags ni módulos existentes.
+
+La guía rápida, README y manifiesto se reconciliaron con la implementación
+local de parsers, comandos y P-007. Las cifras y corridas de los hitos son
+observaciones fechadas: esta revisión no las convierte en mediciones actuales.
+Ver `docs/evidencia/reconciliacion-documental-2026-09-12.md`.
 
 ## Criterio de cierre por hito
 
@@ -55,30 +67,28 @@ Estado guardado en AN-KLA local (`.an-kla/`, gitignorado — patrón de
 ektel), como cadena de supersedes: `f-ciclo-multi-cli-2026-08-20` →
 `f-ciclo-multi-cli-2026-08-28` → `f-skopos-cierre-2026-08-28` →
 `f-skopos-cierre-2026-09-06` → `f-skopos-cierre-p005-2026-09-06` →
-**`f-skopos-cierre-h2-2026-09-10`**
-(vigente; transacción escrita con AN-KLA b22 el 2026-09-10, revisión
-`sha256:3699363dba8f78278594830475b9805ca02c0fcdcdd0eead63b4042b46aa6851`,
-autoridad `tool_observed` vía `attest`).
-Recoge la sesión del 2026-09-10: corrección H-2 de ARIA F0.1 (baseline
-sanitation) — `project-manifest.yaml` era YAML inválido (`:` sin
-proteger en la línea 12, reproducido antes del cambio con PyYAML y
-Psych); corrección mínima con escalar bloque `>-`, semántica
-byte-idéntica verificada; `pinax.py validate` OK y `pinax build` vuelve
-a cosechar a skopos (commit `def9bb9`). Hallazgos incidentales no
-corregidos: 9 proyectos de Aria sin manifiesto (`missing_manifest`) y
-el venv de pinax sin PyYAML instalado.
-Recoge el cierre de la sesión del 2026-09-05/06: propuesta **P-005
-"syndesmos"** (plugin independiente tejedor de contexto skopos ↔
-AN-KLA; commit `a4a74ea`, issue de seguimiento
-`kristhianmanue1/skopos#2`), las dos hipótesis de memoria refutadas
-con medición (AN-KLA insuficiente y perecedera; la memoria de skopos
-sin capa de análisis y sin el presente) y el dato que destraba la
-integración: 448 turnos con `commit-write-plan` como anclas curadas.
+`f-skopos-cierre-h2-2026-09-10` → **`f-skopos-cierre-2026-09-12`**
+(vigente; revisión `sha256:4f64274cd71eb04b58525ba5999e6e31f3d0dd86ef40275405f4bf8829284da8`,
+nº 8, autoridad `tool_observed` con recibo `attest` verificado).
+Coexiste con `f-skopos-documentation-language-2026-09-12`, escrita por
+otra sesión el mismo día: no se sustituyen, cubren cosas distintas.
+
+Recoge la sesión del 2026-09-12 completa: ADR-016, ADR-017 y su
+enmienda (d'), P-006 decidida, el piloto de 135/135 anclas, P-007
+reparado con el índice reconstruido, y lo que queda abierto — los 44
+análisis huérfanos, P-005 como contrato, y la ampliación del hito 25.
+
 Recuperable con
-`an-kla retrieve --query "syndesmos p-005 tejedor" --budget 1500`.
-Nota de versión: la instalación de AN-KLA para skopos quedó en
-**0.1.0b22** (venv local); los almacenes de otros proyectos y el PATH
-siguen en versiones anteriores por decisión del dueño.
+`an-kla retrieve --query "skopos cierre piloto anclas P-007" --budget 6000`.
+**Ojo con el presupuesto**: el registro cuesta 4,364 bytes, así que con
+los 1,500–2,500 habituales de arranque queda fuera por presupuesto y no
+aparece. Es un ejemplo vivo de lo que midió P-005 §1 — AN-KLA sabe qué
+importa pero entrega poco —, y un argumento más para el tejedor.
+
+Nota de versión: la instalación de AN-KLA para skopos sigue en
+**0.1.0b22** (venv local); hay 0.1.0-beta.28 publicada. Los almacenes de
+otros proyectos y el PATH siguen en versiones anteriores por decisión
+del dueño.
 
 ## Índice de turnos (P-004) e identidad de Codex
 

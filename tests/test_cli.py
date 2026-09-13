@@ -22,7 +22,12 @@ from skopos.almacenamiento import (
     version_vigente,
 )
 from skopos.analisis import Analisis
-from skopos.cli import query, query_command, reanalizar_command
+from skopos.cli import (
+    _servir_fragmento,
+    query,
+    query_command,
+    reanalizar_command,
+)
 
 DB_DE_PRUEBA = "skopos_test_cli"
 
@@ -525,3 +530,24 @@ class ReanalizarTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FragmentoDeOrigenDeFilas(unittest.TestCase):
+    """ADR-012: un turno de filas no tiene rango de bytes que releer."""
+
+    def test_sin_offsets_no_revienta_y_se_declara(self):
+        # regresión: antes daba TypeError (None - None) y tumbaba la
+        # consulta entera — un solo análisis de opencode entre los
+        # resultados dejaba `query` inservible para todos los demás
+        doc = {"ruta_origen": "/tmp/opencode.db", "offset_inicio": None,
+               "offset_fin": None, "fragmento_sha256": "abc"}
+        estado, sellado, texto = _servir_fragmento(doc)
+        self.assertEqual(estado, "origen_de_filas")
+        self.assertTrue(sellado)
+        self.assertIsNone(texto)
+
+    def test_campos_de_offset_ausentes_tampoco_revientan(self):
+        estado, sellado, texto = _servir_fragmento({"ruta_origen": "/tmp/x.db"})
+        self.assertEqual(estado, "origen_de_filas")
+        self.assertFalse(sellado)
+        self.assertIsNone(texto)

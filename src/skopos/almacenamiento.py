@@ -10,6 +10,7 @@ huérfano.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 
 import pymongo
@@ -257,6 +258,41 @@ def _documento_turno(turno: Turno) -> dict:
     return documento
 
 
+def _offsets_imposibles(turno: Turno) -> str | None:
+    """Motivo por el que el rango del turno no puede ser cierto, o None.
+
+    Invariante de escritura (P-007 §6.4): un turno no puede terminar más
+    allá del final de su archivo, ni acabar antes de empezar. No es
+    "improbable", es imposible — la página 900 de un libro de 200.
+
+    Hasta el 2026-09-12 nadie lo comprobaba al escribir, y una corrida
+    guardó 9,033 turnos con offsets imposibles **en silencio**. El
+    defecto no salió a la luz hasta dos semanas después, cuando `query`
+    intentó releer el fragmento y lo negó. `_servir_fragmento` ya
+    verificaba al leer; lo que faltaba era el guardián en la puerta de
+    entrada (`docs/evidencia/reconstruccion-indice-2026-09-12.md`).
+
+    No verificable ≠ inválido: si el archivo no se puede consultar
+    —borrado, permisos, ruta sintética de un test— no se inventa un
+    veredicto y el turno pasa. El tamaño NO se cachea a propósito: un
+    archivo vigilado crece entre ciclos, y un tamaño rancio rechazaría
+    turnos legítimos del final.
+    """
+    if turno.offset_inicio is None or turno.offset_fin is None:
+        return None  # origen de filas (ADR-012): no hay rango que validar
+    if turno.offset_fin < turno.offset_inicio:
+        return (f"offset_fin {turno.offset_fin} es anterior a offset_inicio "
+                f"{turno.offset_inicio}")
+    try:
+        tamano = os.path.getsize(turno.ruta_origen)
+    except OSError:
+        return None
+    if turno.offset_fin > tamano:
+        return (f"offset_fin {turno.offset_fin} excede el tamaño de "
+                f"{turno.ruta_origen} ({tamano} bytes)")
+    return None
+
+
 def indexar_turno(turno: Turno, *, coleccion: Collection) -> bool:
     """Guarda un turno observado. Devuelve si se insertó (False = ya estaba).
 
@@ -265,12 +301,20 @@ def indexar_turno(turno: Turno, *, coleccion: Collection) -> bool:
     nuevos ya califican con su producto (ADR-010 §7), así que dos CLIs no
     pueden colisionar. No llama al modelo: indexar es observar, no
     interpretar.
+
+    Rechaza —no marca— un turno con offsets imposibles: el puntero existe
+    para releer el origen, y uno que no puede apuntar a nada no sirve
+    para eso. Guardarlo marcado sólo traslada el problema a quien lo lea
+    después.
     """
     if not turno.turn_id or not turno.ruta_origen:
         raise DocumentoInvalido(
             f"turn_id y ruta_origen son obligatorios: turn_id={turno.turn_id!r} "
             f"ruta_origen={turno.ruta_origen!r}"
         )
+    motivo = _offsets_imposibles(turno)
+    if motivo is not None:
+        raise DocumentoInvalido(f"offsets imposibles en {turno.turn_id}: {motivo}")
     try:
         coleccion.insert_one(_documento_turno(turno))
     except DuplicateKeyError:

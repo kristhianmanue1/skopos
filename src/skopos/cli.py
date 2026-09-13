@@ -47,9 +47,13 @@ def _servir_fragmento(
 
     Devuelve (estado, sellado, texto):
     - estado: "integro" | "truncado" | "origen_perdido" |
-      "integridad_fallida" — nunca se sirven bytes no verificados: ante
-      discordancia de longitud o de sello, el texto es None (cierre de
-      Y-5: ni bytes de otro turno, ni lecturas cortas, en silencio).
+      "integridad_fallida" | "origen_de_filas" — nunca se sirven bytes no
+      verificados: ante discordancia de longitud o de sello, el texto es
+      None (cierre de Y-5: ni bytes de otro turno, ni lecturas cortas,
+      en silencio).
+    - "origen_de_filas": el turno vino de filas, no de un archivo
+      (ADR-012), así que no hay rango de bytes que releer. No es un
+      fallo de integridad: es una relectura que este camino no ofrece.
     - sellado: False para documentos sin fragmento_sha256 (legados, o
       captura con archivo ilegible en ese momento) — se sirven con
       chequeo de longitud, mínimo Y-5 de la ronda 6 R6-3.
@@ -59,9 +63,15 @@ def _servir_fragmento(
       el tope — cantidad fija, documentada en el contrato.
     """
     ruta = doc["ruta_origen"]
-    inicio, fin = doc["offset_inicio"], doc["offset_fin"]
-    esperado = fin - inicio
+    inicio, fin = doc.get("offset_inicio"), doc.get("offset_fin")
     sello = doc.get("fragmento_sha256")
+    if inicio is None or fin is None:
+        # ADR-012: una fila no tiene rango de bytes estable y fingir uno
+        # sería mentir. Antes esto reventaba con TypeError y tumbaba la
+        # consulta entera — un análisis de opencode entre los resultados
+        # dejaba `query` inservible para todos los demás.
+        return "origen_de_filas", sello is not None, None
+    esperado = fin - inicio
     if esperado <= 0:  # offsets corruptos en el documento (ronda 8, H2)
         return "integridad_fallida", sello is not None, None
     try:

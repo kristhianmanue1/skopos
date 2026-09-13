@@ -49,8 +49,8 @@ publica:
 
 consume:
   - { tipo: externo, id: mongodb-local, uso: "almacenamiento de turnos y análisis; instalación y operación locales", requerido: true }
-  - { tipo: externo, id: ollama-local, uso: "motor de análisis temático vía API HTTP local (qwen3:8b)", requerido: true }
-  - { tipo: proyecto, id: escrubery, uso: "canal alternativo de obtención de conversaciones (REQ-10); ensayo pendiente", requerido: false }
+  - { tipo: externo, id: ollama-local, uso: "proveedor de análisis por defecto (qwen3:8b); sustituible conforme a ADR-014, no necesario para indexar o buscar", requerido: false }
+  - { tipo: proyecto, id: escrubery, uso: "canal alternativo de obtención de conversaciones (REQ-10); ensayo registrado en el hito 10, no implica operación continua", requerido: false }
 
 fronteras_de_confianza:
   - el análisis temático es salida de un LLM y no se verifica contra el fragmento de origen
@@ -58,11 +58,13 @@ fronteras_de_confianza:
     del dueño y con la API key fuera del repo (ADR-014 §c)
   - fragmento_completo conserva el texto original sin redactar; la redacción de secretos es defensa por patrón sólo en campos derivados
   - watch procesa sólo turnos cerrados desde su arranque; el histórico exige backfill explícito
-  - el soporte multi-CLI está aceptado a nivel contractual, no implementado; cada parser nuevo requiere su propia verificación
-  - lo capturado incluye rutas absolutas del sistema del usuario y permanece en almacenamiento local sin exposición externa
+  - el soporte de codex-cli, claude-code, cline, kimi-code y opencode está implementado; cada parser nuevo requiere su propia verificación
+  - "query comprueba longitud y sello cuando existe; admite legado sin sello marcado sellado:false. P-007 sigue sin reparación aprobada"
+  - search devuelve texto indexado redactado y acotado, sin releer el origen ni verificar su sello
+  - lo capturado incluye rutas absolutas y se almacena localmente; un proveedor remoto autorizado puede recibir entradas del análisis (ADR-014)
 
 pospuesto:
-  - implementación de parsers multi-CLI (autorización y plan de fase propios pendientes)
+  - ampliación a conversaciones de otros orígenes; prime-agent pendiente y qwen-code diferido
   - lectura por sesión, fecha o rango
   - borrado selectivo y política de retención
   - búsqueda semántica si $text resulta insuficiente en uso real
