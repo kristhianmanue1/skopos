@@ -44,7 +44,7 @@ No asumas el contenido de un documento que no leíste — si vas a tocar
 | `src/skopos/parseo.py` | SPEC-006 | Despacha los cinco adaptadores; OpenCode usa filas SQLite |
 | `src/skopos/indexador.py` | P-004 | `index`: guarda turnos sin llamar al modelo |
 | `src/skopos/busqueda.py` | ADR-009 | `search`: consulta turnos indexados |
-| `src/skopos/analizador.py` | ADR-017 | `analyze`: primer análisis de turnos ya indexados |
+| `src/skopos/analyzer.py` | ADR-017 | `analyze`: primer análisis de turnos ya indexados |
 | `src/skopos/analisis.py` | SPEC-002 | Llama al proveedor de análisis (Ollama por defecto; multi-proveedor, ADR-014) |
 | `src/skopos/almacenamiento.py` | SPEC-003 | Guarda/busca en MongoDB local |
 | `src/skopos/orquestador.py` | — (conecta 001→002→003) | Máquina de estados de un turno |

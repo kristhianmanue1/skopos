@@ -1,16 +1,16 @@
 """Comando `skopos analyze` — la puerta del índice al análisis (ADR-017).
 
-El hito 18 separó indexar de analyze, y la separación fue correcta:
-indexar es barato y evita perder conversación; analyze cuesta ~19.6 s
-por turn. Lo que nadie escribió es que esa separación dejó los turnos
+El hito 18 separó indexar de analizar, y la separación fue correcta:
+indexar es barato y evita perder conversación; analizar cuesta ~19.6 s
+por turno. Lo que nadie escribió es que esa separación dejó los turnos
 ya indexados **sin ninguna vía hacia el análisis**: `indexar` no llama
 al modelo (P-004), `watch` sólo cubre su ventana (ADR-008) y
 `reanalizar` supersede un análisis existente (ADR-007), no crea el
 primero. Este módulo es esa vía.
 
-Lee de `skopos.turnos` y escribe en `skopos.analysis`. No vuelve a
-tocar el archivo de origen: el document indexado guarda todo lo que
-compone un Turno, así que reconstruirlo since Mongo funciona igual para
+Lee de `skopos.turnos` y escribe en `skopos.analisis`. No vuelve a
+tocar el archivo de origen: el documento indexado guarda todo lo que
+compone un Turno, así que reconstruirlo desde Mongo funciona igual para
 orígenes de archivo y de filas (ADR-012), donde no hay offsets que
 releer.
 
@@ -77,7 +77,7 @@ DEFAULT_PAUSE = 0.0
 
 
 class Summary(Counter):
-    """Conteos de una corrida, por outcome de cada turn."""
+    """Conteos de una corrida, por destino de cada turno."""
 
 
 def turn_from_document(document: dict) -> Turno:
@@ -118,8 +118,8 @@ def build_filter(
 
     `since`/`until` comparan `ocurrido_en` como cadena: los timestamps se
     guardan en ISO 8601 con `Z`, donde el orden lexicográfico coincide
-    con el cronológico. Un turn sin `ocurrido_en` queda fuera de
-    cualquier time_range — no se le inventa una fecha.
+    con el cronológico. Un turno sin `ocurrido_en` queda fuera de
+    cualquier rango — no se le inventa una fecha.
     """
     query_filter: dict = {}
     if project:
@@ -188,9 +188,9 @@ def analyze_document(
     sleep_for: Callable[[float], None] = time.sleep,
     **analysis_kwargs,
 ) -> str:
-    """El outcome de UN turn del índice. Devuelve el conteo que le toca.
+    """El destino de UN turno del índice. Devuelve el conteo que le toca.
 
-    ADR-017 (b): un turn que ya tiene análisis se omite y no se toca.
+    ADR-017 (b): un turno que ya tiene análisis se omite y no se toca.
     Crear la segunda versión de un análisis es territorio exclusivo de
     `reanalizar` (ADR-007) — si dos superficies pudieran hacerlo, la
     traza de por qué existe cada versión dejaría de ser reconstruible.
@@ -241,8 +241,8 @@ def analyze_selection(
 ) -> Summary:
     """Corre la selección completa. Una corrida larga se puede interrumpir.
 
-    `KeyboardInterrupt` no se traga: se devuelve lo hecho until ahí para
-    que el summary sea verdadero, y se marca la corrida como partial.
+    `KeyboardInterrupt` no se traga: se devuelve lo hecho hasta ahí para
+    que el resumen sea verdadero, y se marca la corrida como parcial.
     Lo ya guardado en Mongo queda guardado — la próxima corrida lo saltará
     por la regla de (b).
     """
@@ -272,7 +272,7 @@ def analyze_command(argv: list[str]) -> int:
             "(ADR-017). No toca los que ya lo tienen: eso es reanalizar."
         ),
     )
-    parser.add_argument("--project", default=None, help="filtra por eje de project")
+    parser.add_argument("--project", default=None, help="filtra por eje de proyecto")
     parser.add_argument("--cli", default=None, help="filtra por CLI de origen")
     parser.add_argument(
         "--anchor", default=None,
@@ -283,7 +283,7 @@ def analyze_command(argv: list[str]) -> int:
     parser.add_argument("--limit", type=int, default=None,
                         help="máximo de turnos a procesar")
     parser.add_argument("--pause", type=float, default=DEFAULT_PAUSE,
-                        help="seconds de espera entre peticiones; súbelo si "
+                        help="segundos de espera entre peticiones; súbelo si "
                              "el proveedor cobra por tasa")
     parser.add_argument("--dry-run", action="store_true",
                         help="cuenta y estima el costo sin llamar al modelo")
