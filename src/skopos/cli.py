@@ -39,6 +39,22 @@ TOPE_FRAGMENTO_BYTES = 64 * 1024
 
 MARCADOR_TRUNCADO = "\n…[fragmento truncado: servidos {servidos} de {total} bytes]"
 
+# Estado del fragmento cuando la consulta pidió no servir evidencia
+# (`--no-evidence`). No es un fallo: es que **no se miró**. Medido el
+# 2026-09-13: la evidencia cruda era el 97% del egreso de una consulta
+# (512 KB de 529 KB para 20 resultados), y quien abre una sesión con
+# `query` para tomar contexto quiere los 16 KB interpretados, no los
+# otros 512. Como este camino no relee el origen, tampoco puede afirmar
+# integridad — y fingir `integro` sin haber verificado sería exactamente
+# lo que ADR-009 Y-5 prohíbe.
+#
+# El valor va en español como los otros cuatro (`integro`, `truncado`,
+# `origen_perdido`, `integridad_fallida`): son un enum publicado en
+# `cli-skopos-query v1` y partirlo en dos idiomas por ADR-018 rompería
+# a los consumidores sin ganar nada. El flag, que es nuevo y no legado,
+# sí nace en inglés.
+ESTADO_EVIDENCIA_OMITIDA = "evidencia_omitida"
+
 
 def _servir_fragmento(
     doc: dict, *, tope_bytes: int = TOPE_FRAGMENTO_BYTES
@@ -108,8 +124,15 @@ def query(
     coleccion: Collection,
     proyecto: str | None = None,
     max_resultados: int = MAX_RESULTADOS_POR_DEFECTO,
+    with_evidence: bool = True,
 ) -> dict:
-    """Devuelve el objeto {resultados, excluidos} del CONTRATO cli-skopos-query v1."""
+    """Devuelve el objeto {resultados, excluidos} del CONTRATO cli-skopos-query v1.
+
+    `with_evidence=False` sirve sólo la capa interpretada: el campo
+    `fragmento_completo` sigue presente —quitarlo exigiría v2 del
+    contrato— pero vale `null`, y el estado lo declara. Ahorra el 97%
+    del egreso y las N lecturas de archivo que la consulta hace hoy.
+    """
     documentos = buscar_por_tema(tema, coleccion=coleccion, proyecto=proyecto)
     # P5: presupuesto sobre vigentes ya filtrados (ADR-007) — las
     # versiones superseded no consumen cupo (ronda 6, R6-5). Clamp
@@ -118,7 +141,15 @@ def query(
     excluidos_por_limite = max(0, len(documentos) - max_resultados)
     resultados = []
     for doc in documentos[:max_resultados]:
-        estado, sellado, fragmento = _servir_fragmento(doc)
+        if with_evidence:
+            estado, sellado, fragmento = _servir_fragmento(doc)
+        else:
+            # `sellado` no necesita el archivo: sale del documento. Se
+            # conserva para que el consumidor sepa que hay sello que
+            # verificar si decide pedir la evidencia después.
+            estado = ESTADO_EVIDENCIA_OMITIDA
+            sellado = doc.get("fragmento_sha256") is not None
+            fragmento = None
         resultados.append(
             {
                 "tema": doc["tema"],
@@ -151,6 +182,13 @@ def query_command(argv: list[str]) -> int:
         default=MAX_RESULTADOS_POR_DEFECTO,
         help="máximo de resultados a servir (default 20); el resto se cuenta en excluidos",
     )
+    parser.add_argument(
+        "--no-evidence",
+        action="store_true",
+        help="sirve sólo la capa interpretada (tema, resumen) sin releer los "
+             "archivos de origen; fragmento_completo queda en null y el "
+             "estado lo declara. Ahorra ~97%% del egreso",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -160,6 +198,7 @@ def query_command(argv: list[str]) -> int:
             coleccion=coleccion,
             proyecto=args.proyecto,
             max_resultados=args.max,
+            with_evidence=not args.no_evidence,
         )
     except PyMongoError as exc:
         print(f"error: MongoDB no disponible: {exc}", file=sys.stderr)

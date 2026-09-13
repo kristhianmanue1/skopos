@@ -347,6 +347,65 @@ class FragmentoSelladoTests(unittest.TestCase):
         self.assertEqual(r["fragmento_estado"], "integridad_fallida")
         self.assertIsNone(r["fragmento_completo"])
 
+    def test_no_evidence_omite_el_fragmento_y_declara_el_estado(self):
+        # 2026-09-13: la evidencia cruda era el 97% del egreso de una
+        # consulta real. `--no-evidence` sirve la capa interpretada sola.
+        contenido = b"evidencia cruda que esta consulta no pidio\n"
+        self._guardar(contenido=contenido,
+                      sha256=hashlib.sha256(contenido).hexdigest())
+        r = self._resultado(with_evidence=False)
+        self.assertEqual(r["fragmento_estado"], "evidencia_omitida")
+        self.assertIsNone(r["fragmento_completo"])
+        # el campo NO desaparece: quitarlo exigiria v2 del contrato
+        self.assertIn("fragmento_completo", r)
+        # tema y resumen —lo que se vino a buscar— siguen enteros
+        self.assertEqual(r["tema"], "tema sellado")
+        self.assertTrue(r["resumen"])
+        # hay sello que verificar si el consumidor decide pedirla despues
+        self.assertTrue(r["sellado"])
+
+    def test_no_evidence_no_relee_el_origen(self):
+        # la razon de ser del flag no es solo el egreso: son las N
+        # lecturas de archivo. Sin origen en disco el resultado es el
+        # mismo, y NO dice origen_perdido — no se miro, no se opina.
+        contenido = b"contenido que va a desaparecer\n"
+        self._guardar(contenido=contenido,
+                      sha256=hashlib.sha256(contenido).hexdigest())
+        self.rollout.unlink()
+        r = self._resultado(with_evidence=False)
+        self.assertEqual(r["fragmento_estado"], "evidencia_omitida")
+        self.assertNotEqual(r["fragmento_estado"], "origen_perdido")
+
+    def test_no_evidence_conserva_sellado_false_en_legado(self):
+        contenido = b"legado sin sello\n"
+        self._guardar(contenido=contenido, sha256=None)
+        r = self._resultado(with_evidence=False)
+        self.assertEqual(r["fragmento_estado"], "evidencia_omitida")
+        self.assertFalse(r["sellado"])
+
+    def test_no_evidence_cableado_por_argparse(self):
+        import json as _json
+
+        contenido = b"cableado del flag hasta el borde\n"
+        self._guardar(contenido=contenido,
+                      sha256=hashlib.sha256(contenido).hexdigest())
+        with mock.patch("skopos.cli.coleccion_local", return_value=self.coleccion):
+            buffer = StringIO()
+            with redirect_stdout(buffer):
+                exit_code = query_command(["tema sellado", "--no-evidence"])
+            self.assertEqual(exit_code, 0)
+            r = _json.loads(buffer.getvalue())["resultados"][0]
+            self.assertEqual(r["fragmento_estado"], "evidencia_omitida")
+            self.assertIsNone(r["fragmento_completo"])
+
+            # sin el flag, la misma consulta sigue sirviendo evidencia
+            buffer = StringIO()
+            with redirect_stdout(buffer):
+                query_command(["tema sellado"])
+            r = _json.loads(buffer.getvalue())["resultados"][0]
+            self.assertEqual(r["fragmento_estado"], "integro")
+            self.assertIn("cableado del flag", r["fragmento_completo"])
+
     def test_max_cableado_por_argparse(self):
         # ronda 8, H7: el flag --max llega por query_command, y un
         # negativo se rechaza en el borde (H1)

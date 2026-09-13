@@ -255,6 +255,16 @@ Entrada:
   `--max`: int [opcional, ADR-009 P5, 2026-08-20] — máximo de
   resultados a servir (default 20); el excedente se reporta en
   `excluidos`, no se descarta en silencio
+  `--no-evidence`: flag [opcional, 2026-09-13] — sirve sólo la capa
+  interpretada: `fragmento_completo` queda en `null` y
+  `fragmento_estado` vale `evidencia_omitida`. **No relee los archivos
+  de origen**, así que no puede afirmar ni negar integridad; por eso el
+  estado declara que no se miró en vez de reutilizar `origen_perdido` o
+  `integro`. Medido el 2026-09-13 sobre la colección real: la evidencia
+  cruda era el 97 % del egreso de una consulta (512 KB de 529 KB para
+  20 resultados), contra 16.2 KB de capa interpretada. El nombre va en
+  inglés por ADR-018 (identificador nuevo); los valores del enum de
+  estado siguen en español para no partir un enum publicado
 
 Salida (JSON a stdout):
   `resultados`: lista de objetos `{tema, resumen, turn_id, ruta_origen,
@@ -271,7 +281,12 @@ Salida (JSON a stdout):
   `fragmento_completo` es `null`) | `integridad_fallida` (longitud leída
   ≠ esperada, rango inválido, o sha256 ≠ sello:
   rotación/edición/truncación del origen; `fragmento_completo` es
-  `null` — nunca se sirven bytes no verificados)
+  `null` — nunca se sirven bytes no verificados) | `origen_de_filas`
+  (el turno vino de filas y no de un archivo, ADR-012: no hay rango de
+  bytes que releer; `fragmento_completo` es `null` y **no** es un fallo
+  de integridad) | `evidencia_omitida` [2026-09-13] (la consulta pasó
+  `--no-evidence`: el origen no se leyó, `fragmento_completo` es `null`
+  y no hay veredicto de integridad porque no se buscó uno)
   `sellado`: bool — `false` para documentos sin `fragmento_sha256`
   (legados pre-ADR-009, o capturados con el archivo ilegible en ese
   momento): se sirven con chequeo de longitud, el mínimo Y-5
@@ -307,6 +322,12 @@ Invariantes:
 
 Compatibilidad: agregar campos opcionales es compatible hacia atrás;
 en el resultado de `skopos query`, quitar o renombrar campos exige v2.
+Agregar **valores** al enum de `fragmento_estado` también es aditivo
+—`origen_de_filas` (2026-09-12) y `evidencia_omitida` (2026-09-13)
+entraron así—, con una condición: el campo nunca desaparece y un
+consumidor que no reconozca un estado nuevo ya tiene que tratar
+`fragmento_completo: null` como "sin evidencia servida", que es lo
+correcto en los cinco casos.
 
 ## CONTRATO: cli-skopos-buscar v1
 
