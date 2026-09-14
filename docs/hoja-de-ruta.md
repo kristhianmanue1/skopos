@@ -98,22 +98,28 @@ Estado guardado en AN-KLA local (`.an-kla/`, gitignorado — patrón de
 ektel), como cadena de supersedes: `f-ciclo-multi-cli-2026-08-20` →
 `f-ciclo-multi-cli-2026-08-28` → `f-skopos-cierre-2026-08-28` →
 `f-skopos-cierre-2026-09-06` → `f-skopos-cierre-p005-2026-09-06` →
-`f-skopos-cierre-h2-2026-09-10` → **`f-skopos-cierre-2026-09-12`**
-(vigente; revisión `sha256:4f64274cd71eb04b58525ba5999e6e31f3d0dd86ef40275405f4bf8829284da8`,
-nº 8, autoridad `tool_observed` con recibo `attest` verificado).
+`f-skopos-cierre-h2-2026-09-10` → `f-skopos-cierre-2026-09-12` →
+**`f-skopos-cierre-2026-09-13`** (vigente; revisión
+`sha256:aca06c4b114c3703df9a57690f0bb1e4bbf0b2615db23ebdcc972d1e3e2ec287`,
+nº 9, autoridad `tool_observed` con **dos** recibos `attest` verificados
+—`git rev-parse HEAD` y la suite completa—, decisión `write-full` con
+`tool_evidence_verified`).
 Coexiste con `f-skopos-documentation-language-2026-09-12`, escrita por
 otra sesión el mismo día: no se sustituyen, cubren cosas distintas.
 
-Recoge la sesión del 2026-09-12 completa: ADR-016, ADR-017 y su
-enmienda (d'), P-006 decidida, el piloto de 135/135 anclas, P-007
-reparado con el índice reconstruido, y lo que queda abierto — los 44
-análisis huérfanos, P-005 como contrato, y la ampliación del hito 25.
+Recoge la sesión del 2026-09-13/14: el merge a main de once días de
+trabajo, `query --no-evidence`, los 44 huérfanos congelados, la corrida
+de `analyze --project skopos` (199 analizados, 0 fallos, 95.1 % de
+cobertura) y ADR-019 propuesto con su medición. Abierto: ADR-019 sin
+sellar, P-005 como contrato —ya con la precondición cumplida—, el hito
+25 sin diseñar, los 41 huérfanos re-derivables y la calibración de
+`SECONDS_PER_TURN`.
 
 Recuperable con
-`an-kla retrieve --query "skopos cierre piloto anclas P-007" --budget 6000`.
-**Ojo con el presupuesto**: el registro cuesta 4,364 bytes, así que con
+`an-kla retrieve --query "skopos cierre merge query no-evidence huerfanos" --budget 8000`.
+**Ojo con el presupuesto**: el registro cuesta 5,643 bytes, así que con
 los 1,500–2,500 habituales de arranque queda fuera por presupuesto y no
-aparece. Es un ejemplo vivo de lo que midió P-005 §1 — AN-KLA sabe qué
+aparece; con 6000 entra él pero se cae el registro acompañante. Es un ejemplo vivo de lo que midió P-005 §1 — AN-KLA sabe qué
 importa pero entrega poco —, y un argumento más para el tejedor.
 
 Nota de versión: la instalación de AN-KLA para skopos sigue en

@@ -71,14 +71,17 @@ cadena de supersedes; el registro vigente y su revisión están en
 `docs/hoja-de-ruta.md`. Para tomar contexto al arrancar:
 
 ```bash
-.venv/bin/an-kla retrieve --query "<tema>" --budget 6000
+.venv/bin/an-kla retrieve --query "<tema>" --budget 8000
 ```
 
-**Pide 6000, no 2500.** El presupuesto lo elige quien consulta, no el
+**Pide 8000, no 2500.** El presupuesto lo elige quien consulta, no el
 almacén, y un registro que no cabe **se excluye entero y en silencio** —
 en `retrieve` es todo o nada por registro, no se sirve resumido. Pedir
 poco no devuelve una versión corta: devuelve nada, y parece memoria
-vacía. El cierre del 2026-09-12 cuesta 4,364 B y con 2500 no aparece.
+vacía. El cierre del 2026-09-13 cuesta 5,643 B; con 2500 no aparece, y
+con 6000 entra él pero se cae por presupuesto el registro acompañante
+del mismo día. La cifra sube cuando sube el registro: compruébala con
+`used_bytes` y `excluded_summary.budget` de la respuesta, no de memoria.
 
 No es que los registros hayan engordado por descuido: la representación
 la gobierna la **autoridad**, no el autor. Una escritura con recibo
