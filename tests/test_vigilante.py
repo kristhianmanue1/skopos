@@ -339,11 +339,16 @@ class PoliticaArranqueTests(unittest.TestCase):
                 with mock.patch(
                     "skopos.vigilante.coleccion_local",
                     return_value=self.coleccion,
+                ), mock.patch(
+                    "skopos.vigilante.coleccion_turnos",
+                    return_value=mock.sentinel.test_index,
                 ), mock.patch.object(
                     vigilante, "ejecutar", ejecutar_mock
                 ), mock.patch("sys.stderr", new_callable=io.StringIO):
                     watch_command(argv)
                 self.assertEqual(ejecutar_mock.call_count, 1)
+                self.assertIs(ejecutar_mock.call_args.kwargs["indice"],
+                              mock.sentinel.test_index)
                 self.assertIs(ejecutar_mock.call_args.kwargs["backfill"], backfill)
 
     def test_prefiltro_mtime_salta_archivo_sin_actividad_sin_parsear(self):

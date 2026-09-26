@@ -107,8 +107,24 @@ def buscar_por_tema(
     cursor = coleccion.find(
         filtro, {"score": {"$meta": "textScore"}}
     ).sort([("score", {"$meta": "textScore"})])
-    documentos = list(cursor)
-    return _solo_vigentes(documentos)
+    documentos = _solo_vigentes(list(cursor))
+    # La búsqueda ve versiones antiguas: resolver vigencia contra todas las
+    # versiones, sin volver a aplicar filtros de tema o proyecto (ADR-007).
+    # Sólo se leen identidad/versión; no se devuelve el contenido reemplazado.
+    identities = list(dict.fromkeys(doc["turn_id"] for doc in documentos))
+    current_versions = {}
+    for start in range(0, len(identities), 1000):
+        versions = coleccion.find(
+            {"turn_id": {"$in": identities[start:start + 1000]}},
+            {"turn_id": 1, "version": 1, "_id": 0},
+        )
+        for version in versions:
+            identity = version["turn_id"]
+            current_versions[identity] = max(
+                current_versions.get(identity, 0), version.get("version") or 0
+            )
+    return [doc for doc in documentos
+            if doc.get("version", 0) == current_versions.get(doc["turn_id"])]
 
 
 def _solo_vigentes(documentos: list[dict]) -> list[dict]:

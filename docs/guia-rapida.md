@@ -12,15 +12,16 @@ defecto, multi-proveedor vía ADR-014). `search` consulta el índice de
 turnos: devuelve texto indexado, redactado y acotado, sin releer el origen
 ni verificar su sello. `query` consulta análisis y comprueba longitud y
 sello del fragmento cuando existe; admite legado sin sello marcado
-`sellado:false`. Ver la limitación histórica P-007.
+`sellado:false`. Ver la reparación histórica P-007 en la hoja de ruta.
 
 ## Estado ahora mismo
 
 Implementado en el checkout verificado el 2026-09-12: parsers multi-CLI,
 índice, vigilancia incremental y `analyze` sobre turnos ya indexados sin
 análisis previo. Esto no certifica el estado de los servicios ni la
-finalización de una corrida en vivo. P-007 registra offsets históricos
-irrecuperables, sin reparación aprobada. Ver `docs/hoja-de-ruta.md`.
+finalización de una corrida en vivo. La hoja de ruta registra P-007 reparado
+el 2026-09-12 y huérfanos congelados el 2026-09-13; no se ha vuelto a verificar
+aquí el corpus vivo. Ver `docs/hoja-de-ruta.md`.
 
 ## Orden de lectura si vas a tocar código
 

@@ -9,7 +9,7 @@ Los indexa en MongoDB y permite analizarlos con un LLM para recuperarlos
 por tema. `query` comprueba longitud y sello del fragmento de origen cuando
 el sello existe; acepta legado sin sello y lo marca `sellado:false`.
 `search` devuelve texto indexado, redactado y acotado, sin releer el origen
-ni verificar su sello. Hay una limitación histórica abierta en P-007.
+ni verificar su sello. P-007 registra una reparación histórica; ver la hoja de ruta y sus evidencias.
 
 Construido siguiendo el método de
 [Skevi](https://github.com/kristhianmanue1/Skevi) (F0→F3). Las decisiones
@@ -70,10 +70,10 @@ nueva versión explícita. `reanalyze`, `index` y `search` conservan los alias
 `reanalizar`, `indexar` y `buscar`. Los flags legados españoles siguen
 vigentes: consulta `<comando> --help` antes de invocar el comando.
 
-**Limitación abierta:** P-007 registra offsets históricos que impiden releer
-el fragmento original de parte del índice. La comprobación niega el fragmento
-cuando falla su sello. La reparación y la causa siguen pendientes; esta
-actualización no modifica los datos. Ver la propuesta en `docs/propuestas/`.
+**Antecedente P-007:** la hoja de ruta registra la reconstrucción del índice
+(2026-09-12), la reparación de análisis y el congelamiento de huérfanos
+(2026-09-13). Es evidencia histórica; esta actualización no vuelve a comprobar
+el corpus vivo. No repetir la reparación por una descripción antigua.
 
 **Idioma:** ADR-018 establece identificadores nuevos en inglés y comunicación,
 producto, documentación y comentarios en español por defecto. La persona
@@ -152,16 +152,17 @@ python3 -m unittest discover -s tests
 El estado detallado y la procedencia de cada hito están en
 `docs/hoja-de-ruta.md`; las decisiones viven en `docs/adr/`.
 
-1. **P-007:** decidir y verificar una reparación del índice histórico.
-   No se autoriza reindexar ni borrar documentos por leer esta lista.
+1. **Vigencia de búsquedas:** consultar sólo versiones actuales incluso cuando
+   una anterior coincidía con el término. Ver [corrección local](docs/vigencia-y-fuentes-diversas.md).
 2. **Evaluar la corrida de `analyze`:** el comando está implementado
    (ADR-017); la hoja de ruta registra un piloto acotado a siete días.
    Verificar su resultado antes de diseñar `curated-anchor`/`context-block`
    o dar por resuelta la propuesta P-005. No se declara aquí su finalización.
 3. **Persistencia de `watch` tras reinicio:** seguimiento de LaunchAgent,
    sin configuración o activación en esta revisión.
-4. **Ampliación de orígenes:** prime-agent y otras conversaciones requieren
-   diseño propio; qwen-code permanece diferido por falta de cierre de turno.
+4. **Ampliación de orígenes:** reuniones, chats, mensajería, código y sesiones
+   de agentes requieren adaptadores propios; no se limita el producto a CLI.
+   Ver [dirección y primer piloto](docs/vigencia-y-fuentes-diversas.md).
 5. **Lectura por sesión/rango y búsqueda semántica:** `read` sigue diferido;
    embeddings son condicionales a insuficiencia de `$text` en uso real.
 
