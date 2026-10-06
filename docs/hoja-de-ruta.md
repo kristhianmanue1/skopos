@@ -84,6 +84,24 @@ evaluación de relevancia. Ver `docs/evidencia/adr019-expansion-2026-10-05.md`.
 No corrige frases entre comillas ni todas las tildes. Referencias rotas siguen
 pendientes de originales o decisión de conservación; no se reescribieron sellos.
 
+Continuación autorizada: corrección `c49bf5c` y evaluación documental `b6981b2`
+fusionadas y publicadas en main (SHA remoto comprobado). Revalidación: 365 tests
+OK sin skips en 86.180 s; gates 199 archivos/un plan. Mongo temporal detenido.
+Sonda bilingüe muestra pérdida run/running con español y expansión inversa
+ausente; no activar ADR-019 todavía. Consultas/objetivos reales requieren juicio
+del Operador. Segundo origen autorizado pero sin runtime/export identificado;
+no se implementó un adaptador ficticio. Búsqueda acotada en Downloads no localizó
+un respaldo inequívoco; no prueba ausencia global. Producción sin cambios.
+
+AN-KLA vigente: revisión 12, registro `f-skopos-h25-followup-2026-10-06`,
+digest `sha256:04607717edabe1a6d96dede22afd0a4f7b2595658626ad0457baf7123f5c1136`.
+Supersede el cierre T5, conservándolo histórico. Plan/commit gobernados,
+verify OK y retrieve presupuesto 8000: 2822 bytes, sin exclusión por presupuesto.
+Representación summary/model_derived; no se presenta como atestación independiente.
+El bloque de contexto gestionado AN-KLA no está instalado; escritura y recuperación
+manual verificadas, sin activar automáticamente integración. Este registro precede
+únicamente al commit documental que publica este puntero; no afirma su SHA futuro.
+
 ## Sesión del 2026-09-13
 
 Rama `docs/sync-language-and-state-20260912` **fusionada a main** (`3ac9885`)
