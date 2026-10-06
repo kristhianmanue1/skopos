@@ -59,7 +59,7 @@ fronteras_de_confianza:
   - fragmento_completo conserva el texto original sin redactar; la redacción de secretos es defensa por patrón sólo en campos derivados
   - watch procesa sólo turnos cerrados desde su arranque; el histórico exige backfill explícito
   - el soporte de codex-cli, claude-code, cline, kimi-code y opencode está implementado; cada parser nuevo requiere su propia verificación
-  - "query comprueba longitud y sello cuando existe; admite legado sin sello marcado sellado:false. P-007 sigue sin reparación aprobada"
+  - "query comprueba longitud y sello cuando existe; admite legado sin sello marcado sellado:false. P-007 tiene reparación histórica registrada en docs/evidencia/reconstruccion-indice-2026-09-12.md y congelamiento de huérfanos en docs/evidencia/congelamiento-analisis-huerfanos-2026-09-13.md; esos resultados no certifican el corpus vivo actual"
   - search devuelve texto indexado redactado y acotado, sin releer el origen ni verificar su sello
   - lo capturado incluye rutas absolutas y se almacena localmente; un proveedor remoto autorizado puede recibir entradas del análisis (ADR-014)
 
