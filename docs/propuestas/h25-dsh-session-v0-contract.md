@@ -616,3 +616,60 @@ exclusivo37027 y fixture Ollama local. Gates271 archivos/un plan verdes; diff
 leído, código sin cambios posteriores a la suite. Log local:
 `/private/tmp/skopos-runtime.hmdFUy/verification-tests.log`. Procede publicación
 del núcleo experimental, no integración/activación productiva ni cierre de H25.
+
+## Integración de laboratorio con Mongo — 2026-10-05
+
+Continuación autorizada: `experiments/runtime-source-v1/store.py` incorpora
+LaboratoryStore, separado del SourceStore productivo y no registrado en CLI.
+Admite explícitamente runtime JSONL junto con TXT/v0 y ASR/v1, usando colecciones
+source_revisions_v3/source_heads_v3 exclusivamente en base de pruebas.
+El constructor rechaza nombres fuera de skopos_test* y endpoints distintos de
+loopback o puerto27017. Son restricciones adicionales, no prueba de exclusividad
+ni ACL: la instancia usada debe ser temporal, creada para este laboratorio.
+
+Reutiliza transacciones, CAS e índices del almacén existente; valida S+D y tamaño
+BSON antes de preparar índices para runtime. Verifica familia contra revisión
+existente/cabeza dentro de la transacción; cambio meeting↔runtime bajo misma
+identidad falla. Replay conserva primer recibo, receipt no abre archivo.
+La validación de v0/v1 sigue delegada al almacén existente; no se afirma un
+endurecimiento completo del esquema legado. v2 sí usa el validador experimental.
+
+search_runtime selecciona cabezas, verifica toda fuente y agrega límites globales;
+search conserva payload de transcripciones y añade exclusión contada por familia.
+Nunca abre originales de la otra familia sólo para excluirlos. Incoherencia de
+identidad entre cabeza/registro/sobre aborta; fallo de fuente/derivación se cuenta
+sin servir resultados parciales de esa fuente. fetch_runtime exige vista y
+selector; fetch histórico no se compara con la cabeza actual. Lecturas cruzadas
+de familia se rechazan. No hay reparación del corpus ni fallback histórico.
+
+14 pruebas del laboratorio con fixtures sintéticos y replica set real:
+restricciones de destino, import/replay/receipt, original ausente/alterado y
+restaurado, revisión histórica frente a cabeza nueva, TXT/ASR/runtime mixtos,
+fetch cruzado, cambio de familia sin avance, texto falsificado con sellos nuevos,
+límite BSON, límites globales/limit0, cabeza e identidad corruptas, dos solicitudes
+concurrentes de revisión con un ganador y rollback por excepción entre inserción
+de revisión y reemplazo de cabeza, seguido de reintento positivo.
+
+Autorrevisión adversarial: ampliada comprobación de identidad del sobre antes de
+clasificar una fuente como indisponible; ahora la discrepancia aborta la consulta.
+Pruebas de fallo transaccional por excepción controlada, no SIGKILL, desconexión
+real ni corte eléctrico. Consulta de receipt tras commit no prueba pérdida real
+de respuesta de red. La revisión es de la misma instancia, no independiente.
+
+No se importó export privado en Mongo; no se modificó src/skopos, contratos
+productivos, CLI, producción, índices del corpus ni AN-KLA. Las bases y fixtures
+efímeros creados por los tests se retiran al terminar; logs del laboratorio se
+conservan fuera de Git. No se borraron ni movieron fuentes del Operador.
+
+Siguiente recomendación: piloto del export DSH identificado, exclusivamente en
+laboratorio, identidad nueva skopos-h25-runtime-lab/dsh-export-28eff1a5/revisión1;
+lectores propuestos: Operador y proceso local autorizado; retención local hasta
+decisión expresa del Operador, sin borrado automático ni copia privada en Git.
+Confirmar este alcance antes de ingesta privada. Después adjudicar aceptación
+acotada de H25.2; promoción a CLI/producción queda como decisión separada.
+
+Verificación final:440 pruebas OK sin omisiones,85.347 s en Mongo temporal
+exclusivo37027 y fixture Ollama local. Gates273 archivos/un plan verdes;
+diff leído, sin cambios de código después de esta suite. Log:
+`/private/tmp/skopos-runtime.hmdFUy/store-tests.log`. Procede publicar el
+experimento de laboratorio; no implica aceptación del piloto ni cierre de H25.
