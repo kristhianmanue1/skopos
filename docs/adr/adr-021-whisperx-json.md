@@ -97,3 +97,14 @@ cambios posteriores; sólo cierre documental. Log:
 /private/tmp/skopos-json.cxzP5k/final-tests.log. Gates: 216 archivos dentro de
 límites, un plan válido, git diff --check limpio. Base temporal se conserva
 en /private/tmp/skopos-json.cxzP5k/db, no en producción ni Git.
+
+## Revisión previa al merge autorizado
+
+El Operador autorizó cerrar JSON con revisión final, merge y actualización de
+AN-KLA al continuar los pasos recomendados. Revalidación 2026-10-06 UTC:
+377 tests OK sin skips, 93.529 s; gates 216 archivos/un plan. Log temporal
+/private/tmp/skopos-close.D4OwZM/tests.log. Diff revisado, sin cambios Python
+desde 08c8309. Autorrevisión, no revisión independiente; sin nuevo hallazgo
+bloqueante dentro del perfil documentado. Procede integración de código, no
+activación productiva. Recomendaciones posteriores en propuesta H25 runtime
+y evidencia ADR-019; no son servicios instalados ni corpus migrado.

@@ -131,3 +131,33 @@ de conversaciones; no se abrieron archivos comprimidos ajenos ni se concluye
 ausencia global. El respaldo Mongo conocido no custodia fuentes externas.
 La reparación sigue bloqueada por ruta de originales o decisión de retención;
 no hubo reingesta, borrado, cuarentena ni sustitución de hashes históricos.
+
+## Recomendaciones de continuación — cierre JSON
+
+El Operador declaró después que no hay respaldo disponible. Conservar los
+registros/hashes históricos sin falsear recuperación. La reunión JSON ASR es
+fuente nueva, no restauración de esas conversaciones. No borrar ni poner en
+cuarentena el corpus. No se ejecutó reanálisis.
+
+Para ADR-019 recomiendo 12 consultas reales fijadas antes de ver resultados:
+cuatro españolas (incluidas flexión y tilde), cuatro técnicas/inglesas y cuatro
+de frase, negación, ausencia esperada y paráfrasis. El Operador identifica
+objetivos por referencia; el agente puede preparar candidatos, pero sus
+juicios no sustituyen la aceptación humana. Comparar english/none/spanish y
+spanish+expansión sobre copia y versiones vigentes: recall de objetivos en
+top20, posición del primero, falsos positivos revisados y fallos de integridad.
+Separar ajuste de evaluación reservando al menos cuatro consultas sin usar
+para afinar. Gate propuesto: cero pérdida de objetivos críticos, sin regresión
+de negación/frase/integridad; restantes diferencias adjudicadas explícitamente.
+No reconstruir índices hasta cumplir ese gate; embeddings permanecen diferidos.
+
+Operación productiva: recomiendo un replica set local dedicado para v3 antes
+que convertir el Mongo standalone del corpus legado durante este incremento.
+Es propuesta, no servicio creado: evaluar coste operativo, backup/restauración,
+permisos y autenticación antes de decidir. Un nodo habilita transacciones, no
+alta disponibilidad. Mantener v2 sin migraciones y entradas manuales optativas.
+Custodia recomendada: copia inmutable gobernada del original con hash y recibo,
+respaldo probado en otro soporte y lectores explícitos. Requiere contrato propio;
+actualmente las referencias externas pueden quedar indisponibles. Definir con
+el Operador plazo de retención por tipo de fuente y borrado verificable; no
+elegir retención indefinida ni borrar pilotos por conveniencia técnica.

@@ -99,3 +99,33 @@ fixtures derivados saneados → integración explícita SourceStore → regresi�
 diarizada completa → piloto temporal → revisión del artefacto final.
 No migrar v0 silenciosamente ni activar producción; merge del adaptador y
 aceptación de sus resultados se resuelven con su evidencia final.
+
+## Candidato real localizado — 2026-10-05 local / 6 UTC
+
+Reconocimiento read-only autorizado al continuar los pasos recomendados.
+Archivo local: /Users/krisnova/Downloads/
+dsh-session-session-28eff1a5-c416-4f37-aa3c-c7bc57234a29.zip.
+Única entrada session.jsonl: 168846 bytes, 126 registros, SHA-256
+6fe02ace6d9e31233e18b920796a539c362637733f7efb2881595c90994dfcb2.
+No se extrajo a disco, importó ni ejecutó contenido. Productor no confirmado;
+el encabezado declara version=0, no una versión de aplicación acreditada.
+
+Hay 92 registros con seq (92 valores únicos), 33 con seq0 (33 únicos), un
+encabezado session. Tipos incluyen user/message, assistant/message, tool/call,
+tool/result y agregados text-chunks/tool-call-chunks/reasoning-chunks.
+Quince referencias sourceEventSeqs: siete no resuelven contra seq solamente.
+Esto NO demuestra pérdida: falta interpretar agregados y seq0 antes de juzgar
+completitud. No inferir causalidad desde posición, ni concatenar chunks con
+mensajes finales duplicando texto. tool/call incluye callId/name/arguments;
+tool/result contiene message. No se publican argumentos ni contenido privado.
+
+Recomendación: usar esta muestra como candidato al segundo origen y confirmar
+con el Operador la aplicación productora. Antes de implementar: ficha de
+semántica seq/seq0/sourceEventSeqs, identidad de llamadas/resultados, selección
+de texto sin duplicación, tratamiento de reasoning como evidencia opaca no
+servida por defecto, lectura ZIP acotada sin extracción de rutas arbitrarias.
+Conservar líneas originales y diagnóstico de relaciones sin resolver. El
+formato hipotético event_id/parent_ids de arriba NO sustituye a este observado.
+No escribir EKTEL ni lanzar ejecuciones para fabricar un export; su README
+local declara M2 cerrado y M3 no autorizado, y no se identificó un export real
+en el reconocimiento acotado de nombres/código de ese repositorio.
