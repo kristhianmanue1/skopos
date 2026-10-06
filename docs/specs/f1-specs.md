@@ -14,6 +14,10 @@ límites producen exclusiones contadas; consumidor v2 conserva su comportamiento
 Implementación técnica no equivale a D2a/D2b ni a completar el hito 25.
 Extensión ADR-021: formato explícito whisperx-json, sobre v1 y localizador de
 objeto JSON original; TXT conserva v0. Piloto temporal, no activación productiva.
+Extensión H25.2 autorizada 2026-10-06: formato manual dsh-session-v0-jsonl,
+sobre v2, proyección selectiva y vistas runtime explícitas por CLI; ver contrato
+source-store-v3. Preparación operativa no equivale a servicio activado ni
+aceptación de relevancia documental. No cambia búsqueda v2 ni ADR-019.
 
 ## SPEC-001 [cubre: REQ-1]
 

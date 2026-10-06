@@ -1,6 +1,7 @@
 """Validación y vistas puras: manipulación sintética y controles positivos."""
 from copy import deepcopy
 import importlib.util
+import importlib
 import json
 from pathlib import Path
 import sys
@@ -13,6 +14,8 @@ root = Path(__file__).resolve().parents[1] / 'experiments/runtime-source-v1'
 
 
 def load(name, bindings):
+    if name in ('verification', 'views', 'store'):
+        return importlib.import_module('skopos.runtime_' + name)
     spec = importlib.util.spec_from_file_location('runtime_' + name, root / (name + '.py'))
     module = importlib.util.module_from_spec(spec)
     with patch.dict(sys.modules, bindings):

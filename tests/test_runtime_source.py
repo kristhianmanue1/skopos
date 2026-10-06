@@ -6,10 +6,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-path = Path(__file__).resolve().parents[1] / 'experiments/runtime-source-v1/reader.py'
-spec = importlib.util.spec_from_file_location('runtime_reader', path)
-reader = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(reader)
+from skopos import runtime_reader as reader
 
 
 def source(*rows, ending=b'\n'):

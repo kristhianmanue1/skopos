@@ -213,6 +213,13 @@ Int64 de tiempos grandes, sin alterar hashes ni duplicar la revisión admitida.
 Fuente y base privadas retenidas localmente hasta decisión del Operador; detalle
 y límites en el contrato candidato. Pendiente adjudicación humana de H25.2;
 no hay activación productiva ni cierre del hito25. AN-KLA sigue histórica.
+Actualización 2026-10-06, preparación H25.2: módulos runtime integrados en src,
+CLI manual explícita import/search/receipt/fetch-runtime y pruebas contra producto.
+No activación de servicios, cambio ADR-019 ni migración. Perfil operativo
+monousuario/compartido pendiente de respuesta; no declarar producción lista.
+Contrato y reversión: docs/contratos/source-store-v3.md, sección H25.2.
+Diagnóstico documental/contexto vecino en evidencia/adr019-expansion-2026-10-05.md;
+la sonda mejora sólo parte de desarrollo, no satisface aceptación de relevancia.
 El Operador declara que no hay respaldos: conservar evidencia histórica, sin
 borrar/quarantinar ni reanalizar corpus. JSON nuevo no restaura originales.
 Pendientes:12 consultas reales con objetivos adjudicados para evaluar relevancia

@@ -9,11 +9,7 @@ from unittest.mock import patch
 
 from test_runtime_source import reader, source, batch
 
-path = Path(__file__).resolve().parents[1] / 'experiments/runtime-source-v1/envelope.py'
-spec = importlib.util.spec_from_file_location('runtime_envelope', path)
-envelope = importlib.util.module_from_spec(spec)
-with patch.dict(sys.modules, {'reader': reader}):
-    spec.loader.exec_module(envelope)
+from skopos import runtime_envelope as envelope
 
 
 def message(seq=0, assistant=False, origin=None, content=None):

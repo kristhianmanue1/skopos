@@ -161,3 +161,28 @@ respaldo probado en otro soporte y lectores explícitos. Requiere contrato propi
 actualmente las referencias externas pueden quedar indisponibles. Definir con
 el Operador plazo de retención por tipo de fuente y borrado verificable; no
 elegir retención indefinida ni borrar pilotos por conveniencia técnica.
+
+## Diagnóstico documental y contexto vecino — 2026-10-06
+
+Evaluación local autorizada sobre documentación, no conversaciones privadas:
+99 archivos de docs en49910d8,637 fragmentos no solapados de20 líneas,12 consultas
+con objetivos conocidos (no juicios exhaustivos). Desarrollo8/reserva4;
+manifiesto325eb076a9565c36641816178f5464d32e339a971dc47a11cf92065a1318a80a.
+En `/private/tmp/skopos-local-eval.bkdb5V`: manifest.json,results.json,conclusion.json.
+Evidencia completa top20: english4/12,none4/12,spanish5/12,expansión5/12.
+Persisten omisiones críticas; los12 conjuntos objetivo sí sobreviven redacción
+y presupuesto cuando se seleccionan directamente. No son preguntas sin respuesta.
+
+Propuesta previa a sonda: agregar sólo vecinos inmediatos del mismo archivo,
+sin nuevo ranking, manteniendo redacción y tope8KiB por bloque. Sonda ejecutada
+únicamente sobre desarrollo, sin volver a evaluar reserva: english3→5/8,
+none3→4/8,spanish3→6/8,expansión3→6/8. Evidencia local:
+`/private/tmp/skopos-h252.WBLheT/context_probe.py` y context-results.json.
+La vecindad ayuda con fragmentación; no resuelve candidatos ausentes (por ejemplo,
+recibos) ni fragmentos relevantes distantes. No se implementó en producto ni se
+promueve español por esta mejora. Si se ajusta usando reserva, debe reemplazarse.
+
+Separación contractual: $text documental evalúa ranking del consumidor legado;
+source/runtime busca subcadena sobre evidencia verificada, sin ranking ni ADR-019.
+El criterio documental fallido no se rebautiza como aprobado ni bloquea por sí
+solo la implementación autorizada del lector; aceptación de utilidad sigue aparte.

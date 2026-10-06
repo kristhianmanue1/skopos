@@ -112,3 +112,71 @@ demostrado cuando se perdió comunicación después de commit.
 No se ejecuta LLM, no se llama Ágora/AN-KLA, no se migra legado. Consultar no
 crea colecciones/índices. Deshabilitar la entrada nueva conserva consumidores
 v2; v3 permanece almacenado y no se borra para simular rollback.
+
+## H25.2 — entrada runtime integrada (2026-10-06)
+
+Implementación autorizada por el Operador para preparar operación; activación
+productiva y aceptación de relevancia no se deducen de esa autorización.
+`runtime_reader`, `runtime_envelope`, `runtime_verification`, `runtime_views`
+y `runtime_store.RuntimeSourceStore` incorporan el perfil probado en laboratorio.
+El código experimental anterior permanece como antecedente; los tests runtime
+ahora ejecutan los módulos integrados. No hay dependencias nuevas.
+
+Se conserva el identificador histórico `skopos/experimental-runtime-envelope/v0`
+del adaptador para no cambiar sobres/hashes ya admitidos. Su nombre no acredita
+ni niega aceptación operativa; contrato detallado y límites en
+`docs/propuestas/h25-dsh-session-v0-contract.md`. Se mantiene source-envelope/v2,
+política runtime-text-policy/v0 y rechazo de versiones desconocidas. BSON Int64
+se convierte a entero JSON al leer; bool y otros tipos no se coercionan.
+
+Entrada explícita: `source ... import PATH --format dsh-session-v0-jsonl`,
+con los mismos IDs, revisión, captura y predecesor obligatorios del contrato.
+No autodetecta ZIP, no extrae archivos ni recorre directorios. Import requiere
+replica set. El archivo original debe permanecer en su ruta de custodia.
+
+Lecturas runtime explícitas:
+- `source ... search TERM --project-id P --kind runtime-events [--limit 20]`
+- `source ... receipt --project-id P --source-id S --revision N
+  --source-sha256 HASH --kind runtime-events`
+- `source ... fetch-runtime --project-id P --source-id S --revision N
+  --source-sha256 HASH --view text_projection --text-id ID`
+- Vista `original_jsonl` exige `--row-id`; `derived_event` exige `--event-id`.
+  Un único selector, coherente con vista, se comprueba antes de conectar.
+
+Default de import sigue siendo TXT; search/receipt siguen seleccionando el
+consumidor legado salvo --kind runtime-events. El consumidor legado puede
+reportar v2 como no soportado; usar el consumidor explícito correcto, no degradar
+sobres ni reescribirlos. fetch de transcripción conserva su contrato anterior.
+La búsqueda runtime es subcadena casefold, no ranking ni respuestas semánticas;
+la evaluación documental $text/ADR-019 constituye un frente separado.
+
+### Preparación operativa y reversión
+
+Antes de activar: fijar perfil local monousuario o compartido, lectores,
+retención, ubicación estable de originales, URI/base dedicada v3 y respaldo en
+otro soporte. project_id no es ACL. El texto de evidencia no está redactado;
+no exponer esta interfaz como servicio multiusuario sin contrato de acceso.
+No convertir el Mongo legado por conveniencia. Un replica set de un nodo
+permite transacciones, pero no aporta alta disponibilidad.
+
+Ensayar primero contra base nueva: import, receipt, replay, search y las tres
+vistas; verificar hash de original antes/después. Ante resultado incierto,
+consultar receipt con la misma identidad. No aumentar revisión a ciegas.
+Respaldar original y base de forma consistente; ensayo de recuperación debe
+incluir ruta original o relocalización autorizada, no sólo apertura de Mongo.
+La copia de custodia actual no reubica referencias almacenadas automáticamente.
+
+Reversión no destructiva: dejar de invocar runtime, conservar base v3 y fuentes,
+volver al consumidor anterior para TXT/v2 legado; éste no leerá sobres runtime.
+No borrar colecciones, migrar a v2 ni alterar índices ADR-019 como rollback.
+El despliegue y su validación final quedan pendientes del perfil operativo.
+
+Verificación de integración:462 pruebas OK sin omisiones en65.912s,
+Mongo temporal exclusivo37027; log `/private/tmp/skopos-h252.WBLheT/final-suite.log`.
+CLI sobre export privado autorizado, en base de laboratorio nueva: import,
+replay,receipt,2 proyecciones,2 búsquedas literales y fila original correctos;
+hash del JSONL en custodia estable sin cambios. Datos privados fuera de Git.
+Autorrevisión adversarial: no se confunde integración con despliegue; selector
+de vista incorrecto falla antes de conectar; ruta de retorno conserva registros;
+tests de parser/sobre/vistas ahora usan módulos integrados, no sólo prototipos.
+El prototipo conserva copias históricas; mantener su divergencia fuera de producto.

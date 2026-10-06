@@ -205,3 +205,13 @@ consiste en usar el consumidor anterior sin invocar source; no borra v3.
 
 Referencia del mecanismo, no evidencia de ejecución propia:
 [transacciones PyMongo](https://www.mongodb.com/docs/languages/python/pymongo-driver/current/crud/transactions/).
+
+## Extensión H25.2 autorizada — 2026-10-06
+
+El Operador autoriza continuar integración CLI, operación, reversión y memoria.
+Se incorpora el perfil runtime probado, con formato y vistas explícitos, sin
+migrar v2 ni activar índices ADR-019. AMENDS: alcance de formatos en SPEC-007 y
+source-store-v3; conserva identidad, custodia por referencia y autoridad separada.
+No convierte la evaluación documental deficiente en fallo de integridad runtime,
+ni la captura correcta en aceptación de relevancia. Perfil de producción y
+aceptación operacional final deben concretarse antes de habilitar el servicio.

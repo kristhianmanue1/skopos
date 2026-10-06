@@ -34,7 +34,7 @@ _AYUDA = f"""skopos {__version__}
 
 Comandos:
   source --database DB <import|search|fetch|receipt>
-                             fuentes diarizadas, entrada manual (ADR-020)
+                             fuentes TXT/ASR/runtime, entrada manual; fetch-runtime disponible
   query <tema>              busca por tema en lo ya analizado (SPEC-004)
   watch [--sessions-dir DIR] [--intervalo SEGUNDOS] [--backfill]
                              vigila y procesa turnos nuevos (SPEC-005);

@@ -7,6 +7,7 @@ import pymongo
 from pymongo.errors import PyMongoError
 
 from skopos.source_store import SourceStore
+from skopos.runtime_store import RuntimeSourceStore
 
 
 def source_command(argv=None):
@@ -16,9 +17,9 @@ def source_command(argv=None):
     parser.add_argument('--uri', default='mongodb://localhost:27017',
                         help='Mongo local; import requiere replica set.')
     commands = parser.add_subparsers(dest='operation', required=True)
-    admission = commands.add_parser('import', help='Importa un archivo diarizado explícito.')
+    admission = commands.add_parser('import', help='Importa una fuente de formato explícito.')
     admission.add_argument('path')
-    admission.add_argument('--format', choices=('diarized-text', 'whisperx-json'),
+    admission.add_argument('--format', choices=('diarized-text', 'whisperx-json', 'dsh-session-v0-jsonl'),
                            default='diarized-text', help='Formato explícito; no autodetecta.')
     admission.add_argument('--captured-at', required=True)
     admission.add_argument('--expected-previous-sha256')
@@ -28,22 +29,36 @@ def source_command(argv=None):
     search = commands.add_parser('search', help='Busca subcadena en cabezas verificadas.')
     search.add_argument('term')
     search.add_argument('--limit', type=int, default=20)
+    search.add_argument('--kind', choices=('meeting-transcript', 'runtime-events'), default='meeting-transcript')
     fetch = commands.add_parser('fetch', help='Recupera segmento con revisión y hash fijos.')
     fetch.add_argument('--segment-id', required=True)
     receipt = commands.add_parser('receipt', help='Reconcilia una admisión sin releer la fuente.')
-    for command in (admission, search, fetch, receipt):
+    receipt.add_argument('--kind', choices=('meeting-transcript', 'runtime-events'), default='meeting-transcript')
+    runtime_fetch = commands.add_parser('fetch-runtime', help='Recupera una vista runtime explícita y verificada.')
+    runtime_fetch.add_argument('--view', required=True, choices=('text_projection', 'original_jsonl', 'derived_event'))
+    selector = runtime_fetch.add_mutually_exclusive_group(required=True)
+    for flag in ('text-id', 'row-id', 'event-id'):
+        selector.add_argument('--' + flag)
+    for command in (admission, search, fetch, receipt, runtime_fetch):
         command.add_argument('--project-id', required=True)
-    for command in (admission, fetch, receipt):
+    for command in (admission, fetch, receipt, runtime_fetch):
         command.add_argument('--source-id', required=True)
         command.add_argument('--revision', type=int, required=True)
-    for command in (fetch, receipt):
+    for command in (fetch, receipt, runtime_fetch):
         command.add_argument('--source-sha256', required=True)
     args = parser.parse_args(argv)
+    runtime = (getattr(args, 'format', None) == 'dsh-session-v0-jsonl'
+               or getattr(args, 'kind', None) == 'runtime-events'
+               or args.operation == 'fetch-runtime')
+    if args.operation == 'fetch-runtime':
+        selected = {'text_projection': args.text_id, 'original_jsonl': args.row_id, 'derived_event': args.event_id}
+        if selected[args.view] is None:
+            parser.error('El selector no corresponde a --view.')
     try:
         with pymongo.MongoClient(args.uri, serverSelectionTimeoutMS=2000) as client:
-            store = SourceStore(client[args.database])
+            store = (RuntimeSourceStore if runtime else SourceStore)(client[args.database])
             if args.operation == 'search':
-                result = store.search(project_id=args.project_id, term=args.term, limit=args.limit)
+                result = (store.search_runtime if runtime else store.search)(project_id=args.project_id, term=args.term, limit=args.limit)
             else:
                 identity = dict(project_id=args.project_id, source_id=args.source_id,
                                 source_revision=args.revision)
@@ -54,6 +69,10 @@ def source_command(argv=None):
                         capture_completeness=args.completeness,
                         completeness_basis=args.completeness_basis,
                         source_format=args.format)
+                elif args.operation == 'fetch-runtime':
+                    result = store.fetch_runtime(**identity, source_sha256=args.source_sha256,
+                                                 view=args.view, text_id=args.text_id,
+                                                 row_id=args.row_id, event_id=args.event_id)
                 elif args.operation == 'fetch':
                     result = store.fetch(**identity, source_sha256=args.source_sha256,
                                          segment_id=args.segment_id)
