@@ -1,11 +1,16 @@
 # ADR-020 — frontera de fuentes diversas
 
-Estado: PROPUESTO. Prototipo v0 autorizado por el encargo de iniciar el plan;
-contrato productivo, migración y activación NO aceptados.
+Estado: ACEPTADO para implementar T4, por «adelante» del Operador en respuesta
+a la decisión D1 con custodia mediante referencias externas (2026-10-05).
+Acepta contrato y almacenamiento separado; no autoriza corpus real, migración,
+activación, cambio de topología productiva ni merge de este incremento.
 Fecha: 2026-10-05. Plan: `docs/planes/activos/h25-fuentes-v1.md`.
 INFORMS: ADR-016/018 (idioma y evolución), ADR-007 (versiones de análisis),
 ADR-009 (evidencia). No sustituye esos ADR ni modifica contratos v2 vigentes.
-REQUIRES_DECISION: D1 para adoptar la frontera productiva y su almacenamiento.
+D1 aceptada; REQUIRES_DECISION: D2a (corpus) y D2b (aceptación/activación/merge).
+
+El anexo de implementación al final concreta D1 y manda sobre los párrafos
+históricos de propuesta conservados debajo. T3 no se reetiqueta como producto.
 
 ## Problema comprobado y requisitos del primer incremento
 
@@ -145,3 +150,58 @@ Unicode/CRLF, texto con órdenes inertes, no mutación del buffer, hash de fuent
 distinto del hash del sobre, y mismo origen con metadatos de captura diferentes.
 Los tests sólo acreditan el contrato experimental, no audio, producción,
 concurrencia del almacén, escala real, retención o interoperación con Ágora.
+
+## Anexo F1 aceptado para T4 — 2026-10-05
+
+Backend: Mongo local, colecciones `source_revisions_v3` y `source_heads_v3`,
+sin tocar `turnos` ni `analisis`. `SourceStore` recibe una base explícita;
+la CLI exige `--database`. No hay watcher ni entrada automática en v2.
+El contrato ejecutable se detalla en `docs/contratos/source-store-v3.md`.
+
+La clave única de revisión y su `_id` se forman con proyecto/fuente/revisión;
+los IDs no permiten `:`. La cabeza tiene clave única proyecto/fuente.
+Importar requiere replica set: `hello` debe declararlo antes de crear índices.
+En una transacción snapshot/majority se consulta duplicado, compara la cabeza,
+inserta revisión y reemplaza cabeza con CAS. El callback no abre archivos ni
+llama servicios externos; puede repetirse por el driver. DuplicateKey concurrente
+reintenta la misma clave hasta tres veces, no asigna otra revisión.
+La capacidad real de transacción se confirma al ejecutar, no sólo con `hello`.
+Standalone devuelve `transactions_required`; nunca hay fallback no atómico.
+Cambiar la topología productiva queda fuera de esta aceptación.
+
+Los originales se referencian por ruta absoluta; no se custodian copias.
+Duplicado significa misma clave y hash de fuente: retorna el primer recibo,
+sin cambiar captura, parser, completitud o ruta. Para corregir metadatos se
+publica nueva revisión explícita con predecesor; no hay rederivación en sitio.
+Renombrar una fuente ya admitida puede volverla indisponible aunque exista
+una copia; replay no relocaliza. Esta limitación es visible, no se encubre.
+
+Además del límite del lector, el documento BSON completo no puede superar
+16 MiB; exceso o enteros no codificables rechazan antes de escribir. No se
+promete que todo archivo de 16 MiB quepa en Mongo junto con el sobre.
+
+Búsqueda inicial: subcadena casefold, orden por source_id/segmento, sin ranking,
+sin $text ni dependencia de ADR-019. Cada cabeza se fija antes del filtro;
+no es una instantánea global del proyecto bajo concurrencia. Los resultados
+llevan revisión/hash, nunca una promesa de vigencia después de la selección.
+Siempre se verifica el archivo antes de servir texto, también en búsqueda.
+Máximo 20 segmentos y 64 KiB por resultado JSON compacto UTF-8, incluidos sus
+metadatos (refinamiento adversarial: no sólo el texto): se excluye el segmento entero
+excesivo, con contador. No hay truncado ni redacción que falsee localizadores.
+Texto crudo verificado y marcado como dato (ADR-009); no garantiza ausencia de
+secretos. Corpus y lectores requieren D2a. La búsqueda escanea fuentes vigentes;
+escala, latencia y calidad de recuperación se evalúan en T5.
+
+Acceso: cliente local con los permisos del proceso y de Mongo, no ACL por
+proyecto ni aislamiento multiusuario. project_id es selector, no credencial.
+Fuentes no regulares/enlaces finales se rechazan; denegación de lectura produce
+source_unavailable. Nada en esta interfaz autoriza leer rutas ajenas.
+
+Ante respuesta de admisión perdida: consultar receipt por clave+hash sin
+necesitar el original; not_found no acredita fallo si todavía hay otra
+transacción en curso. Esperar su resolución y repetir la MISMA identidad.
+No incrementar revisión para resolver incertidumbre. El retorno operacional
+consiste en usar el consumidor anterior sin invocar source; no borra v3.
+
+Referencia del mecanismo, no evidencia de ejecución propia:
+[transacciones PyMongo](https://www.mongodb.com/docs/languages/python/pymongo-driver/current/crud/transactions/).

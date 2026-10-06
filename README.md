@@ -166,6 +166,20 @@ El estado detallado y la procedencia de cada hito están en
 5. **Lectura por sesión/rango y búsqueda semántica:** `read` sigue diferido;
    embeddings son condicionales a insuficiencia de `$text` en uso real.
 
+## Fuentes diarizadas — incremento H25.1 en evaluación
+
+`python3 -m skopos source --help` expone importación manual, búsqueda,
+fetch por revisión/hash y recibos. Exige base explícita; importar requiere
+Mongo replica set. No iniciar ni convertir producción para probarlo.
+Originales referenciados externamente: borrar/mover el archivo puede impedir
+recuperar evidencia. No cambia turnos/análisis v2 ni activa watcher de fuentes.
+Contrato y límites: `docs/contratos/source-store-v3.md`; estado y decisiones
+pendientes: `docs/planes/activos/h25-fuentes-v1.md` (D2a/D2b aún pendientes).
+Con un Mongo **temporal exclusivo ya iniciado** en puerto distinto de 27017:
+`.venv/bin/python scripts/run_isolated_tests.py --mongo-uri mongodb://127.0.0.1:37027`.
+El runner no inicia servicios; sin replica set las pruebas T4 se saltan y
+eso no acredita su integración. La suite general también usa Ollama local.
+
 ## Riesgos conocidos, aceptados por ahora (no resueltos en esta ronda)
 
 - **Sin retención ni borrado.** Los documentos guardados no expiran ni

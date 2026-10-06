@@ -1,5 +1,18 @@
 # F1 — Specs
 
+## SPEC-007 — fuentes diversas (ADR-020, D1 aceptada)
+
+Importación manual de transcripciones diarizadas con identidad por proyecto,
+revisión de fuente independiente del análisis, localizadores UTF-8 y custodia
+externa. Persistencia transaccional en colecciones v3 separadas; búsqueda sobre
+cabezas antes de filtrar y fetch con revisión/hash explícitos, sin LLM.
+Contrato: `docs/contratos/source-store-v3.md`; no cambia SPEC-001..006.
+Casos de aceptación: replay no duplica; corrección retira términos eliminados;
+dos escritores del mismo padre no publican ambos; fallo entre revisión/cabeza
+no deja media publicación; original ausente/alterado no sirve texto;
+límites producen exclusiones contadas; consumidor v2 conserva su comportamiento.
+Implementación técnica no equivale a D2a/D2b ni a completar el hito 25.
+
 ## SPEC-001 [cubre: REQ-1]
 
 Comportamiento: Skopos detecta el cierre de cada turno en un rollout de

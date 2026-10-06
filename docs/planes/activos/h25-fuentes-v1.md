@@ -1,6 +1,8 @@
 # H25 — fuentes diversas, primer incremento verificable
 
 Estado: plan de trabajo autorizado; revisión v1 refinada tras autorrevisión.
+Actualización T4: D1 aceptada por «adelante» del Operador el 2026-10-05;
+custodia externa y almacenamiento Mongo separado, sin activación ni merge.
 Fecha: 2026-10-05. Base: `2d7038f961a04b6790b35559e22c455039dbcfe1`.
 Encargo: plan detallado, ronda adversarial, refinamiento e inicio de ejecución.
 Autor: Codex. La revisión de la misma instancia es autorrevisión, no revisión
@@ -25,8 +27,9 @@ verificados de afirmaciones sobre integridad, captura y contenido.
 
 El encargo autoriza documentación, diagnóstico de lectura, fixtures sintéticos,
 pruebas locales y un prototipo aislado para evaluar el contrato propuesto.
-La decisión estratégica de contrato productivo, migración y aceptación sigue
-perteneciendo al Operador. No se activan servicios de producción por este plan.
+La decisión estratégica sigue perteneciendo al Operador: D1 ya aceptada para
+implementar T4; migración y aceptación operativa siguen pendientes de D2.
+No se activan servicios de producción por este plan.
 No incluye ingesta privada, endpoints remotos, instalación de dependencias,
 escritura en repositorios ajenos ni admisión automática en AN-KLA o Ágora.
 Commit/push según autorización permanente de AGENTS, después de gates; merge
@@ -111,15 +114,15 @@ TAREA T4 — persistencia y recuperación integrada, después de D1
 Consumes: candidato T2 aprobado; prototipo T3; experiments/meeting-source-v1/persistent.py como referencia.
 Produce: implementación del contrato productivo aprobado, specs y tests de su frontera.
 Steps:
-- [ ] Fijar backend y protocolo de revisión/idempotencia en ADR aceptado.
+- [x] Fijar backend y protocolo de revisión/idempotencia en ADR aceptado.
   Verificación: claves y CAS definidos; SQLite del experimento no se adopta por inercia.
-- [ ] Integrar lector y almacén sin exigir análisis LLM para capturar o consultar.
+- [x] Integrar lector y almacén sin exigir análisis LLM para capturar o consultar.
   Verificación: importación, repetición, corrección y reapertura conservan identidad y bytes.
-- [ ] Comprobar concurrencia y recuperación de interrupciones.
+- [x] Comprobar concurrencia y recuperación de interrupciones.
   Verificación: dos escritores del mismo predecesor no ganan ambos; reintento no duplica.
-- [ ] Implementar consulta vigente y fetch de revisión explícita con límites.
+- [x] Implementar consulta vigente y fetch de revisión explícita con límites.
   Verificación: término eliminado no reaparece; fuente ausente/alterada produce error visible sin texto falso.
-- [ ] Probar compatibilidad y rollback sin tocar v2 real.
+- [x] Probar compatibilidad y rollback sin tocar v2 real.
   Verificación: fixtures v2 dan la misma salida; retorno a versión anterior ensayado en copia.
 
 TAREA T5 — piloto controlado y evaluación
@@ -197,10 +200,27 @@ que no dependan de la decisión faltante.
 Estado al 2026-10-05: T0–T3 ejecutadas dentro de su alcance experimental;
 T2 es contrato candidato, no aceptación productiva. O1 tiene diagnóstico,
 pero recuperación y comprobación del corpus pendientes. O2 sin ejecutar.
-T4 espera D1; T5 espera T4 y D2a; T6 espera resultados y D2b.
+Este estado de T0–T3 es histórico; la actualización T4 de abajo lo complementa.
+T5 espera T4 verificada y D2a; T6 espera resultados y D2b.
 Evidencia: `docs/evidencia/h25-inicio-2026-10-05.md`; ronda:
 `docs/rondas/2026-10-05-h25-plan.md`. Suite 322 pruebas OK sin skips;
 gate de planes activo, un plan verificado. No se cierra el hito 25.
 La última medida de espacio es 6,0 GiB libres (99 %), posterior a los 8,2
 iniciales; dbPath ocupa 1,1 GB según du. No adjudicar esa variación a esta tarea.
 No se realizó recuperación productiva ni escritura nueva en AN-KLA.
+
+Actualización de T4: D1 aceptada, ADR-020 completado con anexo de implementación,
+SPEC-007 y contrato source-store-v3. Interfaz source manual en rama de trabajo;
+pruebas sobre replica set temporal, sin modificar Mongo productivo. Interrupción
+ensayada mediante excepción entre insert y CAS; pérdida de recibo simulada
+después de commit real. No equivalen a corte de energía ni failover multinodo.
+Retorno a consumidor v2 anterior ensayado en copia con JSON idéntico y v3 intacto.
+Evidencia final: `docs/evidencia/h25-t4-2026-10-05.md`; autorrevisión:
+`docs/rondas/2026-10-05-h25-t4.md`. No se inicia T5 real sin D2a.
+Suite final 354 pruebas OK sin skips; gates 167 archivos/un plan OK.
+
+Prioridad antes de uso productivo: O1 (recuperación y respaldo); resolver además
+la incompatibilidad standalone/transacciones sin convertir la topología por
+inercia. O2 rige el ranking v2, no esta búsqueda de subcadenas. H25.1 todavía
+requiere T5/D2b; hito 25 completo requiere un segundo origen estructuralmente
+distinto. No se incorporó esta actualización a AN-KLA en este incremento.

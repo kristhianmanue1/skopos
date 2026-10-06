@@ -17,11 +17,12 @@ from skopos.busqueda import buscar_command
 from skopos.cli import query_command, reanalizar_command
 from skopos.indexador import indexar_command
 from skopos.vigilante import watch_command
+from skopos.source_cli import source_command
 
 COMANDOS = {"query": query_command, "watch": watch_command,
             "analyze": analyze_command,
             "reanalyze": reanalizar_command, "index": indexar_command,
-            "search": buscar_command,
+            "search": buscar_command, "source": source_command,
             # alias heredados (ADR-016 (d)): mismo comando, nombre viejo
             "reanalizar": reanalizar_command, "indexar": indexar_command,
             "buscar": buscar_command}
@@ -32,6 +33,8 @@ ALIAS_HEREDADOS = {"reanalizar": "reanalyze", "indexar": "index",
 _AYUDA = f"""skopos {__version__}
 
 Comandos:
+  source --database DB <import|search|fetch|receipt>
+                             fuentes diarizadas, entrada manual (ADR-020)
   query <tema>              busca por tema en lo ya analizado (SPEC-004)
   watch [--sessions-dir DIR] [--intervalo SEGUNDOS] [--backfill]
                              vigila y procesa turnos nuevos (SPEC-005);
