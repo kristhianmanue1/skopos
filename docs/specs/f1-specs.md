@@ -12,6 +12,8 @@ dos escritores del mismo padre no publican ambos; fallo entre revisión/cabeza
 no deja media publicación; original ausente/alterado no sirve texto;
 límites producen exclusiones contadas; consumidor v2 conserva su comportamiento.
 Implementación técnica no equivale a D2a/D2b ni a completar el hito 25.
+Extensión ADR-021: formato explícito whisperx-json, sobre v1 y localizador de
+objeto JSON original; TXT conserva v0. Piloto temporal, no activación productiva.
 
 ## SPEC-001 [cubre: REQ-1]
 

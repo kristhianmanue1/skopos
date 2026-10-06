@@ -18,6 +18,8 @@ def source_command(argv=None):
     commands = parser.add_subparsers(dest='operation', required=True)
     admission = commands.add_parser('import', help='Importa un archivo diarizado explícito.')
     admission.add_argument('path')
+    admission.add_argument('--format', choices=('diarized-text', 'whisperx-json'),
+                           default='diarized-text', help='Formato explícito; no autodetecta.')
     admission.add_argument('--captured-at', required=True)
     admission.add_argument('--expected-previous-sha256')
     admission.add_argument('--completeness', choices=('unknown', 'partial', 'complete'),
@@ -50,7 +52,8 @@ def source_command(argv=None):
                         args.path, **identity, captured_at=args.captured_at,
                         expected_previous_sha256=args.expected_previous_sha256,
                         capture_completeness=args.completeness,
-                        completeness_basis=args.completeness_basis)
+                        completeness_basis=args.completeness_basis,
+                        source_format=args.format)
                 elif args.operation == 'fetch':
                     result = store.fetch(**identity, source_sha256=args.source_sha256,
                                          segment_id=args.segment_id)

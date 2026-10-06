@@ -102,6 +102,15 @@ El bloque de contexto gestionado AN-KLA no está instalado; escritura y recupera
 manual verificadas, sin activar automáticamente integración. Este registro precede
 únicamente al commit documental que publica este puntero; no afirma su SHA futuro.
 
+Incremento JSON ASR (ADR-021): fuente real reconocida y piloto temporal con
+1186 objetos verificados; import/replay/fetch/búsqueda, sin reemplazar TXT ni
+conversaciones ausentes. --format whisperx-json optativo, sobre v1; TXT/v0
+intacto. Implementación en rama codex/whisperx-json-source, no merge ni activación.
+El JSON es otra representación ASR, no el segundo origen runtime. La declaración
+posterior del Operador confirma que no hay respaldo disponible de conversaciones:
+conservar historia sin inventar reparación; no hubo borrado/cuarentena/reanálisis.
+AN-KLA rev12 precede este incremento y no se actualizó en este pase.
+
 ## Sesión del 2026-09-13
 
 Rama `docs/sync-language-and-state-20260912` **fusionada a main** (`3ac9885`)

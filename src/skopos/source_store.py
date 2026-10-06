@@ -84,14 +84,15 @@ class SourceStore:
 
     def import_file(self, path, *, project_id, source_id, captured_at,
                     source_revision=1, expected_previous_sha256=None,
-                    capture_completeness='unknown', completeness_basis=None):
+                    capture_completeness='unknown', completeness_basis=None,
+                    source_format='diarized-text'):
         path = str(Path(path).absolute())
         envelope = build_envelope(
             read_source(path), project_id=project_id, source_id=source_id,
             captured_at=captured_at, source_revision=source_revision,
             previous_source_sha256=expected_previous_sha256,
             capture_completeness=capture_completeness,
-            completeness_basis=completeness_basis)
+            completeness_basis=completeness_basis, source_format=source_format)
         key = revision_key(project_id, source_id, source_revision)
         document = {
             '_id': key, 'schema': 'skopos/source-record/v3',
@@ -176,7 +177,7 @@ class SourceStore:
                     or (expected_key is not None and key != expected_key)
                     or any(document[field] != envelope[field] for field in
                            ('project_id', 'source_id', 'source_revision'))
-                    or envelope['schema'] != 'skopos/source-envelope/v0'
+                    or envelope['schema'] not in ('skopos/source-envelope/v0', 'skopos/source-envelope/v1')
                     or type(document['admitted_at']) is not str):
                 raise ValueError('store_integrity_failed')
             _digest(envelope['source_sha256'])
@@ -203,13 +204,26 @@ class SourceStore:
     @staticmethod
     def _fragment(document, segment, raw):
         envelope = document['envelope']
-        text_bytes = raw[segment['start_byte']:segment['end_byte']]
-        if text_bytes.decode('utf-8') != segment['text']:
-            raise ValueError('locator_mismatch')
+        extra = {}
+        status = 'transcript_bytes_verified'
+        if envelope['schema'] == 'skopos/source-envelope/v1':
+            from skopos.whisperx_reader import load_json
+            locator = segment['locator']
+            original = raw[locator['start_byte']:locator['end_byte']]
+            if (locator['kind'] != 'json-value' or checksum(original) != locator['sha256']
+                    or load_json(original).get('text') != segment['text']
+                    or checksum(segment['text'].encode()) != segment['derived_text_sha256']):
+                raise ValueError('locator_mismatch')
+            extra['original_json'] = original.decode('utf-8')
+            status = 'json_bytes_verified'
+        else:
+            text_bytes = raw[segment['start_byte']:segment['end_byte']]
+            if text_bytes.decode('utf-8') != segment['text']:
+                raise ValueError('locator_mismatch')
         result = {
             **{k: envelope[k] for k in ('project_id', 'source_id', 'source_revision',
                                         'source_sha256', 'envelope_sha256')},
-            'segment': dict(segment), 'status': 'transcript_bytes_verified',
+            'segment': dict(segment), 'status': status, **extra,
             'audio_alignment': 'not_verified', 'speaker_identity': 'not_verified',
             'declaration': DECLARATION}
         # Acotar también etiquetas/metadatos, no sólo texto: un speaker enorme

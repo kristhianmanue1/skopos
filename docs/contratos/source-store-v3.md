@@ -3,6 +3,29 @@
 Estado: D1 aceptada para implementación; aceptación operativa pendiente de D2.
 No sustituye documento-analisis-mongo v2 ni documento-turno-mongo v2.
 
+## Extensión JSON optativa — ADR-021
+
+import_file añade source_format='diarized-text'; CLI import añade
+--format diarized-text|whisperx-json. Default y salida TXT intactos.
+whisperx-json genera source-envelope/v1 con lector whisperx_reader.parse;
+source-record/v3 admite unión explícita v0/v1. No hay migración de documentos.
+Un consumidor previo rechaza v1; no admitirlo hasta disponer del nuevo lector.
+Sobre v1 mantiene metadatos/identidad/captura de v0, pero omite adjacent_overlaps
+y cambia adapter a skopos/whisperx-reader/v1, formato skopos/whisperx-json/v1.
+Los segmentos llevan start_seconds/end_seconds, speaker nullable, word_count,
+text, derived_text_sha256 y locator json-value (pointer, start_byte/end_byte,
+sha256). ID ordinal acotado a fuente/revisión. Tiempos/confianza/etiquetas
+originales completos permanecen en objeto JSON sellado, no se reinventan.
+Fetch/search v1 devuelve status json_bytes_verified y original_json además del
+segmento derivado: UTF-8 de original_json reproduce el slice original, no una
+serialización normalizada. El presupuesto de 64 KiB cubre toda la salida.
+Replay y CAS conservan su contrato. Rechazos nuevos: unsupported_source_format,
+invalid_json, invalid_json_utf8, invalid_json_unicode, invalid_json_number,
+duplicate_json_key, json_depth_exceeded, invalid_whisperx_schema,
+invalid_whisperx_segment, invalid_whisperx_word, invalid_word_time,
+invalid_word_score, invalid_speaker, word_limit_exceeded,
+word_segments_mismatch y json_locator_missing. Límites y perfil en ADR-021.
+
 ## Fronteras y datos
 
 - `source_reader.parse`: bytes → segmentos y localizadores originales.

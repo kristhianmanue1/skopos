@@ -35,7 +35,8 @@ def _capture_time(value):
 
 def build_envelope(raw, *, project_id, source_id, captured_at,
                    source_revision=1, previous_source_sha256=None,
-                   capture_completeness='unknown', completeness_basis=None):
+                   capture_completeness='unknown', completeness_basis=None,
+                   source_format='diarized-text'):
     """Construye datos; no verifica autoridad, cadena de revisiones ni audio."""
     if type(raw) is not bytes:
         raise ValueError('invalid_source_bytes')
@@ -61,10 +62,16 @@ def build_envelope(raw, *, project_id, source_id, captured_at,
     timestamp = _capture_time(captured_at)
     if not raw or len(raw) > MAX_BYTES:
         raise ValueError('source_size_out_of_range')
-    # Limitar antes de construir los objetos de segmento; no truncar el origen.
-    if sum(bool(line.strip()) for line in raw.decode('utf-8').splitlines()) > MAX_SEGMENTS:
-        raise ValueError('segment_limit_exceeded')
-    parsed = parse(raw)
+    if source_format == 'diarized-text':
+        # Limitar antes de construir segmentos; no truncar el origen.
+        if sum(bool(line.strip()) for line in raw.decode('utf-8').splitlines()) > MAX_SEGMENTS:
+            raise ValueError('segment_limit_exceeded')
+        parsed = parse(raw)
+    elif source_format == 'whisperx-json':
+        from skopos.whisperx_reader import parse as parse_json
+        parsed = parse_json(raw)
+    else:
+        raise ValueError('unsupported_source_format')
     if len(parsed['segments']) > MAX_SEGMENTS:
         raise ValueError('segment_limit_exceeded')
     result = {
@@ -79,8 +86,13 @@ def build_envelope(raw, *, project_id, source_id, captured_at,
         'capture_completeness': {'value': capture_completeness,
                                  'basis': completeness_basis},
         'audio_alignment': 'not_verified', 'speaker_identity': 'not_verified',
-        'segments': parsed['segments'], 'adjacent_overlaps': parsed['adjacent_overlaps'],
+        'segments': parsed['segments'],
     }
+    if source_format == 'diarized-text':
+        result['adjacent_overlaps'] = parsed['adjacent_overlaps']
+    else:
+        result['schema'] = 'skopos/source-envelope/v1'
+        result['adapter'] = {'id': 'skopos/whisperx-reader/v1', 'format': parsed['schema']}
     canonical = json.dumps(result, ensure_ascii=False, sort_keys=True,
                            separators=(',', ':')).encode('utf-8')
     result['envelope_sha256'] = hashlib.sha256(canonical).hexdigest()
