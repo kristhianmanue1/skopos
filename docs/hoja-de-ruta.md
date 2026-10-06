@@ -175,13 +175,37 @@ ektel), como cadena de supersedes: `f-ciclo-multi-cli-2026-08-20` →
 `f-skopos-cierre-2026-09-06` → `f-skopos-cierre-p005-2026-09-06` →
 `f-skopos-cierre-h2-2026-09-10` → `f-skopos-cierre-2026-09-12` →
 `f-skopos-cierre-2026-09-13` → `f-skopos-cierre-2026-10-05` →
-**`f-skopos-h25-t5-2026-10-05`** (vigente, revisión nº 11,
+`f-skopos-h25-t5-2026-10-05` (histórico, revisión nº 11,
 `sha256:bac7db516b7d8dc204788ef96d7b941892dad55311afae921306d4dd8258ddbb`).
 Escritura por plan-write/commit-write-plan, write-full, recibo attest de HEAD
 `3c78356`; acredita ese SHA, no toda la narración. Verify OK; recuperación
 3594 bytes del cierre, 4802 con acompañante, sin exclusión por presupuesto.
 Orden de lectura: plan H25, evidencia T5, ADR-020 y contrato source-store-v3.
 La publicación documental posterior no está acreditada por ese recibo.
+
+Continuidad: rev12 `f-skopos-h25-followup-2026-10-06` →
+**`f-skopos-json-closure-2026-10-06`** (vigente, revisión nº 13,
+`sha256:f30eeb7b35acfbf98add761264c751076d0c932f82e0c6767ac879e49d72e429`).
+Escritura autorizada mediante plan-write/commit-write-plan; `write-summary`,
+autoridad `model_derived`: síntesis del agente, no attest de toda la narración.
+Verify OK; retrieve budget8000 recuperó 3288 bytes del cierre y 4496 con
+acompañante, sin exclusiones por presupuesto. Observación 2026-10-06 UTC.
+
+JSON ASR optativo integrado/publicado en main `4106667` (código `08c8309`),
+SHA remoto comprobado. Suite 377 pruebas OK sin skips, 93.529 s sobre Mongo
+temporal exclusivo; gates216 archivos/1 plan. Autorrevisión adversarial final,
+no revisión independiente. Ver ADR-021. Este registro documental es posterior
+al SHA de la memoria. Producción, corpus y sus índices permanecen sin cambios.
+
+Segundo origen: ZIP real de sesión localizado,126 registros JSONL; productor
+pendiente de confirmación y semántica seq/seq0 sin resolver. No ingerido ni
+adaptador implementado; ficha en `propuestas/h25-runtime-events-v0.md`.
+El Operador declara que no hay respaldos: conservar evidencia histórica, sin
+borrar/quarantinar ni reanalizar corpus. JSON nuevo no restaura originales.
+Pendientes:12 consultas reales con objetivos adjudicados para evaluar relevancia
+léxica; decisión ADR-019 posterior. Embeddings diferidos. Topología v3 separada,
+custodia, lectores y retención son propuestas, no activación; detalles en
+`evidencia/adr019-expansion-2026-10-05.md`. H25 completo sigue abierto.
 
 Antecedente rev10 (sustituido; revisión
 `sha256:94c5130203221a1b59e3c5fcb89ef07322628401eaf302f07003db936062995c`,

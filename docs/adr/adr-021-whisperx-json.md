@@ -1,7 +1,9 @@
 # ADR-021 — JSON ASR con evidencia original y texto derivado
 
-Estado: implementación y piloto local autorizados por «adelante» del Operador
-tras ofrecer adaptar la ingesta JSON. No aceptación productiva ni merge.
+Estado: implementación y piloto local autorizados por «adelante» del Operador.
+Integrado mediante fast-forward y publicado en main `4106667`, tras autorización
+de cierre; SHA remoto comprobado el 2026-10-06 UTC. Sin aceptación ni activación
+productiva. El commit documental de este estado es posterior.
 AMENDS: ADR-020/SPEC-007 sólo para formato optativo whisperx-json.
 TXT/v0, corpus v2 y custodia externa permanecen intactos. No es el origen
 runtime de H25: es otra representación de transcripción ASR.
