@@ -91,3 +91,9 @@ dentro del alcance autorizado, sin blocker de H25.1 abierto. La publicación se
 confirma por SHA remoto tras el merge; este documento se prepara antes de él.
 Persisten límites operativos explícitos: sin ACL multiusuario, sin presupuesto
 global de búsqueda, custodia externa y topología productiva sin transacciones.
+
+Publicación posterior comprobada: commit 7a30a9d267b308cae21e9d88ed92d1a1957f5f90
+empujado a rama y main; merge fast-forward desde 2d7038f, SHA remoto verificado.
+Mongo productivo respondió ping=1 y sigue standalone; no recibió mutaciones
+de este encargo. Instancias temporales 37027/37035 detenidas con exit 0.
+Este añadido es sólo documental: no cambia código ni fixtures probados.

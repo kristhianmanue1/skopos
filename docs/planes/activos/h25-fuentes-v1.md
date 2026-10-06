@@ -1,6 +1,6 @@
 # H25 — fuentes diversas, primer incremento verificable
 
-Estado: plan de trabajo autorizado; revisión v1 refinada tras autorrevisión.
+Estado: H25.1 aceptado y publicado; hito 25 completo y activación pendientes.
 Actualización T4: D1 aceptada por «adelante» del Operador el 2026-10-05;
 custodia externa y almacenamiento Mongo separado, sin activación ni merge.
 Actualización T5: piloto literal aceptado por el Operador; D2b acotada a sus
@@ -152,8 +152,9 @@ Produce: incremento aceptado o rechazo trazable; siguiente alcance de hito 25.
 Steps:
 - [x] Revisar el artefacto final y resolver hallazgos materiales.
   Verificación: ningún blocker abierto; tests y gates pasan sobre código final.
-- [ ] Obtener aceptación y realizar sólo publicación/activación autorizadas.
+- [x] Obtener aceptación y realizar sólo publicación/activación autorizadas.
   Verificación: SHA remoto y estado del servicio se comprueban por separado.
+  Merge fast-forward confirmado en main: 7a30a9d. Sin activación productiva.
 - [x] Diseñar el segundo adaptador de estructura distinta.
   Verificación: no se cierra hito 25 completo hasta fijar y cumplir su aceptación propia.
   Artefacto: docs/propuestas/h25-runtime-events-v0.md; diseño no implementado.
@@ -258,3 +259,8 @@ gate estricto sin skips, suite vacía ni fallos esperados; modelo independiente,
 combinaciones y fronteras; ensayo de caída de proceso temporal. No promete
 durabilidad ante fallo físico, escala ni consistencia global de búsquedas.
 Evidencia de cierre: docs/evidencia/h25-refinamiento-2026-10-05.md.
+
+Publicación confirmada: main remoto en 7a30a9d267b308cae21e9d88ed92d1a1957f5f90,
+merge fast-forward desde 2d7038f. T6 completado dentro de H25.1: aceptación,
+publicación y diseño del segundo origen; no su implementación ni hito 25 completo.
+Producción responde ping=1, permanece standalone; temporales detenidos exit 0.
