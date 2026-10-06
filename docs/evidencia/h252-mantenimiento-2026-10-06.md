@@ -44,6 +44,40 @@ elimina su keyfile temporal después de comprobar su salida; no borra evidencia.
 
 ## Periodicidad activada
 
+### Aclaración del Operador: independencia de proveedor
+
+Decisión explícita posterior del Operador, 2026-10-06: Codex y los productos
+OpenAI se aceptan como mecanismo inicial, no exclusivo ni como infraestructura
+obligatoria de Skopos. El proyecto debe poder operar con otras herramientas y
+sin infraestructura OpenAI. Esta decisión AMENDS la aceptación del programador
+descrita abajo; no revoca su uso inicial ni autoriza instalar otro ahora.
+
+Estado observado: los scripts locales de respaldo/restauración no invocan un
+modelo ni APIs OpenAI. Sin embargo, el disparador periódico activo y su lógica
+de seguimiento semanal/mensual están en una automatización de Codex. Por tanto,
+la periodicidad actual sí tiene dependencia operativa de ese producto; no se
+declara independencia completa ni se confunde código local con operación autónoma.
+
+Requisito para cerrar esa dependencia: ejecución periódica y seguimiento mediante
+un mecanismo sustituible, independiente de proveedor/modelo/chat, con configuración,
+estado, registros y alertas recuperables fuera del chat. Debe comprobarse respaldo
+y restauración sin Codex ni servicios OpenAI, conservando bloqueo, permisos,
+trazabilidad y tratamiento de fallos. La elección, instalación y activación del
+mecanismo sustituto quedan pendientes de su decisión y verificación propias.
+Este requisito no obliga a eliminar los adaptadores de fuentes Codex existentes
+ni acredita portabilidad entre sistemas operativos: el perfil actual usa macOS,
+Keychain, Mongo local y OneDrive.
+
+### Qué significa validación desatendida pendiente
+
+Significa que todavía falta observar una corrida iniciada por el horario, sin
+que el Operador o el agente lancen manualmente el comando: comprobar que arranca,
+obtiene acceso autorizado, termina, verifica el servicio y registra el resultado
+o comunica el fallo. Las ejecuciones manuales ya probadas no acreditan esa ruta.
+Una corrida diaria correcta tampoco acredita por sí sola la semanal, la mensual,
+el funcionamiento tras reinicio ni un SLA. La descarga web mensual puede requerir
+intervención humana; no se presenta como flujo totalmente desatendido.
+
 Automatización en este chat: `skopos-respaldo-y-recuperaci-n`, ACTIVE, comprobada
 en su configuración local. Diario 23:00, zona local America/Mexico_City:
 

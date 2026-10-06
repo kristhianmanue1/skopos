@@ -44,6 +44,10 @@ el Operador. Recuperación de datos desde descarga comprobada con claves locales
 disponibles: [evidencia](evidencia/h252-recuperacion-nube-2026-10-06.md).
 Respaldo coordinado y periodicidad activados; primera ejecución desatendida
 pendiente: [mantenimiento](evidencia/h252-mantenimiento-2026-10-06.md).
+Decisión del Operador 2026-10-06: Codex/OpenAI aceptados sólo como mecanismo
+inicial no exclusivo. La periodicidad activa aún depende de Codex; sustituirla
+y verificar operación sin infraestructura OpenAI es un pendiente explícito,
+no una propiedad ya demostrada. Véase la aclaración en mantenimiento.
 Los párrafos anteriores/posteriores fechados conservan su alcance histórico;
 no describen automáticamente el estado actual de la instancia dedicada.
 
