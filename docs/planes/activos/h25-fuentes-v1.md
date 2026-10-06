@@ -3,6 +3,8 @@
 Estado: plan de trabajo autorizado; revisión v1 refinada tras autorrevisión.
 Actualización T4: D1 aceptada por «adelante» del Operador el 2026-10-05;
 custodia externa y almacenamiento Mongo separado, sin activación ni merge.
+Actualización T5: piloto literal aceptado por el Operador; D2b acotada a sus
+resultados. T6 abierto, sin merge ni activación. Ver evidencia de aceptación.
 Fecha: 2026-10-05. Base: `2d7038f961a04b6790b35559e22c455039dbcfe1`.
 Encargo: plan detallado, ronda adversarial, refinamiento e inicio de ejecución.
 Autor: Codex. La revisión de la misma instancia es autorrevisión, no revisión
@@ -30,7 +32,10 @@ pruebas locales y un prototipo aislado para evaluar el contrato propuesto.
 La decisión estratégica sigue perteneciendo al Operador: D1 ya aceptada para
 implementar T4; migración y aceptación operativa siguen pendientes de D2.
 No se activan servicios de producción por este plan.
-No incluye ingesta privada, endpoints remotos, instalación de dependencias,
+El alcance inicial no incluía ingesta privada; D2a posterior autorizó una
+transcripción concreta en laboratorio, con retención hasta revisión y retirada
+sólo confirmada, lectores Operador/agente y sin exportar su contenido.
+No incluye endpoints remotos, instalación de dependencias,
 escritura en repositorios ajenos ni admisión automática en AN-KLA o Ágora.
 Commit/push según autorización permanente de AGENTS, después de gates; merge
 a main, activación o migración de este incremento requieren su alcance aprobado.
@@ -129,20 +134,22 @@ TAREA T5 — piloto controlado y evaluación
 Consumes: T4 verificado y autorización sobre una exportación concreta.
 Produce: informe fechado con corpus, hashes, preguntas y resultados; contenido privado fuera de Git.
 Steps:
-- [ ] Fijar corpus y respuestas esperadas antes de ejecutar las consultas.
+- [x] Fijar corpus y respuestas esperadas antes de ejecutar las consultas.
   Verificación: muestra sintética primero; muestra real autorizada separada; omisiones contadas.
-- [ ] Medir recuperación y navegación con revisión correctiva.
+- [x] Medir recuperación y navegación con revisión correctiva.
+  Alcance: perturbación sintética en copia, no corrección factual.
   Verificación: cada resultado servido resuelve su fuente/revisión/localizador; cero versiones reemplazadas en casos estables.
-- [ ] Medir coste de ingesta y consulta por separado.
+- [x] Medir coste de ingesta y consulta por separado.
   Verificación: bytes, segmentos, latencia y límites declarados; sin extrapolar una muestra a escala general.
-- [ ] Comprobar acceso, retención y salida al consumidor.
+- [x] Comprobar acceso, retención y salida al consumidor.
+  Alcance: denegación simulada, acuerdo operativo; no ACL multiusuario.
   Verificación: denegación no sirve texto; selección incompleta señalada; sin admisión externa automática.
 
 TAREA T6 — aceptación y cierre H25.1, después de D2b
 Consumes: evidencia T4/T5, revisión adversarial final y decisión del Operador.
 Produce: incremento aceptado o rechazo trazable; siguiente alcance de hito 25.
 Steps:
-- [ ] Revisar el artefacto final y resolver hallazgos materiales.
+- [x] Revisar el artefacto final y resolver hallazgos materiales.
   Verificación: ningún blocker abierto; tests y gates pasan sobre código final.
 - [ ] Obtener aceptación y realizar sólo publicación/activación autorizadas.
   Verificación: SHA remoto y estado del servicio se comprueban por separado.
@@ -155,9 +162,11 @@ Produce: diagnóstico reproducible y propuesta concreta de recuperación.
 Steps:
 - [x] Consultar listener, launchd y eventos fatales recientes, sin contenido del corpus.
   Verificación: separar mensaje observado, causa inmediata e hipótesis causal pendiente.
-- [ ] Preparar preservación y recuperación antes de operar sobre datos.
+- [x] Preparar preservación y recuperación antes de operar sobre datos.
+  Cronología: reinicio autorizado primero; respaldo y restauración después,
+  antes de cualquier reparación del corpus, que no se realizó.
   Verificación: espacio, respaldo/restauración, concurrencia de watch y rollback definidos; ejecutar cambios sólo con alcance aprobado.
-- [ ] Tras recuperación autorizada, comprobar índices y cobertura en lectura.
+- [x] Tras recuperación autorizada, comprobar índices y cobertura en lectura.
   Verificación: cifras nuevas fechadas; no asumir que el proceso activo implica corpus íntegro.
 
 TAREA O2 — decidir ADR-019 y evaluar búsqueda
@@ -224,3 +233,12 @@ la incompatibilidad standalone/transacciones sin convertir la topología por
 inercia. O2 rige el ranking v2, no esta búsqueda de subcadenas. H25.1 todavía
 requiere T5/D2b; hito 25 completo requiere un segundo origen estructuralmente
 distinto. No se incorporó esta actualización a AN-KLA en este incremento.
+
+Actualización posterior: T5 completada y resultado literal aceptado por el
+Operador. O1 recuperado y respaldo/restauración comprobados, sin reparar las
+referencias rotas encontradas. Los estados pendientes anteriores son históricos.
+Evidencia: `docs/evidencia/h25-t5-aceptacion-2026-10-05.md`. El encabezado de
+autorización inicial fue ampliado para ese corpus y el reinicio/respaldo
+solicitados; no autoriza operaciones adicionales sobre producción.
+T6 conserva pendientes de cierre y segundo adaptador. Merge y activación
+requieren decisión separada; no se declara hito 25 completo.

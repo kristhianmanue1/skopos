@@ -1,5 +1,9 @@
 {
   "plans": "docs/planes/activos",
+  "exempt_paths": [
+    "runs/h25-pilot.dQI7zG/revision-2-synthetic.txt",
+    "runs/o1-backup.WPzdQE/restore-mongod.log"
+  ],
   "required": [
     "AGENTS.md",
     "README.md",

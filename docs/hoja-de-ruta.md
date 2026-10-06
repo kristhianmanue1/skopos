@@ -34,7 +34,7 @@
 | 23 | Puerta índice→análisis, `skopos analyze` (**ADR-017, 🔒 2026-09-12**, sobre P-006 §7): los turnos indexados eran inalcanzables para el análisis —`indexar` no llama al modelo, `watch` sólo cubre su ventana, `reanalizar` supersede uno existente—, con 25,909 observados y **8 interpretados**. Primer corpus: las **560 anclas `commit-write-plan`** (~3 h serial, local con `qwen3:8b`). No toca turnos con análisis previo; la ventana de ADR-008 queda acotada a `watch` | **Implementado** — 19 tests nuevos (272 en total), `analyze` corrido contra el corpus real y `skopos query` sirviendo resultados por primera vez; primera corrida acotada a **ventana de 7 días** por decisión del dueño (2026-09-12): 129 anclas en vez de 608, y —por P-007— las únicas con offsets sanos, así que el piloto evalúa la capa interpretada con su evidencia cruda. **Piloto cerrado: 135/135 anclas, 0 fallos** (`docs/evidencia/piloto-anclas-2026-09-12.md`) — `skopos.analisis` pasa de 8 a 151 documentos y `skopos query` sirve resultados por primera vez. Hicieron falta cuatro pases (contexto local insuficiente, endpoint de Z.ai equivocado, reintento ausente); ninguno duplicó nada gracias a la idempotencia de (b). Destapó un fallo en `query`: reventaba con análisis de opencode por asumir offsets enteros — corregido con el estado `origen_de_filas` | `pendiente` |
 | 23.1 | **Hallazgo P-007** — offsets irrecuperables en la parte del índice construida el 2026-08-29: el desfase crece turno a turno (firma de un acumulador que no se reinició por archivo) y el 78 % de una muestra cae fuera del EOF, así que `fragmento_completo` (ADR-009 P3, hito 16) se niega. **No es pérdida de contenido ni duplicados** (595 textos distintos de 608): el índice está segmentado distinto, no inflado. La ingesta con el parser de hoy nace sana (0/400 rotos). **REPARADO el mismo día** (`docs/evidencia/reconstruccion-indice-2026-09-12.md`): índice reconstruido de 26,007 a 16,974 turnos —los 9,033 de diferencia eran artefactos de la segmentación vieja, 0 turnos perdidos— con **0/12,156 offsets rotos y 300/300 sellos verificados**. El corpus anterior queda en `turnos_respaldo_20260912`, así que la operación es reversible. **Invariante de escritura implementada** el mismo día (`indexar_turno` rechaza offsets imposibles; 0 rechazos sobre el corpus, sin costo). Los 18 análisis con offsets rancios **resueltos con `reanalyze`** (supersede de ADR-007, que recomputa referencias de origen): 0 fallos de integridad sobre los 112 con turno vivo. **Huérfanos resueltos el 2026-09-13**: congelados —no borrados— en `skopos.analisis_huerfanos_20260913` por decisión del dueño, con el patrón reversible de P-007 (copiar, verificar documento a documento, retirar). 41 de 44 eran re-derivables, 2 residuo de tests y 1 irreproducible por rollout borrado; ninguno servía evidencia verificable y ocupaban 9 de 20 asientos en una consulta sin filtro (`docs/evidencia/congelamiento-analisis-huerfanos-2026-09-13.md`) | — |
 | 24 | P-005 reformulada como contrato (`curated-anchor`, `context-block`) en vez de tercer proyecto — se escribe **después** de la primera corrida del hito 23, por la regla que siguió ADR-010: el contrato generaliza una instancia viva, no la precede | Contrato pendiente; la corrida previa ya consta en el hito 23. P-005 conserva su propuesta original, aún requiere reconciliación | — |
-| 25 | Ampliación a conversaciones de cualquier origen (prime, agentes en runtimes y sandboxes), más allá de CLIs con rollout en disco — anunciada por el dueño el 2026-09-12. ADR-016 prevé `documento-turno-mongo v3` en inglés; ADR-020 acepta D1 para fuentes separadas; la migración v2 no está aprobada | T4 integrada en rama y verificada en laboratorio; corpus, aceptación y activación D2 pendientes. No cerrado | `5773dbd`, `8614581` (experimentos) |
+| 25 | Ampliación a conversaciones de cualquier origen (prime, agentes en runtimes y sandboxes), más allá de CLIs con rollout en disco — anunciada por el dueño el 2026-09-12. ADR-016 prevé `documento-turno-mongo v3` en inglés; ADR-020 acepta D1 para fuentes separadas; la migración v2 no está aprobada | T5 literal real completada y aceptada; T6 abierto. Merge, activación y segundo origen pendientes. No cerrado | `3c78356` (T4 en rama) |
 
 ## Inicio del plan H25 — 2026-10-05
 
@@ -49,8 +49,18 @@ externas. T4 incorpora colecciones de fuentes v3 separadas, transacciones y
 la entrada manual source en la rama de trabajo, sin migrar datos v2. Evidencia:
 `docs/evidencia/h25-t4-2026-10-05.md`. No adjudica D2a/D2b ni cierra el hito 25.
 Mongo productivo no se convirtió a replica set; esa condición y la recuperación
-O1 deben resolverse antes de operación real. AN-KLA rev10 sigue siendo el cierre
-anterior a T0–T4; para recuperar este incremento leer primero plan y evidencia.
+O1 debían resolverse antes de operación real; estado posterior abajo.
+
+Actualización T5/D2b: piloto real de 1186 segmentos, cinco consultas literales
+correctas, 45 resultados y seis exclusiones; aceptación acotada del Operador.
+Evidencia y autorrevisión: `docs/evidencia/h25-t5-aceptacion-2026-10-05.md`.
+O1 recuperado con respaldo/restauración verificados; referencias rotas detectadas
+no reparadas. Producción sigue standalone. T6 prepara cierre, sin merge ni
+activación; segundo origen estructuralmente distinto aún requiere diseño.
+AN-KLA rev11 recoge este estado sin contenido privado. Los datos temporales
+permanecen fuera de Git hasta decisión expresa de retirada.
+Verificación de este pase: 354 tests OK sin skips (97.618 s) sobre Mongo
+temporal exclusivo y Ollama local, sin volver a ingerir la transcripción.
 
 ## Sesión del 2026-09-13
 
@@ -115,8 +125,16 @@ ektel), como cadena de supersedes: `f-ciclo-multi-cli-2026-08-20` →
 `f-ciclo-multi-cli-2026-08-28` → `f-skopos-cierre-2026-08-28` →
 `f-skopos-cierre-2026-09-06` → `f-skopos-cierre-p005-2026-09-06` →
 `f-skopos-cierre-h2-2026-09-10` → `f-skopos-cierre-2026-09-12` →
-`f-skopos-cierre-2026-09-13` → **`f-skopos-cierre-2026-10-05`**
-(vigente; revisión
+`f-skopos-cierre-2026-09-13` → `f-skopos-cierre-2026-10-05` →
+**`f-skopos-h25-t5-2026-10-05`** (vigente, revisión nº 11,
+`sha256:bac7db516b7d8dc204788ef96d7b941892dad55311afae921306d4dd8258ddbb`).
+Escritura por plan-write/commit-write-plan, write-full, recibo attest de HEAD
+`3c78356`; acredita ese SHA, no toda la narración. Verify OK; recuperación
+3594 bytes del cierre, 4802 con acompañante, sin exclusión por presupuesto.
+Orden de lectura: plan H25, evidencia T5, ADR-020 y contrato source-store-v3.
+La publicación documental posterior no está acreditada por ese recibo.
+
+Antecedente rev10 (sustituido; revisión
 `sha256:94c5130203221a1b59e3c5fcb89ef07322628401eaf302f07003db936062995c`,
 nº 10, `write-full`, autoridad `tool_observed` mediante recibo `attest`
 de `git rev-parse HEAD`). Ese recibo acredita el SHA observado, no todas
@@ -136,7 +154,7 @@ volvieron a comprobar corpus, cobertura ni índices de producción.
 
 Recuperable con
 `an-kla retrieve --query "skopos cierre hito 25" --budget 8000`.
-Medido al escribir: 3,868 bytes del cierre, 5,076 con el acompañante,
+Medido en rev10: 3,868 bytes del cierre, 5,076 con el acompañante,
 sin exclusiones por presupuesto. Mantener 8000 y comprobar `used_bytes`
 y exclusiones en cada consulta; las cifras de septiembre son históricas.
 
