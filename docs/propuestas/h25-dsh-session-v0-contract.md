@@ -567,3 +567,52 @@ omisiones,74.819 s en Mongo temporal exclusivo y fixture Ollama local; log
 `/private/tmp/skopos-runtime.hmdFUy/contract-tests.log`. No hay cambios Python.
 La matriz nueva define aceptación futura; no se declara ejecutada ni validada
 por esta regresión. No se actualizó el contrato vigente ni se escribió AN-KLA.
+
+## Aceptación acotada y validación/lecturas puras — 2026-10-05
+
+El Operador aceptó continuar la extensión sólo para laboratorio mediante
+«adealntes» tras la recomendación de validadores/lecturas antes de admisión.
+Este incremento implementa el núcleo puro; no modifica aún SourceStore, CLI,
+SPEC-007 ni source-store-v3. La aceptación no habilita producción ni datos nuevos.
+
+Módulos experimentales:
+- `verification.py`: validate(envelope), nivel S; verify(envelope, raw), nivel D.
+- `views.py`: fetch_verified con identidad/revisión/hash y vista explícitos;
+  search_verified sobre una única revisión y buffer entregados por el llamador.
+
+No son todavía search_runtime/fetch_runtime del almacén. search_verified declara
+selection=explicit_revision: no simula cabeza vigente, colección mixta, conteo de
+fuentes indisponibles ni CAS. Los errores de esta única fuente fallan completos;
+el futuro adaptador agregará conteos por fuente sin servir resultados parciales.
+Ninguna función abre archivos ni conecta Mongo. raw ausente se trata como fallo
+de integridad del buffer; source_unavailable corresponderá al futuro lector de disco.
+
+S valida campos cerrados, metadatos, políticas conocidas, tipos estrictos,
+límites, continuidad de filas, grupos de lotes, unicidad y enlaces internos,
+sellos y forma de proyecciones. Usa límite de16MiB de JSON canónico del sobre;
+no acredita que quepa el registro BSON, pendiente en admisión. D coteja fuente
+y reconstruye el sobre completo; comparación canónica evita igualdad true==1.
+fetch entrega exclusivamente la vista seleccionada y devuelve copias separadas;
+search sólo texts, orden numérico de seq, exclusión contada por límite/tamaño.
+El límite de64KiB cubre todo resultado serializado compacto, no sólo texto.
+
+Autorrevisión adversarial: probada falsificación de texto con ambos sellos
+recalculados y de contador coherente. S puede aceptar; D rechaza antes de servir
+incluso el primer texto válido de la fuente. Positivos con fuente intacta,
+header sin eventos, lote expandido y restauración del buffer. Negativos incluyen
+bool como seq/contador/selector de revisión, campos extra, referencias internas
+rotas, grupos de lote alterados, schema/política desconocidos y fuente alterada.
+Señuelo PRIVATE no aparece en búsqueda; sólo en vista bruta explícita. Esto no
+implementa ACL ni evita secretos dentro de bloques text admitidos.
+
+15 pruebas nuevas de validación/vistas;49 en total del experimento runtime OK
+con datos sintéticos, sin relectura del export privado en este incremento.
+Revisión de la misma instancia, no independiente. No hay pruebas de persistencia
+runtime aún: faltan conexión a lectura de archivo/Mongo, selección de cabezas,
+compatibilidad mixta y admisión transaccional con su matriz completa.
+
+Regresión final:426 pruebas OK sin omisiones en74.128 s sobre Mongo temporal
+exclusivo37027 y fixture Ollama local. Gates271 archivos/un plan verdes; diff
+leído, código sin cambios posteriores a la suite. Log local:
+`/private/tmp/skopos-runtime.hmdFUy/verification-tests.log`. Procede publicación
+del núcleo experimental, no integración/activación productiva ni cierre de H25.
