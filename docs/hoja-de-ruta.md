@@ -200,6 +200,13 @@ al SHA de la memoria. Producción, corpus y sus índices permanecen sin cambios.
 Segundo origen: ZIP real de sesión localizado,126 registros JSONL; productor
 pendiente de confirmación y semántica seq/seq0 sin resolver. No ingerido ni
 adaptador implementado; ficha en `propuestas/h25-runtime-events-v0.md`.
+Actualización 2026-10-05: ese reconocimiento quedó superado por el cotejo con
+el codec DSH. Lector puro experimental en `experiments/runtime-source-v1/`,
+sin integración a SourceStore/CLI ni activación. Sobre el export identificado:
+126 filas,1375 eventos,1330 referencias resueltas; slices originales verificados.
+Contrato candidato, límites y pruebas: `propuestas/h25-dsh-session-v0-contract.md`.
+Falta decidir el sobre runtime y la selección de texto antes de integrar en copia;
+esta implementación experimental no cierra H25.2 ni el hito 25 completo.
 El Operador declara que no hay respaldos: conservar evidencia histórica, sin
 borrar/quarantinar ni reanalizar corpus. JSON nuevo no restaura originales.
 Pendientes:12 consultas reales con objetivos adjudicados para evaluar relevancia

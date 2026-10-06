@@ -117,3 +117,44 @@ piloto y adjudicación. No cambiar índices ADR-019 ni introducir embeddings.
 Los logs del adaptador AN-KLA son evidencia complementaria de estados, no el
 mismo formato que session v0: requieren un perfil propio antes de admitirlos.
 Autorrevisión del diseño de la misma instancia; no revisión independiente.
+
+## Incremento experimental del lector — 2026-10-05
+
+Implementación acotada en `experiments/runtime-source-v1/reader.py`, función
+`parse(bytes)`, pruebas sintéticas en `tests/test_runtime_source.py`. No abre
+archivos ni requiere servicios. Devuelve `skopos/experimental-dsh-reader/v0`,
+NO source-envelope/v2: identidad por proyecto, revisiones, admisión, fetch y
+selección de texto para búsqueda siguen pendientes de la siguiente frontera.
+La salida interna contiene valores originales potencialmente privados; no es
+una API de consulta limitada a 64KiB ni debe mostrarse como resultado general.
+
+Semántica acotada: expande los tres lotes conocidos con claves cerradas según
+el codec citado; los eventos simples sólo validan type/seq/time y referencias.
+No valida el esquema completo de cada payload DSH ni certifica conformidad
+universal. Referencias futuras o externas son diagnóstico, no causalidad;
+los rangos deben ser crecientes, pero listas simples conservan repeticiones.
+Su presupuesto es global, no el límite por seq del codec: diferencia deliberada
+de este perfil de preservación, no equivalencia con el validador del productor.
+Header sin eventos se conserva como captura de completitud desconocida.
+`sequence_gap_count` cuenta ausencias desde cero hasta el mayor seq observado,
+sin materializar ese intervalo; no significa eventos perdidos demostrados.
+
+Autorrevisión adversarial: reforzadas las pruebas contra resultados esperados
+explícitos del formato de expansión (no sólo conteos), límites inclusivos,
+underflow de tiempo, fila vacía después de header válido y profundidad exacta.
+No se ejecuta contenido ni se promueven COMMITTED/isError a un veredicto propio.
+No se modificó DSH, SourceStore, CLI, Mongo productivo, corpus ni AN-KLA.
+
+Sonda del lector sobre el export real ya identificado: hash de entrada idéntico
+al reconocimiento anterior,126 filas/1375 eventos/1330 referencias, cero huecos
+y referencias no resueltas. Los126 hashes de slice y valores JSON coinciden con
+el original. Lectura acotada del ZIP en memoria, sin extracción a disco, ingesta,
+ejecución de tools ni publicación de contenido privado. No equivale a piloto
+de persistencia o prueba de completitud del export.
+
+Verificación final:19 pruebas específicas OK; suite completa396 pruebas OK,
+sin omisiones,69.399 s en Mongo temporal exclusivo37027 y fixture Ollama local.
+Log local: `/private/tmp/skopos-runtime.hmdFUy/final.log`. Gates266 archivos
+y un plan válidos; diff revisado. Código sin cambios posteriores a esa suite.
+Autorrevisión, no revisión independiente. Procede publicar el experimento,
+no activar producción ni dar por aceptado el sobre runtime pendiente.
