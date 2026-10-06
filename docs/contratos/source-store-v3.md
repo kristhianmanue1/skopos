@@ -171,6 +171,27 @@ volver al consumidor anterior para TXT/v2 legado; éste no leerá sobres runtime
 No borrar colecciones, migrar a v2 ni alterar índices ADR-019 como rollback.
 El despliegue y su validación final quedan pendientes del perfil operativo.
 
+### Perfil operativo confirmado — 2026-10-06
+
+Decisión del Operador: por ahora local monousuario, bajo su cuenta y con agentes
+autorizados; conservar la posibilidad de uso multiusuario futuro sin implementarla.
+Puede haber varios procesos: monousuario no significa exclusión mutua ni una
+sola sesión. Se mantienen las transacciones/CAS y sus pruebas de concurrencia.
+No exponer Mongo ni la CLI como servicio de red compartido. Loopback reduce
+exposición de red, pero no autentica ni aísla procesos locales; project_id sigue
+siendo selector, no credencial. Directorios privados no sustituyen autenticación
+Mongo si otros procesos pueden conectarse. No hay ACL por agente/persona.
+
+Un futuro perfil compartido exige decisión y contrato nuevos: autenticación,
+autorización por recursos, aislamiento entre usuarios/agentes, auditoría y pruebas
+negativas con controles positivos. No se habilita cambiando bindIp ni compartiendo
+credenciales de la cuenta actual. No se añaden dependencias especulativas ahora.
+
+La confirmación no acredita despliegue ni respaldo independiente. Sigue pendiente
+identificar soporte/destino de respaldo autorizado y comprobar su restauración,
+además del arranque y verificación del servicio dedicado. La copia en el mismo
+equipo conserva su utilidad de custodia, no protección ante pérdida del equipo.
+
 Verificación de integración:462 pruebas OK sin omisiones en65.912s,
 Mongo temporal exclusivo37027; log `/private/tmp/skopos-h252.WBLheT/final-suite.log`.
 CLI sobre export privado autorizado, en base de laboratorio nueva: import,

@@ -216,7 +216,10 @@ no hay activación productiva ni cierre del hito25. AN-KLA sigue histórica.
 Actualización 2026-10-06, preparación H25.2: módulos runtime integrados en src,
 CLI manual explícita import/search/receipt/fetch-runtime y pruebas contra producto.
 No activación de servicios, cambio ADR-019 ni migración. Perfil operativo
-monousuario/compartido pendiente de respuesta; no declarar producción lista.
+confirmado por el Operador: local monousuario, agentes autorizados bajo su cuenta;
+multiusuario futuro requiere contrato de acceso separado, no activación implícita.
+Pendientes: respaldo independiente/restauración y despliegue dedicado verificado;
+no declarar producción lista por haber elegido el perfil.
 Contrato y reversión: docs/contratos/source-store-v3.md, sección H25.2.
 Diagnóstico documental/contexto vecino en evidencia/adr019-expansion-2026-10-05.md;
 la sonda mejora sólo parte de desarrollo, no satisface aceptación de relevancia.
@@ -227,6 +230,9 @@ AN-KLA actualizado como suplemento summary model_derived, no aceptación humana:
 verify y retrieve OK,2241 bytes con budget8000; sin exclusión por presupuesto.
 Recuperar con query "h252 cli preparation". El registro JSON anterior conserva
 su condición histórica; este suplemento informa la integración posterior.
+Decisión monousuario conservada además en AN-KLA como suplemento
+`f-skopos-single-user-decision-2026-10-06`, revisión15, verify OK:
+`sha256:03bf6e64d3576ccea7da01f042f4a9599f4217494f81cdc143236f7c9add7517`.
 El Operador declara que no hay respaldos: conservar evidencia histórica, sin
 borrar/quarantinar ni reanalizar corpus. JSON nuevo no restaura originales.
 Pendientes:12 consultas reales con objetivos adjudicados para evaluar relevancia
