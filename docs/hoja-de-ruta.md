@@ -36,6 +36,14 @@
 | 24 | P-005 reformulada como contrato (`curated-anchor`, `context-block`) en vez de tercer proyecto — se escribe **después** de la primera corrida del hito 23, por la regla que siguió ADR-010: el contrato generaliza una instancia viva, no la precede | Contrato pendiente; la corrida previa ya consta en el hito 23. P-005 conserva su propuesta original, aún requiere reconciliación | — |
 | 25 | Ampliación a conversaciones de cualquier origen (prime, agentes en runtimes y sandboxes), más allá de CLIs con rollout en disco — anunciada por el dueño el 2026-09-12. ADR-016 prevé `documento-turno-mongo v3` en inglés; su diseño y migración no están aprobados. Hay pilotos de reuniones y lector diarizado, aislados del producto | Exploración implementada; contrato productivo, integración y aceptación pendientes. No cerrado | `5773dbd`, `8614581` (experimentos) |
 
+## Inicio del plan H25 — 2026-10-05
+
+Iniciado el plan `docs/planes/activos/h25-fuentes-v1.md`, con autorrevisión
+adversarial, reconocimiento F0, ADR-020 propuesto y constructor experimental
+de sobre fuente. El gate de planes queda activo para el directorio de planes
+vigentes. Evidencia: `docs/evidencia/h25-inicio-2026-10-05.md`.
+Esto no adjudica D1 ni cierra el hito 25; la integración productiva sigue pendiente.
+
 ## Sesión del 2026-09-13
 
 Rama `docs/sync-language-and-state-20260912` **fusionada a main** (`3ac9885`)

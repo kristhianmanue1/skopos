@@ -1,4 +1,5 @@
 {
+  "plans": "docs/planes/activos",
   "required": [
     "AGENTS.md",
     "README.md",

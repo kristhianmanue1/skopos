@@ -33,3 +33,13 @@ el contenido real a Ágora. Es una frontera de lectura verificable; no implica
 publicación del documento, transcripción corregida, minuta aprobada o cambio de
 contratos de producción. El ensayo con un archivo privado conserva su informe
 sólo localmente. No publicar ese informe ni la fuente al publicar el lector.
+
+## Frontera experimental H25
+
+`envelope.build_envelope(raw, project_id=..., source_id=..., captured_at=...)`
+produce `skopos/source-envelope/v0` sin abrir archivos ni persistir contenido.
+Conserva bytes/localizadores, identidad declarada y completitud trivalente;
+el hash del sobre derivado es distinto del hash del original. La revisión y
+el predecesor se validan en forma, no contra un almacén autoritativo.
+Ver `docs/adr/adr-020-fuentes-diversas.md` (propuesto) y
+`docs/planes/activos/h25-fuentes-v1.md`. No activa v3 ni cambia los contratos v2.
