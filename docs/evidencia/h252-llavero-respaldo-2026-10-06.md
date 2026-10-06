@@ -1,5 +1,9 @@
 # H25.2 — Llavero y continuidad del respaldo
 
+Actualización posterior: la descarga fue recibida y restaurada correctamente;
+el pendiente de nube de este expediente es histórico. Véase
+[recuperación comprobada](h252-recuperacion-nube-2026-10-06.md), con sus límites.
+
 ## Alcance y decisión
 
 El Operador pidió integrar custodia mediante `/Users/krisnova/www/aria/llavero`,

@@ -37,11 +37,13 @@
 | 25 | Ampliación a conversaciones de cualquier origen (prime, agentes en runtimes y sandboxes), más allá de CLIs con rollout en disco — anunciada por el dueño el 2026-09-12. ADR-016 prevé `documento-turno-mongo v3` en inglés; ADR-020 acepta D1 para fuentes separadas; la migración v2 no está aprobada | H25.1 aceptado y publicado. H25.2 implementado y activado localmente en instancia dedicada; recuperación externa completa y relevancia pendientes. Ver evidencia de operación 2026-10-06. Hito 25 no cerrado | `7a30a9d`; integración runtime `d9abbc8` |
 
 Actualización operativa: [H25.2 local](evidencia/h252-operacion-local-2026-10-06.md).
-AN-KLA rev17 verificada: `f-skopos-h252-llavero-custody-2026-10-06`;
-digest `sha256:2af5f0f4e0458ec5ea4a1a0237999f47de0022c9dadc2b51b9b34172bcf412e3`.
+AN-KLA rev18 verificada: `f-skopos-h252-cloud-restore-2026-10-06`;
+digest `sha256:61f3673aac9f97d656a6087c12cd3f300c84544c5c411d1573b5bebd0dcb95e4`.
 Custodia local mediante Llavero activada; resguardo independiente diferido por
-el Operador. Descarga/restauración desde nube pendiente y periodicidad definida
-sin programador: [evidencia](evidencia/h252-llavero-respaldo-2026-10-06.md).
+el Operador. Recuperación de datos desde descarga comprobada con claves locales
+disponibles: [evidencia](evidencia/h252-recuperacion-nube-2026-10-06.md).
+Periodicidad definida sin programador:
+[política](evidencia/h252-llavero-respaldo-2026-10-06.md).
 Los párrafos anteriores/posteriores fechados conservan su alcance histórico;
 no describen automáticamente el estado actual de la instancia dedicada.
 
