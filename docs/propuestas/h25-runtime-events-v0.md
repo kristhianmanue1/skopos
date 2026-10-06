@@ -1,5 +1,11 @@
 # H25.2 — segundo origen: eventos de runtime
 
+Actualización 2026-10-05: el reconocimiento identifica DSH por su contenido y
+contrasta seq0/sourceEventSeqs con el codec del productor. Perfil candidato y
+matriz de aceptación: `h25-dsh-session-v0-contract.md`. Las menciones inferiores
+a productor desconocido y siete referencias sin resolver son antecedentes,
+no el diagnóstico vigente. No hay adaptador runtime productivo implementado.
+
 Estado: diseño propuesto por encargo del Operador, no implementación ni
 aceptación de un nuevo contrato productivo. INFORMS: ADR-020 y SPEC-007.
 La autorización de merge de H25.1 no activa este adaptador ni amplía permisos.
