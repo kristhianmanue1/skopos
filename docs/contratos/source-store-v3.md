@@ -1,6 +1,9 @@
 # Contrato de fuentes diversas — T4 / ADR-020
 
-Estado: D1 aceptada para implementación; aceptación operativa pendiente de D2.
+Estado inicial T4: D1 aceptada para implementación; D2 entonces pendiente.
+Estado posterior: H25.1 aceptado/publicado con alcance literal; H25.2 tiene
+operación local monousuario. Véanse hoja de ruta y actualización al final;
+no equivale a aceptación de relevancia, multiusuario ni cierre global de H25.
 No sustituye documento-analisis-mongo v2 ni documento-turno-mongo v2.
 
 ## Extensión JSON optativa — ADR-021
@@ -207,5 +210,9 @@ verificada; el Mongo legado permanece separado. El estado pendiente de despliegu
 y destino de respaldo de los párrafos anteriores es histórico. Véanse comandos,
 evidencia, reversión y límites vigentes en
 `docs/evidencia/h252-operacion-local-2026-10-06.md`. Recuperación ante pérdida del
-equipo aún no demostrada: faltan custodia independiente de claves y ensayo desde
-nube. No se adjudica relevancia ni se habilita multiusuario.
+equipo aún no demostrada: la custodia independiente de claves fue diferida por
+el Operador. Sí se comprobó restauración desde descarga OneDrive con claves
+locales disponibles: `docs/evidencia/h252-recuperacion-nube-2026-10-06.md`.
+Mantenimiento y dependencia provisional del programador:
+`docs/evidencia/h252-mantenimiento-2026-10-06.md`.
+No se adjudica relevancia ni se habilita multiusuario.

@@ -13,15 +13,21 @@ turnos: devuelve texto indexado, redactado y acotado, sin releer el origen
 ni verificar su sello. `query` consulta análisis y comprueba longitud y
 sello del fragmento cuando existe; admite legado sin sello marcado
 `sellado:false`. Ver la reparación histórica P-007 en la hoja de ruta.
+Además, `source` conserva fuentes TXT/WhisperX JSON y runtime DSH JSONL con
+revisión/hash explícitos, sin LLM; no migra automáticamente el índice legado.
 
 ## Estado ahora mismo
 
-Implementado en el checkout verificado el 2026-09-12: parsers multi-CLI,
+Documentación contrastada el 2026-10-06: parsers multi-CLI,
 índice, vigilancia incremental y `analyze` sobre turnos ya indexados sin
 análisis previo. Esto no certifica el estado de los servicios ni la
 finalización de una corrida en vivo. La hoja de ruta registra P-007 reparado
 el 2026-09-12 y huérfanos congelados el 2026-09-13; no se ha vuelto a verificar
-aquí el corpus vivo. Ver `docs/hoja-de-ruta.md`.
+aquí el corpus vivo. H25.1 aceptado/publicado; H25.2 integrado y activado en
+perfil local monousuario dedicado, sin cerrar H25 ni adjudicar relevancia.
+Ver `docs/hoja-de-ruta.md` y [CLI y operación](cli.md).
+Codex/OpenAI no son requisitos arquitectónicos. La programación actual del
+respaldo sí depende provisionalmente de Codex; su sustitución está pendiente.
 
 ## Orden de lectura si vas a tocar código
 
@@ -52,20 +58,27 @@ No asumas el contenido de un documento que no leíste — si vas a tocar
 | `src/skopos/cli.py` | SPEC-004 | `skopos query <tema>` |
 | `src/skopos/vigilante.py` | SPEC-005 | `skopos watch`, ciclo de polling |
 | `src/skopos/__main__.py` | — | Dispatcher de comandos |
+| `src/skopos/source_cli.py` | ADR-020/021 | Entrada explícita de fuentes v3 |
+| `src/skopos/source_store.py` | source-store-v3 | Transcripciones, revisiones, recibos y lectura verificada |
+| `src/skopos/runtime_store.py` | H25.2 | Fuentes runtime y vistas explícitas verificadas |
 
-## Arrancar el entorno
+## Inspección inicial sin activar servicios
 
 ```bash
-brew services start mongodb/brew/mongodb-community   # si no está corriendo
-ollama list                                            # confirma qwen3:8b
 cd /Users/krisnova/www/aria/skopos
-source .venv/bin/activate
-python3 -m unittest discover -s tests   # el runner informa conteos y skips
+.venv/bin/python -m skopos --help
+.venv/bin/python -m skopos source --help
 python3 scripts/check_sizes.py && python3 scripts/check_plans.py   # gate de Skevi (ADR-015)
-python3 -m skopos                        # ayuda + comandos
-python3 -m skopos query "<tema>" --no-evidence   # contexto interpretado, sin evidencia cruda
 .venv/bin/an-kla retrieve --query "<tema>" --budget 8000   # contexto de sesiones previas
 ```
+
+La venv debe existir; AN-KLA es una herramienta opcional de contexto del proyecto,
+no dependencia de la CLI instalada. No iniciar/reconfigurar Mongo ni lanzar
+ingestas por seguir esta guía. `query --no-evidence` sí necesita Mongo y omite
+verificación del original; es una consulta a datos, no una ayuda offline.
+Para pruebas, seguir [README: pruebas](../README.md#pruebas) con instancia
+temporal exclusiva. Para operación dedicada, usar el lanzador autenticado
+descrito en [mantenimiento](evidencia/h252-mantenimiento-2026-10-06.md).
 
 Sobre el `--budget 8000`: lo elige quien consulta, y un registro que no
 cabe se excluye **entero y en silencio**. Pedir 2500 con un registro de

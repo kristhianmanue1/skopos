@@ -11,50 +11,62 @@ el sello existe; acepta legado sin sello y lo marca `sellado:false`.
 `search` devuelve texto indexado, redactado y acotado, sin releer el origen
 ni verificar su sello. P-007 registra una reparación histórica; ver la hoja de ruta y sus evidencias.
 
+Por separado, `source` admite transcripciones TXT/WhisperX JSON y exports runtime
+DSH JSONL, con identidad, revisión y hashes explícitos, sin análisis LLM.
+
 Construido siguiendo el método de
 [Skevi](https://github.com/kristhianmanue1/Skevi) (F0→F3). Las decisiones
 de diseño están en `docs/`, no aquí — este README es el contrato de
 arranque: cómo se construye, corre y prueba.
 
-**Estado documental verificado el 2026-09-12:** implementados parsers
-multi-CLI, índice, consultas, vigilancia incremental y `analyze` para crear
-el primer análisis de turnos ya indexados. Ollama es el proveedor por
-defecto; ADR-014 permite otro proveedor con autorización. Este estado del
-código no certifica que Mongo/Ollama estén activos ni cierra corridas en vivo.
+**Estado documental contrastado el 2026-10-06:** parsers multi-CLI, índice,
+consultas, vigilancia y análisis; H25.1 aceptado/publicado y H25.2 integrado,
+con operación local monousuario dedicada. Hito 25 no cerrado: aceptación de
+relevancia y recuperación sin claves locales no demostradas. Véanse la
+[hoja de ruta](docs/hoja-de-ruta.md) y la [guía CLI](docs/cli.md).
 
-```bash
+Skopos no exige Codex ni infraestructura OpenAI. Ollama es el proveedor de
+análisis predeterminado; otros requieren la configuración/autoridad de ADR-014.
+La programación de respaldos actual **sí depende provisionalmente de Codex**:
+su sustitución independiente sigue pendiente. Los scripts de respaldo son
+locales y no llaman a un modelo. [Estado y límites](docs/evidencia/h252-mantenimiento-2026-10-06.md).
+
+Esquema de sintaxis: los corchetes indican opciones, no se copian literalmente.
+
+```text
 python3 -m skopos query "<tema>" [--no-evidence]          # análisis temáticos
 python3 -m skopos search "<texto>"                        # turnos indexados
 python3 -m skopos index --help                            # indexación sin LLM
 python3 -m skopos watch [--sessions-dir DIR] [--intervalo SEGUNDOS] [--backfill]
 python3 -m skopos reanalyze <turn_id> [--solo-redaccion]    # supersede (ADR-007)
 python3 -m skopos analyze --help                          # filtros y ventana
+python3 -m skopos source --help                           # fuentes v3; sin LLM
 # analyze admite --project, --cli, --anchor, --since, --until, --limit, --dry-run
-# --no-evidence sirve sólo tema y resumen: 16 KB en vez de 512 por consulta
+# --no-evidence omite evidencia cruda y su relectura/verificación
 ```
 
 ## Proveedor de análisis: local o remoto (ADR-014, enmienda de ADR-017)
 
 Los dos caminos conviven y se eligen sin tocar código:
 
-| Camino | Cómo se activa | Ritmo medido |
-|---|---|---|
-| **Local** (default) | sin variables `SKOPOS_LLM_*` en el entorno | ~195 s/turno sobre anclas grandes |
-| **Remoto** | `source ~/.skopos-env` antes de invocar skopos | ~6 s/turno |
+| Camino | Configuración |
+|---|---|
+| Ollama local (predeterminado) | Sin variables `SKOPOS_LLM_*` heredadas |
+| API compatible, local o remota | `SKOPOS_LLM_API=openai`, `SKOPOS_LLM_BASE_URL`, `SKOPOS_LLM_MODELO` y, si procede, `SKOPOS_LLM_API_KEY` |
 
-`~/.skopos-env` vive **fuera del repo**, con permisos `600`: la API key
-jamás se commitea (ADR-014 §c). Declara `SKOPOS_LLM_API=openai`, la
-`BASE_URL`, el `MODELO` y la `API_KEY`. Sin ese archivo cargado, skopos
-usa Ollama local byte-idéntico.
+`openai` es el nombre del **protocolo compatible**, no una obligación de usar
+ese proveedor. Se selecciona destino con `SKOPOS_LLM_BASE_URL`; remoto exige
+autorización explícita. Las variables se leen del entorno: no cargar un archivo
+no garantiza modo local si ya estaban heredadas. El archivo `~/.skopos-env` del
+piloto no es obligatorio ni se carga automáticamente; si se usa, mantenerlo fuera
+del repositorio con permisos 600. Nunca incluir claves en ejemplos o commits.
 
-Con Z.ai, **el endpoint importa**: un GLM Coding Plan cubre
-`https://api.z.ai/api/coding/paas/v4`, no `https://api.z.ai/api/paas/v4`
-— esta última es la API estándar, de pago por uso contra el saldo de la
-cuenta, y responde `429 / code 1113` cuando no hay saldo. El status 429
-se lee como límite de tasa y no lo es (`docs/evidencia/piloto-anclas-2026-09-12.md`).
+Endpoints, errores y tiempos del piloto Z.ai son evidencia histórica, no una
+promesa vigente de planes o rendimiento:
+[piloto de anclas](docs/evidencia/piloto-anclas-2026-09-12.md).
 
-`modelo_analisis` registra por turno cuál se usó, así que un corpus
-mixto siempre es distinguible.
+`modelo_analisis` registra el nombre de modelo configurado por turno; no prueba
+por sí solo proveedor efectivo, endpoint, identidad criptográfica ni calidad.
 
 Advertencia deliberada: lo que se manda al proveedor es el **texto crudo
 del turno**. La redacción de secretos actúa sobre campos derivados, no
@@ -83,6 +95,7 @@ Los nombres existentes se preservan por compatibilidad.
 ## Documentación de diseño
 
 - `docs/guia-rapida.md` — arrancar contexto en 5 minutos (empieza aquí).
+- `docs/cli.md` — comandos, requisitos, efectos, selectores y errores.
 - `docs/hoja-de-ruta.md` — hitos, qué está cerrado y qué falta.
 - `docs/f0-analisis-y-requerimientos.md` — problema, REQ-*, restricciones,
   evidencia.
@@ -122,6 +135,22 @@ python3 -m skopos
 python3 -m unittest discover -s tests
 ```
 
+La suite general puede conectar a servicios locales y crear fixtures; no usarla
+contra la instancia operativa para comprobar disponibilidad. Para publicación,
+usar un replica set **temporal exclusivo ya iniciado**, no el Mongo legado ni
+el dedicado operativo:
+
+```bash
+.venv/bin/python scripts/run_isolated_tests.py --mongo-uri mongodb://127.0.0.1:37027
+python3 scripts/check_sizes.py
+python3 scripts/check_plans.py
+```
+
+37027 es sólo un ejemplo: un puerto diferente no prueba aislamiento. El runner
+no inicia Mongo; rechaza servidores sin primario replica set y falla si hay
+skips, suite vacía o fallos esperados. También se necesita Ollama local para
+cubrir su integración; no instala ni inicia proveedores.
+
 ## Decisiones de cascarón
 
 - **Gestor de paquetes:** `pip` + `venv` estándar. Dependencia declarada:
@@ -144,41 +173,41 @@ python3 -m unittest discover -s tests
   del estándar de Skevi (800 líneas genérico, 200 `AGENTS.md`, 300
   `README.md`) y se comprueban con el **gate de Skevi** (ADR-015):
   `python3 scripts/check_sizes.py && python3 scripts/check_plans.py`,
-  configurado en `skevi-gate.json` (canon propio de skopos; gate de
-  planes E1-E5 inactivo hasta que haya un plan nuevo que lo conforme).
+  configurado en `skevi-gate.json`; el gate E1-E5 revisa el plan H25 activo.
 
 ## Próximos pasos
 
 El estado detallado y la procedencia de cada hito están en
 `docs/hoja-de-ruta.md`; las decisiones viven en `docs/adr/`.
 
-1. **Vigencia de búsquedas:** consultar sólo versiones actuales incluso cuando
-   una anterior coincidía con el término. Ver [corrección local](docs/vigencia-y-fuentes-diversas.md).
+1. **Vigencia y evidencia:** conservar la selección de versiones actuales y
+   gestionar fuentes ausentes sin borrarlas ni reanalizarlas por iniciativa del
+   agente. Ver [vigencia](docs/vigencia-y-fuentes-diversas.md) y hoja de ruta.
 2. **Evaluar la corrida de `analyze`:** el comando está implementado
    (ADR-017); la hoja de ruta registra un piloto acotado a siete días.
    Verificar su resultado antes de diseñar `curated-anchor`/`context-block`
    o dar por resuelta la propuesta P-005. No se declara aquí su finalización.
 3. **Persistencia de `watch` tras reinicio:** seguimiento de LaunchAgent,
    sin configuración o activación en esta revisión.
-4. **Ampliación de orígenes:** reuniones, chats, mensajería, código y sesiones
-   de agentes requieren adaptadores propios; no se limita el producto a CLI.
-   Ver [dirección y primer piloto](docs/vigencia-y-fuentes-diversas.md).
+4. **Fuentes diversas:** TXT/WhisperX y DSH ya tienen entrada manual; otros
+   formatos requieren adaptadores y aceptación propios. No hay watcher v3 ni
+   importador universal. Ver [CLI](docs/cli.md).
 5. **Lectura por sesión/rango y búsqueda semántica:** `read` sigue diferido;
    embeddings son condicionales a insuficiencia de `$text` en uso real.
 
-## Fuentes diarizadas — incremento H25.1 en evaluación
+## Fuentes v3 — H25.1 y H25.2
 
 `python3 -m skopos source --help` expone importación manual, búsqueda,
 fetch por revisión/hash y recibos. Exige base explícita; importar requiere
 Mongo replica set. No iniciar ni convertir producción para probarlo.
 Originales referenciados externamente: borrar/mover el archivo puede impedir
 recuperar evidencia. No cambia turnos/análisis v2 ni activa watcher de fuentes.
-Contrato y límites: `docs/contratos/source-store-v3.md`; estado y decisiones
-pendientes: `docs/planes/activos/h25-fuentes-v1.md` (D2a/D2b aún pendientes).
-Con un Mongo **temporal exclusivo ya iniciado** en puerto distinto de 27017:
-`.venv/bin/python scripts/run_isolated_tests.py --mongo-uri mongodb://127.0.0.1:37027`.
-El runner no inicia servicios; sin replica set las pruebas T4 se saltan y
-eso no acredita su integración. La suite general también usa Ollama local.
+H25.1 tiene aceptación literal acotada, no semántica. H25.2 agrega
+`--format dsh-session-v0-jsonl`, `--kind runtime-events` para search/receipt y
+`fetch-runtime` con vista/selector explícitos. `source search` no es el índice
+`search`: verifica originales y busca subcadenas, sin ranking semántico.
+Contrato: [source-store-v3](docs/contratos/source-store-v3.md).
+Operación, respaldos y pendientes: [mantenimiento](docs/evidencia/h252-mantenimiento-2026-10-06.md).
 
 ## Riesgos conocidos, aceptados por ahora (no resueltos en esta ronda)
 
