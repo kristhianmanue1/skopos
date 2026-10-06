@@ -205,8 +205,14 @@ el codec DSH. Lector puro experimental en `experiments/runtime-source-v1/`,
 sin integración a SourceStore/CLI ni activación. Sobre el export identificado:
 126 filas,1375 eventos,1330 referencias resueltas; slices originales verificados.
 Contrato candidato, límites y pruebas: `propuestas/h25-dsh-session-v0-contract.md`.
-Falta decidir el sobre runtime y la selección de texto antes de integrar en copia;
-esta implementación experimental no cierra H25.2 ni el hito 25 completo.
+Actualización 2026-10-06: sobre y proyección selectiva implementados en laboratorio,
+con almacén mixto experimental separado del SourceStore productivo y de la CLI.
+Piloto privado autorizado: una revisión/una cabeza,2 proyecciones recuperadas,
+2 consultas literales y control negativo correctos. Se corrigió roundtrip BSON
+Int64 de tiempos grandes, sin alterar hashes ni duplicar la revisión admitida.
+Fuente y base privadas retenidas localmente hasta decisión del Operador; detalle
+y límites en el contrato candidato. Pendiente adjudicación humana de H25.2;
+no hay activación productiva ni cierre del hito25. AN-KLA sigue histórica.
 El Operador declara que no hay respaldos: conservar evidencia histórica, sin
 borrar/quarantinar ni reanalizar corpus. JSON nuevo no restaura originales.
 Pendientes:12 consultas reales con objetivos adjudicados para evaluar relevancia

@@ -10,6 +10,7 @@ from unittest.mock import patch, MagicMock
 import uuid
 
 import pymongo
+from bson.int64 import Int64
 from test_runtime_verification import load, verification, views, seal
 from test_runtime_envelope import envelope, reader, message, source
 
@@ -20,6 +21,14 @@ TIME = '2026-10-05T00:00:00Z'
 
 
 class RuntimeLaboratoryBoundaryTests(unittest.TestCase):
+    def test_bson_normalization_does_not_coerce_json_types(self):
+        original = {'nested': [Int64(2**40), True, 1.5, '7']}
+        normalized = store_module.json_integers(original)
+        self.assertIs(type(normalized['nested'][0]), int)
+        self.assertIs(type(original['nested'][0]), Int64)
+        self.assertIs(normalized['nested'][1], True)
+        self.assertEqual(normalized['nested'][2:], [1.5, '7'])
+
     def test_database_and_endpoint_guards(self):
         database = MagicMock()
         database.name = 'production'
@@ -84,6 +93,30 @@ class RuntimeStoreTests(unittest.TestCase):
         self.assertEqual(self.store.receipt(**identity), replay)
         with self.assertRaisesRegex(ValueError, '^source_unavailable$'):
             self.fetch(first)
+
+    def test_large_json_times_survive_bson_roundtrip(self):
+        events = [message(), message(1, True)]
+        events[0]['time'], events[1]['time'] = 2**40, -(2**40)
+        self.raw = source(*events)
+        self.path.write_bytes(self.raw)
+        first = self.import_runtime()
+        document = self.store.revisions.find_one({'project_id': self.project})
+        self.assertIs(type(document['envelope']['events'][0]['time']), Int64)
+        verified = self.store._verified_envelope(document)
+        verification.verify(verified, self.raw)
+        self.assertEqual(self.import_runtime(), {**first, 'status': 'duplicate'})
+        self.assertEqual(self.fetch(first)['projection']['text'], 'á終')
+        self.assertEqual(len(self.store.search_runtime(project_id=self.project, term='á')['results']), 2)
+        identity = {k: first[k] for k in ('project_id', 'source_id', 'source_revision', 'source_sha256')}
+        self.assertEqual(self.store.receipt(**identity)['status'], 'duplicate')
+        self.store.heads.update_one({'project_id': self.project}, {'$set': {'source_revision': Int64(1)}})
+        self.store.revisions.update_one({'project_id': self.project},
+                                       {'$set': {'source_revision': Int64(1), 'envelope.source_revision': Int64(1)}})
+        self.assertEqual(len(self.store.search_runtime(project_id=self.project, term='á')['results']), 2)
+        corrupted = deepcopy(document)
+        corrupted['envelope']['events'][0]['time'] = True
+        with self.assertRaises(ValueError):
+            self.store._verified_envelope(corrupted)
 
     def test_mixed_sources_and_crossed_fetch(self):
         runtime = self.import_runtime()

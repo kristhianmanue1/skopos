@@ -673,3 +673,53 @@ exclusivo37027 y fixture Ollama local. Gates273 archivos/un plan verdes;
 diff leído, sin cambios de código después de esta suite. Log:
 `/private/tmp/skopos-runtime.hmdFUy/store-tests.log`. Procede publicar el
 experimento de laboratorio; no implica aceptación del piloto ni cierre de H25.
+
+## Piloto privado de runtime — 2026-10-06
+
+El Operador autorizó continuar con el piloto propuesto: identidad nueva,
+laboratorio local, lectores Operador/proceso autorizado y retención hasta
+decisión expresa. No autoriza promoción productiva ni modificación del corpus.
+Ejecutor reproducible: `experiments/runtime-source-v1/pilot.py`; ZIP y JSONL
+fijados por SHA-256, entrada única, copia privada exclusiva y sin payload en Git.
+
+El primer intento admitió una revisión y una cabeza, pero falló al verificar
+el replay. Diagnóstico comprobado: BSON recupera timestamps grandes como
+`bson.int64.Int64`; el validador JSON exige enteros nativos. Control positivo:
+normalizar exactamente Int64 permite validar el mismo sobre sin cambiar hash.
+Se corrigió exclusivamente la frontera del almacén experimental; no se relajó
+el validador puro ni se convierten bool, float o strings. Se añadieron controles
+de no mutación y regresión Mongo con tiempos positivos/negativos grandes,
+replay, receipt, fetch, search y revisiones BSON Int64.
+
+Antes de retomar se reconcilió el recibo en lectura: una revisión/una cabeza.
+El reintento conservó identidad y primer recibo (`duplicate`), sin reingesta
+ni reescritura correctiva del registro privado. Resultado 05:35:46 UTC:
+126 filas,1375 eventos,2 proyecciones de texto; fetch de2 proyecciones,
+3 filas originales y1 evento derivado coinciden con la fuente. Dos consultas
+literales devolvieron1/1 objetivo cada una; control negativo sin resultados.
+ZIP y JSONL conservaron sus hashes. Estos controles prueban recuperación literal
+de esta muestra, no relevancia general, autenticidad del emisor o éxito del agente.
+
+Custodia local: `/private/tmp/skopos-runtime-pilot.oofiUI`, directorio0700,
+`session.jsonl`0600; base `skopos_test_runtime_pilot` en replica set exclusivo
+loopback37027. Informe privado `report-20261006T053546740063.json`.
+Fuente, base y logs se conservan; no se borran automáticamente por este ejecutor.
+La ruta temporal no garantiza retención frente a limpieza del sistema operativo;
+el ZIP original en Downloads permanece sin cambios. No es una copia de seguridad
+duradera ni una ACL multiusuario. Mongo se detiene al finalizar las comprobaciones.
+
+Autorrevisión adversarial: el fallo real expuso cobertura sintética insuficiente
+(tiempos pequeños); se añadió roundtrip real con Int64 y control bool rechazado.
+Se revisó replay tras resultado parcial, preservación del primer recibo,
+separación de payload privado, límite de ZIP y alcance de consultas literales.
+No hubo revisor independiente. H25.2 requiere adjudicación humana acotada;
+H25 completo,12 consultas reales adjudicadas,ADR-019 y embeddings siguen pendientes.
+No se modificaron CLI,src/skopos,producción ni AN-KLA.
+
+Verificación final del piloto:446 pruebas OK sin omisiones en77.351 s,
+Mongo temporal37027 y fixture Ollama local; gates275 archivos/un plan verdes.
+Log: `/private/tmp/skopos-runtime-pilot.oofiUI/final-tests.log`.
+Tras la suite se comprobaron nuevamente una revisión/una cabeza y hash del JSONL;
+se solicitó parada ordenada del Mongo dedicado, conservando sus archivos.
+Procede publicación del código experimental y evidencia sin payload privado;
+no constituye promoción, aceptación humana ni cierre de H25.

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from bson import BSON
+from bson.int64 import Int64
 from bson.errors import InvalidDocument
 from pymongo.errors import DuplicateKeyError
 from pymongo.read_concern import ReadConcern
@@ -15,6 +16,17 @@ from skopos.source_envelope import _identifier
 from envelope import build_envelope
 from verification import validate, verify, checksum
 from views import fetch_verified, search_verified, DECLARATION
+
+
+def json_integers(value):
+    """Restaurar enteros JSON tras BSON; no convertir bool ni otros tipos."""
+    if type(value) is Int64:
+        return int(value)
+    if type(value) is dict:
+        return {key: json_integers(item) for key, item in value.items()}
+    if type(value) is list:
+        return [json_integers(item) for item in value]
+    return value
 
 
 class LaboratoryStore(SourceStore):
@@ -30,6 +42,7 @@ class LaboratoryStore(SourceStore):
 
     @staticmethod
     def _verified_envelope(document, expected_key=None):
+        document = json_integers(document)
         try:
             envelope = document['envelope']
             if envelope['schema'] not in ('skopos/source-envelope/v0', 'skopos/source-envelope/v1',
@@ -65,12 +78,14 @@ class LaboratoryStore(SourceStore):
         return raw
 
     def _head_document(self, head, project_id, session=None):
+        head = json_integers(head)
         try:
             key = revision_key(project_id, head['source_id'], head['source_revision'])
             if (head['_id'] != project_id + ':' + head['source_id']
                     or head['project_id'] != project_id or head['revision_key'] != key):
                 raise ValueError('store_integrity_failed')
             document = self.revisions.find_one({'_id': key}, session=session)
+            document = json_integers(document)
             if (document is None or document['project_id'] != project_id
                     or document['source_id'] != head['source_id']
                     or type(document['source_revision']) is not int
