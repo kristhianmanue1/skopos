@@ -125,6 +125,7 @@ def query(
     proyecto: str | None = None,
     max_resultados: int = MAX_RESULTADOS_POR_DEFECTO,
     with_evidence: bool = True,
+    expand_accents: bool = False,
 ) -> dict:
     """Devuelve el objeto {resultados, excluidos} del CONTRATO cli-skopos-query v1.
 
@@ -133,7 +134,8 @@ def query(
     contrato— pero vale `null`, y el estado lo declara. Ahorra el 97%
     del egreso y las N lecturas de archivo que la consulta hace hoy.
     """
-    documentos = buscar_por_tema(tema, coleccion=coleccion, proyecto=proyecto)
+    documentos = buscar_por_tema(tema, coleccion=coleccion, proyecto=proyecto,
+                                expand_accents=expand_accents)
     # P5: presupuesto sobre vigentes ya filtrados (ADR-007) — las
     # versiones superseded no consumen cupo (ronda 6, R6-5). Clamp
     # defensivo: un negativo nunca parte la lista (ronda 8, H1).
@@ -171,6 +173,8 @@ def query(
 def query_command(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="skopos query")
     parser.add_argument("tema")
+    parser.add_argument('--expand-accents', action='store_true',
+                        help='añade -ción a palabras simples en -cion; no modifica frases')
     parser.add_argument(
         "--proyecto",
         default=None,
@@ -199,6 +203,7 @@ def query_command(argv: list[str]) -> int:
             proyecto=args.proyecto,
             max_resultados=args.max,
             with_evidence=not args.no_evidence,
+            expand_accents=args.expand_accents,
         )
     except PyMongoError as exc:
         print(f"error: MongoDB no disponible: {exc}", file=sys.stderr)

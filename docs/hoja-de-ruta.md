@@ -77,6 +77,13 @@ Publicación comprobada después: merge fast-forward a main en `7a30a9d`, SHA
 remoto verificado. H25.1 aceptado y publicado; T6 completado con diseño del
 segundo origen, no con su implementación. El hito 25 completo sigue abierto.
 
+Incremento posterior ADR-019: expansión optativa --expand-accents en query/search,
+sin cambio de índice productivo ni comportamiento por defecto. En copia española
+reparacion recupera 7 análisis/635 turnos frente a 0/18 sin expansión; no es
+evaluación de relevancia. Ver `docs/evidencia/adr019-expansion-2026-10-05.md`.
+No corrige frases entre comillas ni todas las tildes. Referencias rotas siguen
+pendientes de originales o decisión de conservación; no se reescribieron sellos.
+
 ## Sesión del 2026-09-13
 
 Rama `docs/sync-language-and-state-20260912` **fusionada a main** (`3ac9885`)

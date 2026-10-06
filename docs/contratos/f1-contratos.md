@@ -241,6 +241,14 @@ fija ese contrato, sólo declara cómo tolera su ausencia o cambio.
 
 ## CONTRATO: cli-skopos-query v1
 
+Extensión optativa 2026-10-05 (también cli-skopos-buscar v1):
+`--expand-accents` / argumento Python `expand_accents=False`. Con true añade
+variante -ción para tokens simples -cion, mantiene signo de negación y no
+modifica frases ni tokens técnicos. Consultas con escapes o comillas impares
+quedan intactas. Desactivado conserva consulta original; no cambia índice ni
+idioma. Resultados, límites y selección de versiones mantienen su contrato.
+No garantiza equivalencia de ranking ni corrección ortográfica general.
+
 Entrada:
   `tema`: string [obligatorio] — primer argumento posicional de
   `skopos query <tema>`; se usa como término de búsqueda de texto

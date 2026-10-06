@@ -29,6 +29,7 @@ from pymongo.errors import PyMongoError
 
 from skopos.almacenamiento import coleccion_turnos
 from skopos.analisis import redactar_secretos
+from skopos.text_query import expand_accents as expand_query_accents
 
 # P5 (ADR-009, extendido por P-004): mismos defaults que `skopos query`
 # para no tener dos presupuestos distintos que recordar.
@@ -66,9 +67,10 @@ def buscar(
     cli: str | None = None,
     max_resultados: int = MAX_RESULTADOS_POR_DEFECTO,
     tope_texto: int = TOPE_TEXTO_BYTES,
+    expand_accents: bool = False,
 ) -> dict:
     """Busca por `$text` sobre el texto crudo y sirve resultados acotados."""
-    filtro: dict = {"$text": {"$search": texto}}
+    filtro: dict = {"$text": {"$search": expand_query_accents(texto) if expand_accents else texto}}
     if proyecto is not None:
         filtro["proyecto"] = proyecto
     if cli is not None:
@@ -135,6 +137,8 @@ def buscar_command(argv: list[str]) -> int:
     )
     parser.add_argument("--proyecto", default=None)
     parser.add_argument("--cli", default=None, help="filtra por CLI de origen")
+    parser.add_argument('--expand-accents', action='store_true',
+                        help='añade -ción a palabras simples en -cion; no modifica frases')
     parser.add_argument(
         "--max", type=_max_no_negativo, default=MAX_RESULTADOS_POR_DEFECTO,
         help="máximo de turnos a servir (default 20); el resto se cuenta en excluidos",
@@ -153,6 +157,7 @@ def buscar_command(argv: list[str]) -> int:
             cli=args.cli,
             max_resultados=args.max,
             tope_texto=args.tope_texto,
+            expand_accents=args.expand_accents,
         )
     except PyMongoError as exc:
         print(f"error: MongoDB no disponible: {exc}", file=sys.stderr)

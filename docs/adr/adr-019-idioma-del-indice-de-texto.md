@@ -12,6 +12,15 @@ corpus actual. La generalización «no pierde nada de lo escrito» sólo tenía
 ocho palabras de evidencia. La expansión (c) requiere semántica y tests para
 frases/negaciones antes de aceptarse, no basta añadir variantes con OR.
 
+Afinamiento posterior autorizado el mismo día: apartado (c) implementado como
+opción explícita `--expand-accents` para query/search, desactivada por defecto.
+Sólo palabras ASCII simples terminadas en -cion; añade -ción sin sustituir el
+término. Negaciones conservan el signo en ambas variantes; frases entre comillas,
+tokens técnicos y consultas con escapes/comillas desbalanceadas no se reescriben.
+No es normalización general ni corrige frases sin tilde. No cambia índices,
+idioma, documentos ni búsqueda literal source. (a)/(b) siguen sin activarse.
+Contrato y evidencia: docs/evidencia/adr019-expansion-2026-10-05.md.
+
 Contexto: ADR-006 decidió `$text` sobre `tema`+`resumen` y dejó escrito
 que la coincidencia es "por palabra, con stemming y stopwords **según el
 idioma configurado en Mongo**". Nunca se configuró. `almacenamiento.py`

@@ -87,7 +87,8 @@ def guardar_analisis(
 
 
 def buscar_por_tema(
-    tema: str, *, coleccion: Collection, proyecto: str | None = None
+    tema: str, *, coleccion: Collection, proyecto: str | None = None,
+    expand_accents: bool = False,
 ) -> list[dict]:
     """Devuelve documentos relacionados con el tema, por texto completo.
 
@@ -101,7 +102,8 @@ def buscar_por_tema(
     homónimo — los documentos sin el campo (pre-C-9 o desconocido)
     quedan fuera, nunca se les inventa una coincidencia.
     """
-    filtro: dict = {"$text": {"$search": tema}}
+    from skopos.text_query import expand_accents as expand_query_accents
+    filtro: dict = {"$text": {"$search": expand_query_accents(tema) if expand_accents else tema}}
     if proyecto is not None:
         filtro["proyecto"] = proyecto
     cursor = coleccion.find(
