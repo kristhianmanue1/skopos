@@ -220,6 +220,13 @@ monousuario/compartido pendiente de respuesta; no declarar producción lista.
 Contrato y reversión: docs/contratos/source-store-v3.md, sección H25.2.
 Diagnóstico documental/contexto vecino en evidencia/adr019-expansion-2026-10-05.md;
 la sonda mejora sólo parte de desarrollo, no satisface aceptación de relevancia.
+Publicado d9abbc8;462 pruebas finales OK sin omisiones,65.912s; gates281/1.
+AN-KLA actualizado como suplemento summary model_derived, no aceptación humana:
+`f-skopos-h252-cli-preparation-2026-10-06`, revisión14,
+`sha256:dec9bcd605448ff4f59b2c3f3896c3cda9aacca029c68f6cb1b1ab14a293a90a`.
+verify y retrieve OK,2241 bytes con budget8000; sin exclusión por presupuesto.
+Recuperar con query "h252 cli preparation". El registro JSON anterior conserva
+su condición histórica; este suplemento informa la integración posterior.
 El Operador declara que no hay respaldos: conservar evidencia histórica, sin
 borrar/quarantinar ni reanalizar corpus. JSON nuevo no restaura originales.
 Pendientes:12 consultas reales con objetivos adjudicados para evaluar relevancia
