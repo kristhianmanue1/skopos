@@ -385,3 +385,185 @@ exclusivo37027 y fixture Ollama local; gates268 archivos/un plan verdes.
 Log: `/private/tmp/skopos-runtime.hmdFUy/envelope-tests.log`. Diff revisado,
 sin cambios de código posteriores a la suite. Procede publicar el experimento,
 no admitir v2 en SourceStore ni activar producción. AN-KLA no se escribió.
+
+## Extensión contractual para laboratorio — 2026-10-05
+
+Estado: PROPUESTA DOCUMENTAL, no ADR aceptado ni implementación del almacén.
+Base de código inspeccionada: 76842e3. INFORMS: SPEC-007 y source-store-v3.
+La continuación autoriza redactar esta extensión; no convierte la propuesta
+en aceptación productiva. La autoridad operativa sigue siendo del Operador.
+
+### Admisión y persistencia propuestas
+
+Extender import_file con source_format='dsh-session-v0-jsonl', manteniendo
+default diarized-text y whisperx-json. Una lectura regular explícita con límites
+actuales; no autodetección, ZIP, watcher, LLM, memoria ni descubrimiento de rutas.
+El constructor runtime recibe los bytes de esa lectura y metadatos explícitos.
+El importador nunca acepta un sobre v2 construido por un tercero como atajo.
+
+source-record/v3 mantiene campos e identidad; envelope admite v0/v1/v2
+mediante dispatch explícito. Conserva transacción snapshot/majority, CAS,
+revisiones consecutivas, índices, límite BSON de 16 MiB y errores existentes.
+No dividir ni truncar una fuente para que quepa; no prometer que 16 MiB de entrada
+caben junto con descriptores/textos. Fallo de validación precede a _prepare.
+
+Regla nueva propuesta: source_kind no puede cambiar dentro de una identidad
+project_id/source_id. Runtime y reunión usan source_id distintos; v0↔v1
+siguen siendo meeting-transcript. Comparar dentro de la misma transacción,
+con error source_kind_conflict. No migrar ni renombrar identidades existentes.
+El replay de misma clave/hash conserva primer sobre/ruta/política/recibo;
+si cambia el formato explícito de esa llamada a otra familia, rechazar, no
+confirmar silenciosamente la representación equivocada. No cambiar de versión
+para resolver respuesta incierta: consultar receipt de la misma identidad.
+
+### Validación en dos niveles
+
+Nivel S, sin abrir el original: identidad de registro, schema reconocido,
+claves cerradas y tipos exactos (bool no entero), metadatos válidos, límites,
+adapter/projection_policy soportados, sello canónico y consistencia interna.
+Para v2 comprobar filas ordenadas, contiguas desde 0 hasta source_bytes,
+IDs ordinales únicos, hashes sintácticos; eventos únicos por seq, row_id existente,
+member_index entero no negativo sólo para miembro de lote, id=event-SEQ;
+texts con event_id/row_id coincidentes, block_index no negativo, id y pointer
+con forma exacta, role/source_kind permitido, texto no blanco y sello de texto.
+Diagnósticos usan claves conocidas y contadores enteros no negativos acotados;
+sequence_gap_count conserva rango seguro JSON, no el límite de cantidad de eventos.
+Rechazar campos ocultos añadidos, segmentos mezclados y versiones desconocidas.
+El nivel S comprueba coherencia declarada; no demuestra fidelidad al archivo.
+La familia debe corresponder al schema: v0/v1=meeting-transcript,
+v2=runtime-events. Sobre conocido mal formado produce store_integrity_failed;
+sello discordante produce envelope_integrity_failed; schema o política no
+soportados conservan sus errores específicos. No clasificar corrupción como
+simple exclusión de familia ni servir una vista parcial para tolerarla.
+La cabeza sólo se coteja al seleccionar vigentes o publicar una revisión nueva;
+fetch histórico y receipt no exigen coincidir con la cabeza actual. Para verificar
+familia al publicar, cargar y validar el registro apuntado por la cabeza dentro
+de la transacción. No añadir source_kind a la cabeza como fuente de verdad paralela.
+Un member_index presente exige type=assistant/chunk y, por fila, índices 0..N-1
+y seq consecutivos; la procedencia real de lote se acredita únicamente en D.
+
+Nivel D, para cualquier lectura que entregue contenido: después de S, leer una
+sola instantánea del original, cotejar longitud/hash, reconstruir el sobre con
+adapter y política fijados y los mismos metadatos declarados. Comparar la forma
+canónica completa reconstruida con la persistida, incluidos textos, localizadores
+y diagnósticos. No basta comparar hashes recalculados sobre datos manipulados.
+No actualizar sobre/política durante lectura; versión no disponible falla explícito.
+Esto verifica derivación, no autoría: alguien con control de base y archivo puede
+reescribir ambos. No se implementa autenticación por hash ni firma de procedencia.
+
+Receipt sólo aplica S: no requiere original y no afirma disponibilidad, derivación
+actual ni éxito del runtime. Replay también valida el registro previo antes de
+retornar duplicate. La identidad cruzada/sello inválido impiden recibo afirmativo.
+La admisión nueva aplica S y D sobre el buffer ya leído antes de persistir.
+import_file, incluido su replay, mantiene lectura previa del archivo como hoy;
+únicamente receipt permite reconciliar sin él. No prometer replay offline.
+
+### APIs y salidas candidatas cerradas
+
+`search_runtime(*, project_id, term, limit=20)`:
+term no blanco y máximo 1024 bytes UTF-8; limit entero 0..20. No acepta view ni
+selector de payload bruto. Captura cabeza por fuente antes del filtro, valida S,
+selecciona runtime, valida D completo antes de acumular resultados de esa fuente.
+Sin fuente parcialmente servida cuando el último elemento falla validación.
+Orden por source_id, seq numérico y block_index; coincidencia subcadena casefold.
+No lee revisiones antiguas para llenar cupos. limit=0 cuenta sin servir textos.
+
+Resultado raíz: results, excluded {result_limit, fragment_too_large},
+unavailable_sources {código: cantidad}, excluded_source_kinds {meeting-transcript:
+cantidad}, declaration y selection=per_source_head_observed. Los conteos por
+tipo se calculan después de validar S, no confiando sólo en source_kind.
+No devolver textos, snippets ni coincidencias de eventos excluidos por política.
+No añadir contadores de política por término: podrían sugerir contenido oculto.
+No prometer coste de escaneo ni latencia acotados por limit.
+
+Cada resultado de búsqueda: project_id, source_id, source_revision,
+source_sha256, envelope_sha256, view=text_projection, projection (un elemento
+texts completo), locator (descriptor de fila sin payload),
+status=runtime_projection_verified, producer_claims=not_verified y declaration.
+JSON UTF-8 compacto completo ≤64 KiB, incluidos todos esos campos; exceso excluye
+la coincidencia entera. No copiar metadata nativa adicional por conveniencia.
+
+`fetch_runtime(*, project_id, source_id, source_revision, source_sha256,
+view, text_id=None, row_id=None, event_id=None)`:
+identidad/revisión/hash siempre explícitos. view exige exactamente un selector:
+
+| view | Selector | Payload y status |
+|---|---|---|
+| text_projection | text_id | projection, locator; runtime_projection_verified |
+| original_jsonl | row_id | original_jsonl UTF-8 exacto con terminador, locator; runtime_bytes_verified |
+| derived_event | event_id | event reconstruido, locator de fila y member_index nullable; runtime_event_verified |
+
+Todas las vistas añaden los cinco campos de identidad/sellos de search,
+view, producer_claims=not_verified y declaration. No payload de otra vista.
+original_jsonl puede seleccionar header; derived_event no transforma header
+en evento. Selección de evidencia bruta es explícita, no permiso ampliado ni ACL.
+Todas aplican S+D y límite de 64 KiB; exceso falla fragment_too_large sin truncado.
+Campos seleccionados inexistentes: runtime_item_not_found; no búsqueda aproximada.
+
+Errores nuevos candidatos: source_kind_conflict, unsupported_envelope_version,
+unsupported_runtime_policy, invalid_runtime_view, invalid_runtime_selector,
+runtime_item_not_found y runtime_derivation_mismatch. Conservar errores vigentes
+para sellos, fuente ausente/alterada, identidad, BSON y driver. Errores de entrada
+antes de conectar; mensajes sin texto del corpus, rutas privadas ni credenciales.
+En search, fuente no verificable se cuenta entera como unavailable_sources;
+identidad de cabeza/registro incoherente aborta la consulta como hoy. En fetch,
+cualquier error implica cero contenido. No tratar error del driver como rollback
+demostrado; receipt sigue siendo recuperación de resultado incierto.
+
+### Colecciones mixtas y CLI: condición previa, no compatibilidad retroactiva
+
+En el lector actualizado, search de transcripciones conserva su payload v0/v1;
+añade excluded_source_kinds {runtime-events: cantidad}. Valida S antes de excluir
+por tipo; no abre originales de otras familias. fetch de transcripción dirigido
+a v2 devuelve source_kind_conflict; fetch_runtime dirigido a v0/v1 también.
+No saltar una cabeza runtime para devolver una revisión histórica meeting.
+Clientes que exijan claves raíz exactas deben actualizarse por ese campo aditivo.
+Las versiones viejas seguirán siendo incompatibles con v2: sólo se asegura
+convivencia con lectores actualizados, no acceso transparente desde código viejo.
+
+CLI candidata: formato explícito nuevo y subcomandos source search-runtime /
+fetch-runtime con flags equivalentes a las APIs; fetch-runtime exige --view y
+el selector correspondiente, sin default bruto. --help no conecta servicios.
+Sin comandos de activación, cambios de índices de corpus ni reconstrucción ADR-019.
+Antes de integrar, actualizar ADR aceptado, SPEC-007 y source-store-v3 junto con
+implementación/tests. Este documento no añade por sí solo comandos ejecutables.
+
+### Matriz de laboratorio y condiciones de avance
+
+Usar replica set temporal exclusivo, puerto distinto de 27017 y base skopos_test*;
+fixtures sintéticos TXT/v0, ASR/v1 y runtime/v2. No clonar ni reanalizar corpus
+productivo. El export privado sólo se incorpora después de fijar su identidad,
+lectores y retención del piloto; no es requisito de la regresión sintética.
+
+| Caso de falsación | Resultado exigido |
+|---|---|
+| Texto/pointer/contador alterado y sellos de texto/sobre recalculados | S puede pasar coherencia; D rechaza derivación; cero contenido |
+| Campo extra, bool como seq, IDs duplicados, row inexistente | S rechaza; control positivo del mismo sobre válido |
+| Original ausente/alterado y restaurado | fetch falla; search cuenta fuente; restauración permite control positivo |
+| Replay, recibo perdido y revisión concurrente | Un único avance CAS; duplicate conserva primer recibo; no inventar revisión |
+| Cambio runtime↔meeting bajo mismo source_id | source_kind_conflict sin avance ni escritura parcial |
+| Búsqueda mixta y fetch cruzado | Cada familia sirve sólo su tipo; exclusiones contadas; sin fallback histórico |
+| Última proyección corrupta tras primeras válidas | Ningún resultado de esa fuente servido |
+| Exceso BSON/salida, limit=0/20, UTF-8 multibyte | Límites exactos; exclusión completa; sin truncado ni byte counts por caracteres |
+| Reasoning/herramientas/instrucciones con señuelo text | No aparecen en search; bruto sólo con vista y selector explícitos |
+| Política desconocida, lector antiguo | Rechazo claro, sin rederivación con versión nueva por defecto |
+
+Autorrevisión adversarial documental: se eliminaron equivalencias falsas
+entre hash y derivación, v3 y compatibilidad, receipt y disponibilidad, y
+selección de vista y autorización. Se fijaron validación por fuente antes de
+servir, identidad estable por familia y presupuesto del JSON completo.
+Riesgos residuales: secreto en text admitido, pérdida de original, coste de
+reparseo, manipulación por actor con acceso local y ausencia de ACL multiusuario.
+No revisión independiente ni validación clínica o certificación del runtime.
+
+Próximo paso recomendado: aceptar esta extensión sólo para laboratorio e
+implementar validador/lecturas y luego admisión, cerrando la matriz con controles
+positivos y negativos antes de cualquier piloto privado. Producción, memoria,
+embeddings y conservación del corpus histórico permanecen fuera del alcance.
+
+Verificación de esta extensión documental: diff completo revisado y gates
+268 archivos/un plan verdes. Suite del código existente:411 pruebas OK sin
+omisiones,74.819 s en Mongo temporal exclusivo y fixture Ollama local; log
+`/private/tmp/skopos-runtime.hmdFUy/contract-tests.log`. No hay cambios Python.
+La matriz nueva define aceptación futura; no se declara ejecutada ni validada
+por esta regresión. No se actualizó el contrato vigente ni se escribió AN-KLA.
