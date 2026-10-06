@@ -78,3 +78,24 @@ JSON decodificado con bytes originales; no inferir causalidad por orden; no
 confundir export completo con captura completa; no anunciar soporte de runtime
 sin reconocer un formato real. Residuales: contrato de ciclos, profundidad,
 eventos opacos y compatibilidad final requieren el ADR siguiente.
+
+## Continuación autorizada y dependencia de entrada — 2026-10-05
+
+El Operador autorizó implementar el segundo origen junto con las otras tres
+acciones. La autorización de trabajo está resuelta; runtime/export concreto
+sigue sin identificar. Se solicitó sistema y ruta: no se reemplaza esa decisión
+con un formato inventado presentado como interoperable. No hay adaptador nuevo
+implementado por este pase ni aceptación de source-envelope/v1.
+
+Ficha mínima para destrabar: runtime y versión declarados, ruta de un export
+local autorizado, formato/encoding observado, ejemplo saneado de mensaje y de
+resultado de herramienta, campo ID nativo, relaciones, reloj y completitud
+declarada, lectores/retención. No hace falta exportar credenciales ni ejecutar
+las herramientas descritas. Conservar desconocidos donde el runtime no informe.
+
+Orden de implementación autorizado una vez identificada la muestra:
+reconocimiento read-only → ADR de localizadores y fetch → constructor puro con
+fixtures derivados saneados → integración explícita SourceStore → regresión
+diarizada completa → piloto temporal → revisión del artefacto final.
+No migrar v0 silenciosamente ni activar producción; merge del adaptador y
+aceptación de sus resultados se resuelven con su evidencia final.

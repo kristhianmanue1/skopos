@@ -77,3 +77,57 @@ No borrar/quarantinar ni reanalizar corpus por iniciativa del agente.
 Después: validar relevancia léxica, decidir reconstrucción ADR-019, elegir
 export real del segundo origen. Embeddings siguen diferidos. AN-KLA rev11
 permanece histórica respecto de estos incrementos; no se escribió memoria.
+
+## Continuación autorizada — 2026-10-05, observaciones UTC del 6
+
+El Operador autorizó los cuatro pasos: merge, búsqueda de originales,
+evaluación ADR-019 y segundo origen; también actualización de AN-KLA.
+La autorización no aporta los originales ni identifica un runtime/export.
+Revalidación previa al merge: 365 tests OK sin skips, 86.180 s, con
+scripts/run_isolated_tests.py y Mongo temporal exclusivo. Log tests.log en
+/private/tmp/skopos-four.0lVFuY. Cambios posteriores sólo documentales.
+
+Nueva sonda sintética bilingüe sobre Mongo temporal exclusivo 37027:
+seis documentos y ocho consultas con objetivos fijados antes de ejecutar.
+No usa conversaciones privadas ni juicios humanos del corpus real.
+Documentos: a=`índice reparación exacta`, b=`índice reparacion pendiente`,
+c=`índice sin cambios`, d=`analizar documentos`, e=`worker running code`,
+f=`la llave de proveedor`. Buscar text, ordenar textScore descendente con
+desempate _id ascendente, top 3; comparar conjuntos contra objetivos.
+
+| Consulta | Objetivo | english | none | spanish | spanish + expansión |
+|---|---|---|---|---|---|
+| reparacion | a,b | a,b | a,b | b | a,b |
+| reparación | a,b | a,b | a,b | a | a |
+| analizado | d | vacío | vacío | d | d |
+| worker | e | e | e | e | e |
+| run | e | e | vacío | vacío | vacío |
+| "reparación exacta" | a | a | a | a | a |
+| índice -reparacion | c | c | c | c,a | c |
+| de | vacío | f | f | vacío | vacío |
+
+Conjunto exacto: 6/8, 5/8, 4/8 y 6/8 respectivamente. No es una clasificación
+general de motores: la selección es pequeña, sintética y del propio autor.
+Autorrevisión corrigió el control de stopword: la primera versión contenía
+del y no de, por lo que su ausencia no demostraba filtrado. Se repitió con de
+presente: english/none recuperan f y español no, control positivo pertinente.
+Artefactos locales: /private/tmp/skopos-four.0lVFuY/evaluate.py y relevance.jsonl.
+
+Conclusión: no activar el índice español todavía. La expansión sólo corrige
+sin tilde → con tilde; no la dirección inversa. El stemming inglés run/running
+se pierde con español. Ninguna variante supera todas las expectativas.
+La corrección optativa sí conserva su contrato acotado y default sin cambios.
+
+Evaluación real pendiente: el Operador debe identificar consultas de trabajo
+y objetivos relevantes antes de ver rankings (español, inglés/técnico,
+negaciones, frases y sin resultados esperados). Comparar las cuatro variantes
+en copia, sólo versiones vigentes, registrar objetivos recuperados/top 20 y
+primer objetivo en ranking. Propuesta de gate: cero pérdidas de objetivos
+críticos respecto del índice actual; discrepancias no críticas adjudicadas
+explícitamente, sin promover el promedio sintético a aceptación productiva.
+
+Búsqueda acotada de nombres en Downloads no identificó un respaldo inequívoco
+de conversaciones; no se abrieron archivos comprimidos ajenos ni se concluye
+ausencia global. El respaldo Mongo conocido no custodia fuentes externas.
+La reparación sigue bloqueada por ruta de originales o decisión de retención;
+no hubo reingesta, borrado, cuarentena ni sustitución de hashes históricos.
