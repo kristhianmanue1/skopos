@@ -723,3 +723,65 @@ Tras la suite se comprobaron nuevamente una revisión/una cabeza y hash del JSON
 se solicitó parada ordenada del Mongo dedicado, conservando sus archivos.
 Procede publicación del código experimental y evidencia sin payload privado;
 no constituye promoción, aceptación humana ni cierre de H25.
+
+## Validación ampliada — 2026-10-05, America/Mexico_City
+
+Artefacto probado:78792241280cd23e4ce4e042d33768e44b99c84e. Alcance autorizado:
+copia de custodia a laboratorio, restauración replica set, cotejo oficial y
+comparación léxica. Sin producción, CLI nueva, embeddings ni escritura AN-KLA.
+Directorio de evidencia local: `/private/tmp/skopos-validation.8SDigv`.
+
+La copia privada de `/Users/krisnova/Skopos-private/runtime-pilot/db` arrancó
+con su replica set original skopos_runtime_pilot_rs en loopback37027;
+primary confirmado. validate full de ambas colecciones correcto. Se reubicó
+source_path sólo en esta copia, preservando sobre, hash, identidad y recibo.
+Replay transaccional duplicate correcto; excepción controlada al reemplazar
+cabeza revirtió inserción de revisión2: una revisión/una cabeza persistieron.
+Control positivo: commit transaccional de documento sintético en base separada.
+Dos fetch correctos después del rollback. No se probó corte eléctrico, pérdida
+de red ni failover multi-nodo. Script: `restore_transactions.py` en ese directorio.
+
+El Operador autorizó compilar temporalmente trec_eval oficial, sin instalación
+en sistema/proyecto. Revisión ba38899cbd4de0fb699b47f39b64ef1c107e4a5c,
+versión declarada10.0-rc3; make quicktest correcto. Referencia:
+https://github.com/usnistgov/trec_eval
+Se cotejaron las cuatro métricas anteriores por consulta (300) y agregadas:
+coinciden con tolerancia0.000051, correspondiente al redondeo de salida.
+recip_rank mide aquí rankings truncados a20. Los runfiles usan scores ordinales
+únicos para conservar el orden observado; no pretenden reproducir textScore.
+
+SciFact BEIR:5183 documentos,300 consultas test,339 juicios positivos.
+Dataset: https://github.com/beir-cellar/beir ; ZIP SHA-256:
+536e14446a0ba56ed1398ab1055f39fe852686ecad24a6306c80c490fa8e0165.
+buscar real, título+abstract en texto_usuario; texto_agente vacío. Variantes y
+casos fijados en compare.py antes de ejecutar, sin ajuste posterior. SHA script:
+cfaa7e1072e51b951ec80af22ece46a123fe99178964e6de6a068f63b62c1b06.
+
+| Variante | Recall@20 | nDCG@10 | P@10 | MRR@20 | Sintéticos exactos |
+|---|---:|---:|---:|---:|---:|
+| english | 0.7442 | 0.5689 | 0.0760 | 0.5410 | 10/12 |
+| none | 0.6746 | 0.5098 | 0.0690 | 0.4836 | 9/12 |
+| spanish | 0.6912 | 0.4981 | 0.0677 | 0.4722 | 7/12 |
+| spanish+expansión | 0.6912 | 0.4981 | 0.0677 | 0.4722 | 9/12 |
+
+No comparar esos conteos como certificación: SciFact es inglés científico,
+no conversación española ni validación clínica. P@10 divide entre10 aunque
+haya pocos relevantes. Se conservó desempate nativo Mongo; sin prueba de
+significancia ni superioridad general. Casos sintéticos:6 documentos/12 consultas
+con expectativas del autor, incluidas tildes en ambas direcciones, flexión,
+inglés, frases, negaciones y ausencia. Expansión conserva pérdida en reparación
+→reparacion y en negación con tilde; español pierde run/running. Ninguna variante
+satisface todas las expectativas. Recomendación: no activar ADR-019 todavía.
+
+Resultados, rankings y salidas oficiales en comparison.json, *.rankings.json,
+*.run y *.trec.txt del directorio local. local-query-candidates.json contiene
+12 necesidades candidatas del diálogo,8 desarrollo/4 reserva. No se ejecutaron:
+referencias documentales sugeridas no son qrels humanos de conversaciones.
+Falta identificar IDs/versiones y adjudicar relevancia/criticidad; no sustituir
+ese paso por etiquetas del agente ni presentar reserva como test ya validado.
+
+Regresión:446 pruebas OK sin omisiones en77.675 s sobre copia replica set,
+log suite.log. Custodia comparada con copia original: idéntica. Autorrevisión
+adversarial, no revisión independiente; métricas con evaluador externo no
+equivalen a adjudicación independiente. Gates y diff se verifican al publicar.
+Pendientes: evaluación local adjudicada, aceptación H25.2 y operación separada.
