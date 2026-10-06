@@ -33,8 +33,8 @@
 | 22 | Idioma por audiencia (**ADR-016, 🔒 2026-09-12**): inglés en comandos, flags, campos e ids de contrato; español en módulos, funciones, comentarios, `docs/` y commits. Los 25,909 campos almacenados **no** se migran hoy: se renombran dentro del `v3` que exigirá la ampliación a conversaciones de cualquier origen, para no pagar dos migraciones. Alias en inglés para `reanalizar`/`indexar`/`buscar`, sin retirar los actuales | **Implementado** — `analyze`/`reanalyze`/`index`/`search` vivos, alias viejos avisan por stderr | — |
 | 23 | Puerta índice→análisis, `skopos analyze` (**ADR-017, 🔒 2026-09-12**, sobre P-006 §7): los turnos indexados eran inalcanzables para el análisis —`indexar` no llama al modelo, `watch` sólo cubre su ventana, `reanalizar` supersede uno existente—, con 25,909 observados y **8 interpretados**. Primer corpus: las **560 anclas `commit-write-plan`** (~3 h serial, local con `qwen3:8b`). No toca turnos con análisis previo; la ventana de ADR-008 queda acotada a `watch` | **Implementado** — 19 tests nuevos (272 en total), `analyze` corrido contra el corpus real y `skopos query` sirviendo resultados por primera vez; primera corrida acotada a **ventana de 7 días** por decisión del dueño (2026-09-12): 129 anclas en vez de 608, y —por P-007— las únicas con offsets sanos, así que el piloto evalúa la capa interpretada con su evidencia cruda. **Piloto cerrado: 135/135 anclas, 0 fallos** (`docs/evidencia/piloto-anclas-2026-09-12.md`) — `skopos.analisis` pasa de 8 a 151 documentos y `skopos query` sirve resultados por primera vez. Hicieron falta cuatro pases (contexto local insuficiente, endpoint de Z.ai equivocado, reintento ausente); ninguno duplicó nada gracias a la idempotencia de (b). Destapó un fallo en `query`: reventaba con análisis de opencode por asumir offsets enteros — corregido con el estado `origen_de_filas` | `pendiente` |
 | 23.1 | **Hallazgo P-007** — offsets irrecuperables en la parte del índice construida el 2026-08-29: el desfase crece turno a turno (firma de un acumulador que no se reinició por archivo) y el 78 % de una muestra cae fuera del EOF, así que `fragmento_completo` (ADR-009 P3, hito 16) se niega. **No es pérdida de contenido ni duplicados** (595 textos distintos de 608): el índice está segmentado distinto, no inflado. La ingesta con el parser de hoy nace sana (0/400 rotos). **REPARADO el mismo día** (`docs/evidencia/reconstruccion-indice-2026-09-12.md`): índice reconstruido de 26,007 a 16,974 turnos —los 9,033 de diferencia eran artefactos de la segmentación vieja, 0 turnos perdidos— con **0/12,156 offsets rotos y 300/300 sellos verificados**. El corpus anterior queda en `turnos_respaldo_20260912`, así que la operación es reversible. **Invariante de escritura implementada** el mismo día (`indexar_turno` rechaza offsets imposibles; 0 rechazos sobre el corpus, sin costo). Los 18 análisis con offsets rancios **resueltos con `reanalyze`** (supersede de ADR-007, que recomputa referencias de origen): 0 fallos de integridad sobre los 112 con turno vivo. **Huérfanos resueltos el 2026-09-13**: congelados —no borrados— en `skopos.analisis_huerfanos_20260913` por decisión del dueño, con el patrón reversible de P-007 (copiar, verificar documento a documento, retirar). 41 de 44 eran re-derivables, 2 residuo de tests y 1 irreproducible por rollout borrado; ninguno servía evidencia verificable y ocupaban 9 de 20 asientos en una consulta sin filtro (`docs/evidencia/congelamiento-analisis-huerfanos-2026-09-13.md`) | — |
-| 24 | P-005 reformulada como contrato (`curated-anchor`, `context-block`) en vez de tercer proyecto — se escribe **después** de la primera corrida del hito 23, por la regla que siguió ADR-010: el contrato generaliza una instancia viva, no la precede | Pendiente del hito 23 | — |
-| 25 | Ampliación a conversaciones de cualquier origen (prime, agentes en runtimes y sandboxes), más allá de CLIs con rollout en disco — anunciada por el dueño el 2026-09-12. **Sin diseñar**: exige su propio análisis. Fuerza `documento-turno-mongo v3`, que nacerá en inglés por ADR-016 | Anunciado, sin análisis | — |
+| 24 | P-005 reformulada como contrato (`curated-anchor`, `context-block`) en vez de tercer proyecto — se escribe **después** de la primera corrida del hito 23, por la regla que siguió ADR-010: el contrato generaliza una instancia viva, no la precede | Contrato pendiente; la corrida previa ya consta en el hito 23. P-005 conserva su propuesta original, aún requiere reconciliación | — |
+| 25 | Ampliación a conversaciones de cualquier origen (prime, agentes en runtimes y sandboxes), más allá de CLIs con rollout en disco — anunciada por el dueño el 2026-09-12. ADR-016 prevé `documento-turno-mongo v3` en inglés; su diseño y migración no están aprobados. Hay pilotos de reuniones y lector diarizado, aislados del producto | Exploración implementada; contrato productivo, integración y aceptación pendientes. No cerrado | `5773dbd`, `8614581` (experimentos) |
 
 ## Sesión del 2026-09-13
 
@@ -99,33 +99,35 @@ ektel), como cadena de supersedes: `f-ciclo-multi-cli-2026-08-20` →
 `f-ciclo-multi-cli-2026-08-28` → `f-skopos-cierre-2026-08-28` →
 `f-skopos-cierre-2026-09-06` → `f-skopos-cierre-p005-2026-09-06` →
 `f-skopos-cierre-h2-2026-09-10` → `f-skopos-cierre-2026-09-12` →
-**`f-skopos-cierre-2026-09-13`** (vigente; revisión
-`sha256:aca06c4b114c3703df9a57690f0bb1e4bbf0b2615db23ebdcc972d1e3e2ec287`,
-nº 9, autoridad `tool_observed` con **dos** recibos `attest` verificados
-—`git rev-parse HEAD` y la suite completa—, decisión `write-full` con
-`tool_evidence_verified`).
-Coexiste con `f-skopos-documentation-language-2026-09-12`, escrita por
-otra sesión el mismo día: no se sustituyen, cubren cosas distintas.
+`f-skopos-cierre-2026-09-13` → **`f-skopos-cierre-2026-10-05`**
+(vigente; revisión
+`sha256:94c5130203221a1b59e3c5fcb89ef07322628401eaf302f07003db936062995c`,
+nº 10, `write-full`, autoridad `tool_observed` mediante recibo `attest`
+de `git rev-parse HEAD`). Ese recibo acredita el SHA observado, no todas
+las afirmaciones del cierre. Verificación y recuperación posteriores: OK.
 
-Recoge la sesión del 2026-09-13/14: el merge a main de once días de
-trabajo, `query --no-evidence`, los 44 huérfanos congelados, la corrida
-de `analyze --project skopos` (199 analizados, 0 fallos, 95.1 % de
-cobertura) y ADR-019 propuesto con su medición. Abierto: ADR-019 sin
-sellar, P-005 como contrato —ya con la precondición cumplida—, el hito
-25 sin diseñar, los 41 huérfanos re-derivables y la calibración de
-`SECONDS_PER_TURN`.
+Recoge commit/push/merge fast-forward en `main` hasta `8614581`, SHA remoto
+comprobado, corrección de vigencia, pilotos de reuniones y lector diarizado.
+Suite: 311 pruebas OK sin skips contra Mongo temporal, no el corpus vivo.
+Evidencia y límites: `docs/evidencia/publicacion-fuentes-2026-10-05.md`.
+Esta referencia documental se publica después de la escritura de memoria;
+su commit puede ser posterior al SHA de código registrado.
+
+Coexiste con `f-skopos-documentation-language-2026-09-12` como antecedente:
+su mención de P-007 pendiente es histórica y quedó superada por la reparación
+posterior. El cierre anterior conserva las mediciones de septiembre; no se
+volvieron a comprobar corpus, cobertura ni índices de producción.
 
 Recuperable con
-`an-kla retrieve --query "skopos cierre merge query no-evidence huerfanos" --budget 8000`.
-**Ojo con el presupuesto**: el registro cuesta 5,643 bytes, así que con
-los 1,500–2,500 habituales de arranque queda fuera por presupuesto y no
-aparece; con 6000 entra él pero se cae el registro acompañante. Es un ejemplo vivo de lo que midió P-005 §1 — AN-KLA sabe qué
-importa pero entrega poco —, y un argumento más para el tejedor.
+`an-kla retrieve --query "skopos cierre hito 25" --budget 8000`.
+Medido al escribir: 3,868 bytes del cierre, 5,076 con el acompañante,
+sin exclusiones por presupuesto. Mantener 8000 y comprobar `used_bytes`
+y exclusiones en cada consulta; las cifras de septiembre son históricas.
 
-Nota de versión: la instalación de AN-KLA para skopos sigue en
-**0.1.0b22** (venv local); hay 0.1.0-beta.28 publicada. Los almacenes de
-otros proyectos y el PATH siguen en versiones anteriores por decisión
-del dueño.
+AN-KLA local: **0.1.0b22**, comprobado el 2026-10-05. El resultado de escritura
+informa `context_diagnostics.installed:false`: no hay bloque gestionado por
+AN-KLA en AGENTS.md; las instrucciones manuales de recuperación sí existen.
+No se instaló ni activó esa integración. Versiones externas no consultadas.
 
 ## Índice de turnos (P-004) e identidad de Codex
 
