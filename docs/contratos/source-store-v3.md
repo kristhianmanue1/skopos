@@ -201,3 +201,11 @@ Autorrevisión adversarial: no se confunde integración con despliegue; selector
 de vista incorrecto falla antes de conectar; ruta de retorno conserva registros;
 tests de parser/sobre/vistas ahora usan módulos integrados, no sólo prototipos.
 El prototipo conserva copias históricas; mantener su divergencia fuera de producto.
+
+Actualización operativa posterior: la instancia dedicada local fue activada y
+verificada; el Mongo legado permanece separado. El estado pendiente de despliegue
+y destino de respaldo de los párrafos anteriores es histórico. Véanse comandos,
+evidencia, reversión y límites vigentes en
+`docs/evidencia/h252-operacion-local-2026-10-06.md`. Recuperación ante pérdida del
+equipo aún no demostrada: faltan custodia independiente de claves y ensayo desde
+nube. No se adjudica relevancia ni se habilita multiusuario.
