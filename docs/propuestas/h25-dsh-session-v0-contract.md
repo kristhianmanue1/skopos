@@ -332,3 +332,56 @@ Regresión previa a publicar esta propuesta:396 pruebas OK sin omisiones,
 93.174 s, Mongo temporal exclusivo37027 y fixture Ollama local. Log:
 `/private/tmp/skopos-runtime.hmdFUy/design-tests.log`. No hubo cambios de código;
 esta suite NO valida comportamiento del sobre/proyector aún no implementados.
+
+## Constructor y proyector experimentales — 2026-10-05
+
+Continuación autorizada por el Operador: implementación pura en
+`experiments/runtime-source-v1/envelope.py`, `build_envelope(bytes, **metadata)`.
+El módulo se importa con su directorio en sys.path para resolver reader;
+las pruebas usan importlib y restauran el registro temporal de módulos.
+Reutiliza validación de identificadores/fecha de source_envelope sin modificar
+el módulo productivo. No requiere dependencias nuevas, filesystem, red o Mongo.
+
+Produce el sobre candidato v2 con descriptores de filas/eventos y textos
+seleccionados; no copia rows.value, events.data, header, replayState ni contenido
+excluido. No es un validador de sobres externos: sólo construye desde bytes;
+validación de entradas persistidas y rederivación en fetch siguen pendientes.
+El sello no prueba autoridad y la marca model no verifica identidad del modelo.
+La salida puede contener secretos dentro del texto admitido: no hay redacción.
+
+Precisión del presupuesto: cuenta las entradas de listas content de los dos
+tipos de mensaje, incluidos mensajes después excluidos, antes de proyectar.
+No desciende a bloques anidados ni inspecciona payloads de otros tipos para
+buscar text. Sus bytes siguen acotados por el lector. blocks_examined identifica
+este presupuesto, no un conteo de contenido privado indexado.
+La forma externa del mensaje se valida antes del origen; la validación de
+bloques text sólo se aplica tras admitir el origen. Mensaje inválido no produce
+textos ni exclusiones de bloque parciales. Campos extra en bloque text invalidan
+el mensaje; bloques opacos con type no vacío sólo cuentan como non_text.
+
+Autorrevisión adversarial de la misma instancia: corregido presupuesto para
+incluir mensajes excluidos; probado invalidado completo si el último bloque
+text es inválido; probados señuelos text dentro de reasoning/tool-result,
+interrupted false/null, roles cruzados, proyecciones repetidas con seq distintos,
+predecesor/fecha/identificadores inválidos y sustituto Unicode en completeness_basis.
+Pruebas específicas:15 del constructor más19 del lector,34 OK con fixtures
+sintéticos. Un test confirma que el SourceStore actual rechaza el v2 construido;
+no se amplió su unión de sobres ni se conectó este experimento a la CLI.
+
+Pendiente fuera de este incremento: diseño aceptado de integración, validador
+del sobre persistido, search_runtime/fetch_runtime, límites BSON/salida,
+colecciones mixtas y piloto de persistencia en copia. H25 permanece abierto.
+
+Sonda adicional del constructor sobre el export identificado (mismo SHA de
+entrada):126 filas/1375 eventos y2 textos proyectados, ambos cotejados por
+pointer y hash contra el original. Exclusiones:1365 eventos por tipo,2 por
+origen y11 bloques no textuales;15 bloques en el presupuesto, cero mensajes
+inválidos o interrumpidos. Los contadores no califican relevancia ni éxito.
+Construcción en memoria con identidad de reconocimiento, sin ingesta y sin
+mostrar/copiar texto privado a evidencia versionada. No equivale a piloto Mongo.
+
+Regresión final:411 pruebas OK sin omisiones en69.627 s contra Mongo temporal
+exclusivo37027 y fixture Ollama local; gates268 archivos/un plan verdes.
+Log: `/private/tmp/skopos-runtime.hmdFUy/envelope-tests.log`. Diff revisado,
+sin cambios de código posteriores a la suite. Procede publicar el experimento,
+no admitir v2 en SourceStore ni activar producción. AN-KLA no se escribió.
