@@ -4,6 +4,14 @@ Estado: **propuesto** — enmienda de ADR-006, pendiente de decisión del
 dueño. No sellado: recrear un índice de texto sobre 17,417 turnos es una
 operación sobre datos y no se ejecuta por iniciativa del agente.
 
+Actualización 2026-10-05: evaluación nueva en copia del respaldo (17849 turnos,
+332 análisis) en `docs/evidencia/referencias-adr019-copia-2026-10-05.md`.
+Confirma efecto de stopwords y regresión sin tilde; no activa esta propuesta.
+La afirmación histórica «corpus español entero» no está verificada para el
+corpus actual. La generalización «no pierde nada de lo escrito» sólo tenía
+ocho palabras de evidencia. La expansión (c) requiere semántica y tests para
+frases/negaciones antes de aceptarse, no basta añadir variantes con OR.
+
 Contexto: ADR-006 decidió `$text` sobre `tema`+`resumen` y dejó escrito
 que la coincidencia es "por palabra, con stemming y stopwords **según el
 idioma configurado en Mongo**". Nunca se configuró. `almacenamiento.py`

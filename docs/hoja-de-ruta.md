@@ -62,6 +62,18 @@ permanecen fuera de Git hasta decisión expresa de retirada.
 Verificación de este pase: 354 tests OK sin skips (97.618 s) sobre Mongo
 temporal exclusivo y Ollama local, sin volver a ingerir la transcripción.
 
+Afinamiento posterior autorizado: receipt/replay validan sello e identidad;
+gate estricto, modelo de estados y combinaciones, caídas reales de mongod
+temporal. Suite final 361 OK sin skips (75.916 s); gates 196 archivos/un plan.
+Evidencia: `docs/evidencia/h25-refinamiento-2026-10-05.md`. Merge autorizado
+tras verificación; no activa producción. AN-KLA rev11 es anterior a este pase.
+Segundo origen diseñado en `docs/propuestas/h25-runtime-events-v0.md`, todavía
+sin adaptador ni export real elegido. Hito 25 no cerrado.
+Referencias/ADR-019: `docs/evidencia/referencias-adr019-copia-2026-10-05.md`;
+cero relocalizaciones admisibles entre 202 candidatos; originales faltantes
+o decisión de conservación requeridos. Ensayo léxico favorable al español con
+regresión sin tilde; no se reconstruyó producción ni se activaron embeddings.
+
 ## Sesión del 2026-09-13
 
 Rama `docs/sync-language-and-state-20260912` **fusionada a main** (`3ac9885`)

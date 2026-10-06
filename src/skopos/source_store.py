@@ -123,6 +123,7 @@ class SourceStore:
         envelope = document['envelope']
         existing = self.revisions.find_one({'_id': document['_id']}, session=session)
         if existing is not None:
+            self._verified_envelope(existing, expected_key=document['_id'])
             if existing['envelope']['source_sha256'] != envelope['source_sha256']:
                 raise ValueError('revision_conflict')
             # Primer recibo gana: no cambiar ruta, metadatos ni parser por replay.
@@ -158,23 +159,41 @@ class SourceStore:
         document = self.revisions.find_one({'_id': key})
         if document is None:
             return {'status': 'not_found'}
+        self._verified_envelope(document, expected_key=key)
         if document['envelope']['source_sha256'] != source_sha256:
             raise ValueError('revision_conflict')
         return _receipt(document, 'duplicate')
 
     @staticmethod
+    def _verified_envelope(document, expected_key=None):
+        """Valida metadatos almacenados sin depender de la custodia externa."""
+        try:
+            envelope = document['envelope']
+            key = revision_key(document['project_id'], document['source_id'],
+                               document['source_revision'])
+            if (document['schema'] != 'skopos/source-record/v3'
+                    or document['_id'] != key
+                    or (expected_key is not None and key != expected_key)
+                    or any(document[field] != envelope[field] for field in
+                           ('project_id', 'source_id', 'source_revision'))
+                    or envelope['schema'] != 'skopos/source-envelope/v0'
+                    or type(document['admitted_at']) is not str):
+                raise ValueError('store_integrity_failed')
+            _digest(envelope['source_sha256'])
+            canonical = json.dumps(
+                {k: v for k, v in envelope.items() if k != 'envelope_sha256'},
+                ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()
+            if checksum(canonical) != envelope['envelope_sha256']:
+                raise ValueError('envelope_integrity_failed')
+        except (KeyError, TypeError, ValueError, OverflowError) as error:
+            if str(error) == 'envelope_integrity_failed':
+                raise ValueError('envelope_integrity_failed') from None
+            raise ValueError('store_integrity_failed') from None
+        return envelope
+
+    @staticmethod
     def _verified_raw(document):
-        envelope = document['envelope']
-        if (any(document[key] != envelope[key] for key in
-                ('project_id', 'source_id', 'source_revision'))
-                or document['_id'] != revision_key(
-                    document['project_id'], document['source_id'], document['source_revision'])):
-            raise ValueError('store_integrity_failed')
-        canonical = json.dumps(
-            {k: v for k, v in envelope.items() if k != 'envelope_sha256'},
-            ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()
-        if checksum(canonical) != envelope['envelope_sha256']:
-            raise ValueError('envelope_integrity_failed')
+        envelope = SourceStore._verified_envelope(document)
         raw = read_source(document['source_path'])
         if (len(raw) != envelope['source_bytes']
                 or checksum(raw) != envelope['source_sha256']):
@@ -207,6 +226,7 @@ class SourceStore:
         document = self.revisions.find_one({'_id': key})
         if document is None:
             raise ValueError('revision_not_found')
+        self._verified_envelope(document, expected_key=key)
         if document['envelope']['source_sha256'] != source_sha256:
             raise ValueError('revision_conflict')
         raw = self._verified_raw(document)

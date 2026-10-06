@@ -3,6 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
 import io
 import json
+import random
+from copy import deepcopy
 from pathlib import Path
 import tempfile
 from threading import Barrier
@@ -11,7 +13,7 @@ from unittest import mock
 import uuid
 
 import pymongo
-from pymongo.errors import PyMongoError
+from pymongo.errors import PyMongoError, OperationFailure
 
 from skopos.source_envelope import build_envelope
 from skopos.source_reader import checksum
@@ -144,6 +146,87 @@ class SourceStoreIntegrationTests(unittest.TestCase):
             project_id=self.project, source_id='s', source_revision=1,
             source_sha256=checksum(RAW)), {**first, 'status': 'duplicate'})
 
+    def test_receipt_replay_and_fetch_reject_corrupt_metadata(self):
+        first = self.admit()
+        original = self.store.revisions.find_one({'project_id': self.project})
+        args = dict(project_id=self.project, source_id='s', source_revision=1,
+                    source_sha256=checksum(RAW))
+        for mutate, error in (
+                (lambda d: d['envelope'].update(project_id='other'), 'store_integrity_failed'),
+                (lambda d: d['envelope'].update(envelope_sha256='0'*64), 'envelope_integrity_failed'),
+                (lambda d: d.pop('envelope'), 'store_integrity_failed'),
+                (lambda d: d.update(schema='unknown'), 'store_integrity_failed')):
+            damaged = deepcopy(original)
+            mutate(damaged)
+            self.store.revisions.replace_one({'_id': original['_id']}, damaged)
+            for operation in (lambda: self.store.receipt(**args), self.admit, self.fetch):
+                with self.subTest(error=error, operation=operation):
+                    with self.assertRaisesRegex(ValueError, error):
+                        operation()
+            self.store.revisions.replace_one({'_id': original['_id']}, original)
+            self.assertEqual(self.store.receipt(**args), {**first, 'status': 'duplicate'})
+        self.path.unlink()
+        self.assertEqual(self.store.receipt(**args)['status'], 'duplicate')
+
+    def test_generated_histories_match_independent_revision_model(self):
+        # Modelo: lista de revisiones; no usa _publish ni consultas del producto
+        # para decidir el resultado esperado. Semillas fijas y subtests reproducibles.
+        for seed in range(8):
+            rng = random.Random(seed)
+            source = 'model-' + str(seed)
+            model = []
+            for step in range(30):
+                action = rng.choice(('new', 'replay', 'conflict', 'fetch')) if model else 'new'
+                with self.subTest(seed=seed, step=step, action=action):
+                    if action == 'new':
+                        revision = len(model) + 1
+                        text = 'token_%d_%d_end' % (seed, revision)
+                        raw = ('[0.0 - 1.0] SPEAKER_01: ' + text + '\n').encode()
+                        path = Path(self.directory.name) / ('%s-%d' % (source, revision))
+                        path.write_bytes(raw)
+                        result = self.admit(path, revision=revision, source_id=source,
+                                            expected_previous_sha256=model[-1][1] if model else None)
+                        self.assertEqual(result['status'], 'imported')
+                        model.append((path, checksum(raw), text))
+                    elif action == 'replay':
+                        revision = rng.randint(1, len(model))
+                        self.assertEqual(self.admit(
+                            model[revision-1][0], revision=revision, source_id=source,
+                            expected_previous_sha256=model[revision-2][1] if revision > 1 else None
+                        )['status'], 'duplicate')
+                    elif action == 'conflict':
+                        with self.assertRaisesRegex(ValueError, 'revision_conflict'):
+                            self.admit(self.path, revision=1, source_id=source)
+                    else:
+                        revision = rng.randint(1, len(model))
+                        result = self.store.fetch(project_id=self.project, source_id=source,
+                            source_revision=revision, source_sha256=model[revision-1][1],
+                            segment_id='segment-000001')
+                        self.assertEqual(result['segment']['text'], model[revision-1][2])
+                    found = self.store.search(project_id=self.project, term='token_%d_' % seed)
+                    self.assertEqual([x['segment']['text'] for x in found['results']], [model[-1][2]])
+                    self.assertEqual(self.store.revisions.count_documents(
+                        {'project_id': self.project, 'source_id': source}), len(model))
+
+    def test_all_pairs_newline_unicode_completeness_and_replay(self):
+        # Producto cartesiano de 2x3x3 factores: cubre todos los pares y triples.
+        import itertools
+        for index, (newline, text, completeness) in enumerate(itertools.product(
+                ('\n', '\r\n'), ('alpha', 'miércoles', '🙂 café'),
+                ('unknown', 'partial', 'complete'))):
+            with self.subTest(newline=newline, text=text, completeness=completeness):
+                raw = ('[0.0 - 1.0] SPEAKER_UNKNOWN: ' + text + newline).encode()
+                path = Path(self.directory.name) / ('pair-%d' % index)
+                path.write_bytes(raw)
+                args = dict(source_id='pair-%d' % index, capture_completeness=completeness,
+                            completeness_basis=None if completeness == 'unknown' else 'fixture')
+                self.assertEqual(self.admit(path, **args)['status'], 'imported')
+                self.assertEqual(self.admit(path, **args)['status'], 'duplicate')
+                result = self.store.fetch(project_id=self.project, source_id=args['source_id'],
+                    source_revision=1, source_sha256=checksum(raw), segment_id='segment-000001')
+                segment = result['segment']
+                self.assertEqual(raw[segment['start_byte']:segment['end_byte']].decode(), text)
+
     def test_conflicts_cannot_advance_head(self):
         with self.assertRaisesRegex(ValueError, 'predecessor_conflict'):
             self.admit(self.second, revision=2)
@@ -190,6 +273,22 @@ class SourceStoreIntegrationTests(unittest.TestCase):
         self.assertEqual(self.store.revisions.count_documents({'project_id': self.project}), 1)
         self.assertEqual(self.store.heads.find_one({'project_id': self.project})['source_revision'], 1)
         self.assertEqual(self.admit(self.second, revision=2)['status'], 'imported')
+
+    def test_driver_retries_callback_without_duplicate_publication(self):
+        publish = self.store._publish
+        calls = []
+        def transient_after_publish(document, session):
+            result = publish(document, session)
+            calls.append(result['status'])
+            if len(calls) == 1:
+                raise OperationFailure('fallo transitorio sintético', code=251,
+                    details={'errorLabels': ['TransientTransactionError']})
+            return result
+        with mock.patch.object(self.store, '_publish', side_effect=transient_after_publish):
+            self.assertEqual(self.admit()['status'], 'imported')
+        self.assertEqual(calls, ['imported', 'imported'])
+        self.assertEqual(self.store.revisions.count_documents({'project_id': self.project}), 1)
+        self.assertEqual(self.fetch()['status'], 'transcript_bytes_verified')
 
     def test_lost_ack_reconciled_without_duplicate_or_original(self):
         original = self.store.import_file
@@ -284,6 +383,29 @@ class SourceStoreIntegrationTests(unittest.TestCase):
         result = self.store.search(project_id=self.project, term='tiny')
         self.assertEqual(result['results'], [])
         self.assertEqual(result['excluded']['fragment_too_large'], 1)
+
+    def test_exact_fragment_boundaries_and_result_limits(self):
+        self.admit()
+        document = self.store.revisions.find_one({'project_id': self.project})
+        segment = document['envelope']['segments'][0]
+        fragment = self.store._fragment(document, segment, RAW)
+        size = len(json.dumps(fragment, ensure_ascii=False, separators=(',', ':')).encode())
+        for budget in (size - 1, size, size + 1):
+            with self.subTest(budget=budget), mock.patch(
+                    'skopos.source_store.MAX_FRAGMENT_BYTES', budget):
+                if budget < size:
+                    with self.assertRaisesRegex(ValueError, 'fragment_too_large'):
+                        self.store._fragment(document, segment, RAW)
+                else:
+                    self.assertEqual(self.store._fragment(document, segment, RAW), fragment)
+        for count in (19, 20, 21):
+            path = Path(self.directory.name) / ('limit-%d' % count)
+            path.write_bytes(b'[0.0 - 1.0] SPEAKER_01: boundary\n' * count)
+            project = 'boundary-' + uuid.uuid4().hex
+            self.admit(path, project_id=project)
+            result = self.store.search(project_id=project, term='boundary')
+            self.assertEqual(len(result['results']), min(count, 20))
+            self.assertEqual(result['excluded']['result_limit'], max(0, count - 20))
 
     def test_corrupt_head_cannot_cross_project(self):
         self.admit()

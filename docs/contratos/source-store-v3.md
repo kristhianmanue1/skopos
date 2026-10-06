@@ -38,6 +38,9 @@ Repetición conserva primer registro completo; ruta/metadatos no se reescriben.
 devuelve primer recibo con status duplicate o status not_found; hash distinto
 en la misma clave es revision_conflict. No lee archivos. Sirve para reconciliar
 resultado incierto, no como promesa de que el archivo todavía esté disponible.
+Receipt y replay verifican identidad del registro y sello del sobre antes de
+confirmar duplicate, sin leer el original. Registro incoherente produce
+store_integrity_failed o envelope_integrity_failed, nunca recibo afirmativo.
 
 `search(*, project_id, term, limit=20)`: term no vacío y hasta 1024 bytes;
 limit entero 0–20 (bool inválido). Sólo cabezas del proyecto, antes del filtro.

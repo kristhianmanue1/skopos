@@ -4,7 +4,8 @@ Estado: plan de trabajo autorizado; revisión v1 refinada tras autorrevisión.
 Actualización T4: D1 aceptada por «adelante» del Operador el 2026-10-05;
 custodia externa y almacenamiento Mongo separado, sin activación ni merge.
 Actualización T5: piloto literal aceptado por el Operador; D2b acotada a sus
-resultados. T6 abierto, sin merge ni activación. Ver evidencia de aceptación.
+resultados. Merge autorizado después de afinar y verificar; producción sin
+cambios. Diseño del segundo origen y evaluación separada O1/O2 autorizados.
 Fecha: 2026-10-05. Base: `2d7038f961a04b6790b35559e22c455039dbcfe1`.
 Encargo: plan detallado, ronda adversarial, refinamiento e inicio de ejecución.
 Autor: Codex. La revisión de la misma instancia es autorrevisión, no revisión
@@ -153,8 +154,9 @@ Steps:
   Verificación: ningún blocker abierto; tests y gates pasan sobre código final.
 - [ ] Obtener aceptación y realizar sólo publicación/activación autorizadas.
   Verificación: SHA remoto y estado del servicio se comprueban por separado.
-- [ ] Diseñar el segundo adaptador de estructura distinta.
+- [x] Diseñar el segundo adaptador de estructura distinta.
   Verificación: no se cierra hito 25 completo hasta fijar y cumplir su aceptación propia.
+  Artefacto: docs/propuestas/h25-runtime-events-v0.md; diseño no implementado.
 
 TAREA O1 — recuperación operacional de Mongo
 Consumes: diagnóstico de lectura T1 y configuración de servicio vigente.
@@ -173,10 +175,11 @@ TAREA O2 — decidir ADR-019 y evaluar búsqueda
 Consumes: docs/adr/adr-019-idioma-del-indice-de-texto.md; evidencia operacional O1.
 Produce: decisión documentada y evaluación lexical antes de embeddings.
 Steps:
-- [ ] Contrastar índices vivos con la propuesta y preservar conteos.
+- [x] Contrastar índices vivos con la propuesta y preservar conteos.
   Verificación: idioma observado, diferencias de configuración y restricciones multilingües explícitas.
 - [ ] Preparar ensayo comparativo en copia y decisión de reconstrucción.
   Verificación: consultas predefinidas, tildes, frases, recall/ranking y rollback; ningún drop en producción sin autorización.
+  Ensayo en copia ejecutado; juicio de relevancia y decisión productiva pendientes.
 ```
 
 ## Decisiones y condiciones de parada
@@ -242,3 +245,16 @@ autorización inicial fue ampliado para ese corpus y el reinicio/respaldo
 solicitados; no autoriza operaciones adicionales sobre producción.
 T6 conserva pendientes de cierre y segundo adaptador. Merge y activación
 requieren decisión separada; no se declara hito 25 completo.
+
+Actualización de autoridad posterior: el Operador pidió ejecutar el plan
+refinado y autorizó merge después de verificar, manteniendo producción sin
+cambios. También autorizó diseñar eventos de runtime y resolver referencias
+rotas/evaluar ADR-019 por separado. El ensayo de reparación e índices se hace
+en copia del respaldo, nunca sobre producción por inferencia. Instalar nuevas
+dependencias no está incluido. AN-KLA rev11 es anterior a este afinamiento.
+
+Refinamiento: validar identidad/sello de receipt y replay sin exigir original;
+gate estricto sin skips, suite vacía ni fallos esperados; modelo independiente,
+combinaciones y fronteras; ensayo de caída de proceso temporal. No promete
+durabilidad ante fallo físico, escala ni consistencia global de búsquedas.
+Evidencia de cierre: docs/evidencia/h25-refinamiento-2026-10-05.md.
