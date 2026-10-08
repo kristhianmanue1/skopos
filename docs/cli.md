@@ -22,6 +22,7 @@ marcadores sin sustituirlos por recursos y decisiones autorizados.
 | `source search/fetch/fetch-runtime/receipt` | Lecturas v3 explícitas | Mongo; sin LLM |
 | `custody` | Custodia mecánica PDF experimental bajo política del host | Mongo para admitir/recuperar; sin LLM |
 | `custody-host serve/request` | Canal PDF con configuración de host fija y material exacto | Mongo dedicado para admisión/recuperación; sin LLM |
+| `document-host serve/request` | Derivados PDF locales con política separada | Mongo dedicado y original v0.2 verificable; sin LLM |
 
 `source` exige `--database`; URI predeterminada localhost:27017. No usar ese
 default por comodidad en el perfil dedicado autenticado. El índice legado y
@@ -32,6 +33,8 @@ IMSS sólo en un piloto local monousuario con política y base dedicadas;
 ver [evidencia bilateral](evidencia/pdf-custody-imss-pilot-2026-10-08.md).
 El [procedimiento del piloto bajo demanda](evidencia/pdf-custody-pilot-operations-2026-10-08.md)
 documenta `preflight/start/status/smoke/stop` sobre esa base dedicada.
+La [guía de derivados PDF](evidencia/pdf-document-pilot-operations-2026-10-08.md)
+encadena host y cliente con parada controlada al salir o recibir INT/TERM.
 La CLI directa no es frontera para un agente con shell y credenciales.
 
 ## Turnos y análisis: opciones reales
