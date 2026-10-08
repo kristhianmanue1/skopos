@@ -20,6 +20,8 @@ revisión/hash explícitos, sin LLM; no migra automáticamente el índice legado
 monousuario admitió técnicamente el PDF IMSS bajo política de referencia
 externa; ver `docs/evidencia/pdf-custody-imss-pilot-2026-10-08.md`. No hay
 extracción, aislamiento entre usuarios demostrado ni despliegue general.
+Su operación bajo demanda tiene un procedimiento separado en
+`docs/evidencia/pdf-custody-pilot-operations-2026-10-08.md`.
 
 ## Estado ahora mismo
 

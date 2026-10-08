@@ -30,6 +30,8 @@ Nada en estos ejemplos autoriza exposición de red, envío remoto o reanálisis.
 `custody` conserva el esquema de laboratorio. `custody-host` admitió el PDF
 IMSS sólo en un piloto local monousuario con política y base dedicadas;
 ver [evidencia bilateral](evidencia/pdf-custody-imss-pilot-2026-10-08.md).
+El [procedimiento del piloto bajo demanda](evidencia/pdf-custody-pilot-operations-2026-10-08.md)
+documenta `preflight/start/status/smoke/stop` sobre esa base dedicada.
 La CLI directa no es frontera para un agente con shell y credenciales.
 
 ## Turnos y análisis: opciones reales
