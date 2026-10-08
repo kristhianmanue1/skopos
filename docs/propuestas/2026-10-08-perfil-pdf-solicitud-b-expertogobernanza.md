@@ -78,8 +78,9 @@ atribuida con origen inmediato, URI/ficha y momento de consulta cuando proceda,
 `declared_scope`, perfil de sello y `capture_requested_at`. Ninguna URI
 autoriza descarga automática. El límite de bytes/páginas y el presupuesto
 de proceso deben fijarse y probarse antes de implementación; no heredar el
-límite TXT de 16 MiB como promesa PDF. La entrada declara si se permite OCR,
-renderizado o salida a red; por defecto del piloto: sin red y sin modelo.
+límite TXT de 16 MiB como promesa PDF. La entrada sólo puede seleccionar OCR,
+renderizado o salida a red si el perfil preconfigurado los ofrece; por defecto
+del piloto: sin red y sin modelo.
 Para este caso el consumidor sí tiene hash de su copia y debe entregarlo
 como `expected_source_sha256`; la opcionalidad sólo cubre otros orígenes sin hash
 previo y no los equipara a esta verificación.
@@ -95,7 +96,8 @@ queda `unknown`, sin impedir la custodia mecánica. Si faltan PDF y referencia
 legible, no hay admisión `ok` por tener metadatos de origen.
 `source_delivery` no elige retención: un PDF lateral efímero requiere además
 referencia duradera gobernada para `verified_external_reference`; de otro modo
-se limita a verificación puntual, o se decide `managed_copy` por separado.
+puede motivar una verificación puntual separada, pero la admisión duradera
+rechaza `recovery_requirement_unsatisfied`. `managed_copy` se decide aparte.
 
 Identidad del original: `(project_id, material_id, source_revision)` y
 `original_sha256`/`byte_length` de **la copia recibida**. Una corrección del
@@ -209,8 +211,10 @@ Si no hay borrado selectivo de respaldo, se declara no soportado y se rechaza
 material cuya política lo requiera. Exportar incluye manifiesto de hashes,
 versiones, cobertura y referencias; ningún export acredita autenticidad.
 
-La ficha pública sugiere origen público, pero no sustituye clasificación de
-la copia y los derivados por el Operador. OCR, notas y futuros corpus pueden
+La ficha pública sugiere origen público, pero no sustituye la clase descriptiva
+permitida por la política para la copia y sus derivados. La clasificación
+jurídica o una excepción de política sí requiere autoridad humana. OCR, notas
+y futuros corpus pueden
 contener datos sensibles. Piloto propuesto: procesamiento local sin salida de
 red, sin LLM, sin envío a IMSS, Ágora o expertoGobernanza. Cualquier OCR
 externo, descarga o transferencia exige perfil/red/datos autorizados aparte.
@@ -280,37 +284,40 @@ recuperar aun después de perder la copia del consumidor, corresponde estudiar
 `managed_copy` con almacén, respaldo, retiro y enmienda de ADR-020 propios.
 La igualdad de hashes no prueba independencia de respaldos.
 
-**Decisión bilateral pendiente:** versión exacta del contrato y perfil,
-clasificación del manual, raíz/acceso/duración de solicitud, PDF lateral,
+**Preconfiguración bilateral pendiente:** versión exacta del contrato y perfil,
+clases descriptivas permitidas, raíz/acceso/duración de solicitud, PDF lateral,
 referencia persistente y salida; propietario y retención por modo; política de
 sello; límites de bytes/páginas; responsable de relocalización y prueba de
-recuperación. La ficha del consumidor permite atribuir un cotejo puntual con
-la URL IMSS, pero no decide vigencia jurídica ni aceptación de citas.
+recuperación. Una vez instalada, los agentes seleccionan y verifican esas
+reglas sin consulta rutinaria al Operador. Si falta una regla requerida,
+rechazan con razón tipada; no crean permisos ni retención por inferencia.
+La ficha del consumidor permite atribuir un cotejo puntual con la URL IMSS,
+pero no decide vigencia jurídica ni aceptación de citas.
 Para operación real se requieren implementación, controles positivo/negativo
 de la matriz del contrato base, pruebas de corte y restauración, evaluación de
 cobertura PDF, rechazo del consumidor ante fallos y aceptación humana
 separada. Publicar este borrador no satisface esa puerta.
 
-**Skopos/productor:** aceptar o rechazar perfil PDF; decidir si referencia
-verificada basta para el caso y cómo resolver/relocalizar la ruta autorizada;
-fijar límites, sello, derivadores, retención de metadatos, recuperación y
-errores. Sólo una copia propia requiere enmendar la elección de custodia de
-ADR-020; un perfil PDF y sobre nuevo requieren decisión contractual propia.
-Identificar responsable y versión implementable del contrato base y perfil.
-Para `authorized_reference`, acordar raíz real, acceso del proceso, reglas
-ante enlaces y cambios de ruta, duración mínima de la referencia y prueba de
-lectura/recuperación tras reinicio y restauración. Para `provided_file`, acordar
-entrega y caducidad del archivo lateral, además de su destino durable o el
-rechazo de admisión duradera en modo referencia.
+**Skopos/productor:** anuncia únicamente el perfil PDF y políticas realmente
+habilitados para ese consumidor. En cada solicitud comprueba raíz, permiso
+efectivo, bytes, ficha, sello y retención; prefiere
+`verified_external_reference` sólo cuando todos sus requisitos se cumplen.
+Si falla uno, rechaza con causa tipada; no selecciona `managed_copy` ni una
+ruta nueva por sí mismo. El host o responsable de plataforma configura antes
+las raíces, duración, límites, derivadores, sello, retención, recuperación y
+reglas de relocalización. Sólo una copia propia requiere enmendar la elección
+de custodia de ADR-020; un perfil PDF y sobre nuevo requieren decisión
+contractual propia. `provided_file` no altera estas obligaciones.
 
-**expertoGobernanza/consumidor:** conserva su original; debe fijar ubicación
-autorizada para Skopos, respaldo, retención, retirada y restauración. Clasificar
-el material y autorizar alcance de piloto, decidir qué citas/diagramas necesita,
-política jurídica, umbral de cobertura y plan de evaluación de
-relevancia. Debe comprobar bytes y sello exigido antes de usar un derivado.
-Debe decidir si su propio respaldo basta para la recuperación requerida, quién
-responde ante la pérdida de la referencia, y si quiere solicitar una copia
-gestionada por Skopos con política y enmienda separadas.
+**expertoGobernanza/consumidor:** conserva su original y declara identidad,
+hash, alcance, procedencia atribuida y requisito de recuperación dentro de la
+oferta vigente. Su host configura ubicación accesible para Skopos, respaldo,
+retención, retirada y restauración. El agente consumidor verifica recibo y
+bytes recuperados, conserva `disposicion_id` y aplica su propio gate. Puede
+registrar clasificación descriptiva permitida, sin resolver vigencia jurídica
+ni aceptar citas por el solo recibo. La necesidad excepcional de una copia
+gestionada por Skopos se eleva como cambio de política/ADR, no como elección
+automática durante el intercambio.
 La integración es optativa: puede aportar directamente su copia a Ágora o a
 su propio gate si su custodia y verificación lo permiten. Skopos no escribe
 registry, EvidenceEdge ni AN-KLA; ninguna conformidad mecánica los modifica.

@@ -37,13 +37,16 @@ suelto sea todo un repositorio, ni que un Excel incluya sus vínculos externos.
 
 ## Entrada, identidad y recibo candidatos
 
-Entrada manual propuesta: `contract_id` y `contract_version` bilaterales
+Entrada de agente consumidor propuesta: `contract_id` y `contract_version` bilaterales
 aceptados, `request_id` y `request_sha256` de los bytes exactos del archivo de
 solicitud, `project_id`, `material_id`,
 `source_revision`, `expected_previous_sha256` si procede, `source_delivery`,
 `scope=single_object`, `custody_mode`, tipo declarado, procedencia opcional
 atribuida, `classification`, `custody_policy_id` y versión,
-`seal_profile_id`, presupuesto y límites del perfil. Una URI de procedencia
+`seal_profile_id`, presupuesto y límites del perfil. Los identificadores de
+política, clasificación, sello y límites solicitados deben coincidir con una
+oferta vigente del productor y con el ámbito habilitado para ese consumidor;
+la solicitud no los crea ni los modifica. Una URI de procedencia
 no desencadena descarga. El productor registra tipo detectado y método por
 separado; ni extensión ni MIME declarado prueban formato seguro.
 
@@ -130,7 +133,8 @@ El consumidor vuelve a leer y verificar el archivo entregado antes de
 admitirlo. Raíces autorizadas, permisos, caducidad, limpieza, fallos de
 salida y límites del transporte requieren acuerdo y pruebas bilaterales.
 
-`seal_policy` se fija en el perfil bilateral, no en cada respuesta. `required`
+`seal_policy` se deriva del perfil bilateral preconfigurado, no de una
+preferencia libre de la solicitud ni de la respuesta. `required`
 necesita esquema, objeto cubierto y material de verificación autorizados;
 `not_required` informa `seal_check=not_applicable`. Un SHA-256 coincidente
 prueba correspondencia de bytes, no firma, autoría, oficialidad ni vigencia.
@@ -191,9 +195,10 @@ de esa ruta sólo tras decisión de custodia, almacenamiento y recuperación.
 | `managed_copy` | Skopos conserva objeto adicional y puede recuperarlo si la copia del consumidor se pierde, sujeto a respaldo y claves propios. Hash igual no demuestra independencia si ambas copias comparten equipo/soporte. | Más almacenamiento, acceso, respaldo y superficies de retiro; coordinar plazos y borrado de ambas copias. Cambia la elección de referencia externa de ADR-020 y requiere enmienda expresa antes de implementarse. |
 
 Para el primer piloto se **propone evaluar la referencia verificada**, no
-declararla aceptada. El consumidor debe autorizar esa ruta y su acceso local,
-fijar su conservación y ensayar pérdida/restauración; si necesita recuperación
-independiente de su copia, se justifica `managed_copy` con decisión separada.
+declararla aceptada. El host del consumidor debe preautorizar esa ruta y su
+acceso local, fijar su conservación y ensayar pérdida/restauración. Si se
+necesita recuperación independiente de su copia, se justifica `managed_copy`
+con decisión separada.
 Un recibo de importación por referencia acredita el hash observado entonces,
 no disponibilidad posterior: `fetch_original` vuelve a leer y verificar.
 Un cambio de ruta no se arregla con el mismo hash por inferencia; exige
@@ -219,8 +224,12 @@ Errores mínimos: `not_found`, `revision_unavailable`, `bytes_unavailable`,
 una admisión parcial. Reintentos con resultado incierto consultan recibo y
 estado del objeto; no inventan una revisión nueva.
 
-Antes de admitir, decidir propietario, lectores, clasificación, plazo,
-exportación, retiro y respaldos **por modo**. Exportar exige bytes y manifiesto
+Antes de habilitar un perfil, el responsable de plataforma configura
+propietario, lectores, clases permitidas, plazo, exportación, retiro y
+respaldos **por modo**. En cada intercambio los agentes seleccionan sólo una
+opción ya ofrecida y verifican que esté vigente; la ausencia de una regla
+requerida produce `policy_unavailable`, no una propuesta implícita de
+retención indefinida. Exportar exige bytes y manifiesto
 con hashes, revisiones, contrato y límites de cobertura. En modo referencia,
 la exportación de bytes depende de lectura autorizada de la copia del
 consumidor; Skopos no promete exportarla si desapareció. Restaurar exige
@@ -425,6 +434,88 @@ un índice, una ruta o un recibo: debe entregar salida de bytes y comprobar
 longitud/hash. El consumidor debe leer y verificar la salida antes de
 admitirla; una salida temporal no es custodia independiente permanente.
 
+## Perfil de intercambio entre agentes propuesto
+
+El consumidor de expertoGobernanza inicia `describe_capabilities` para el
+ámbito `expertogobernanza` y el perfil PDF. Skopos devuelve versiones,
+operaciones, formatos, modos de custodia, límites y políticas **ya habilitados**
+para ese ámbito, con identificador/versión y vigencia. Una capacidad anunciada
+no concede permisos del sistema operativo ni prueba acceso a una ruta concreta.
+Si no existe política completa y vigente, la oferta no incluye admisión PDF y
+devuelve `execution_failed/policy_unavailable` al intentar admitir. Los
+borradores actuales no contienen una configuración bilateral instalada de
+raíces, acceso, retención, sello y clasificación; por ello **todavía no hay
+intercambio PDF autónomo operable**.
+
+El consumidor declara material/revisión, alcance `single_object`, hash esperado,
+`source_delivery`, procedencia atribuida si existe, requisitos de recuperación
+y clasificación descriptiva admitida por la oferta. Puede seleccionar un
+perfil ofrecido, pero no rebajar sello, ampliar retención ni imponer una ruta.
+El productor valida contrato y solicitud, consulta política vigente, abre
+bytes bajo raíz autorizada con permisos efectivos, coteja longitud/hash y
+ficha, aplica revisión/CAS y emite `ok` con recibo correlacionado o fallo
+tipado sin resultado consumible. El consumidor coteja correlación, contrato,
+política, identidad y hashes; conserva su `disposicion_id` y decide su propio
+gate. `fetch_original` posterior usa identidad/revisión/hash admitidos y
+vuelve a verificar bytes antes de entregar una salida temporal verificable.
+
+Orden determinista para el primer caso: si el perfil ofrecido admite
+`verified_external_reference`, existe raíz persistente preautorizada para el
+consumidor, el proceso puede leer la copia regular, los bytes coinciden y una
+política de retención/recuperación vigente satisface el requisito declarado,
+Skopos selecciona ese modo. Si falla alguna condición, rechaza con la causa
+tipada (`policy_unavailable`, `permission_denied`, `bytes_unavailable`,
+`hash_mismatch` o `recovery_requirement_unsatisfied`, según el primer control
+fallido), sin elegir otra ruta ni pasar a `managed_copy`. El orden propuesto es:
+(1) versión/correlación y forma; (2) política vigente, clase, sello y retención
+compatibles; (3) raíz y permiso efectivo; (4) bytes regulares legibles y
+longitud/hash; (5) copia persistente y requisito de recuperación; (6)
+revisión/CAS. Un fallo detiene el flujo antes de cualquier efecto persistente;
+errores simultáneos se reportan por ese orden. `provided_file` es
+sólo transporte: exige `persistent_ref` verificada para ese modo. Si el
+consumidor exige independencia de la copia que conserva, este perfil rechaza
+`recovery_requirement_unsatisfied`; una copia propia necesitaría política y
+decisión separadas. La versión bilateral debe adoptar o enmendar expresamente
+esta precedencia antes de implementar.
+
+| Quién resuelve | Parámetros y límite de autoridad |
+|---|---|
+| Agentes bajo contrato/política | El consumidor declara identidad, alcance, hash, procedencia atribuida, necesidad de recuperación y clase descriptiva permitida. Skopos anuncia capacidades, selecciona la política ya habilitada, verifica bytes/ficha y acepta o rechaza con recibo. Ambos verifican correlación y recuperación; ninguno adjudica vigencia jurídica ni admite al corpus. |
+| Host o responsable de plataforma, antes del intercambio | Raíces de entrada/persistencia/salida, permisos efectivos, identidad del proceso, contrato/perfil habilitados, clases permitidas, retención/retiro, sello, límites, respaldo y capacidad de restauración. Su existencia se comprueba, no se infiere de la solicitud. |
+| Decisión humana excepcional | Cambio de política o ADR; nueva custodia propia o acceso fuera de raíz; admisión jurídica o al corpus; aceptación de riesgo y promoción de fase. No se solicita escoger ruta, sello o plazo en cada operación rutinaria. |
+
+Ejemplo **esquemático**, sin configuración ni ejecución real. Este anuncio
+sólo sería válido si el host hubiera instalado la política ilustrativa
+`candidate/consumer-reference/v0.1` y sus permisos. Usa el mismo identificador
+que las solicitudes de admisión anteriores:
+
+```json
+{"contract_id":"expertogobernanza/skopos-source","contract_version":"v0.1","operation":"describe_capabilities","request_id":"eg-cap-001","project_id":"expertogobernanza","profile":"skopos/pdf-profile/v0.2"}
+{"contract_id":"expertogobernanza/skopos-source","contract_version":"v0.1","request_id":"eg-cap-001","status":"ok","policy":{"id":"candidate/consumer-reference","version":"v0.1","custody_modes":["verified_external_reference"],"scope":["single_object"],"seal_policy":"not_required","retention_basis":"configured:consumer-policy"},"operations":["admit_original","fetch_original"]}
+```
+
+En el estado documental actual, sin esa política instalada, la misma
+solicitud `admit-001` recibiría este fallo hipotético correlacionado:
+
+```json
+{"contract_id":"expertogobernanza/skopos-source","contract_version":"v0.1","request_id":"eg-b-pdf-admit-001","request_sha256":"f6705bd3906d581bfb1475e1ab65cc04fed6be6ecf7674e4ab869deecb41b1fc","status":"execution_failed","error":{"code":"policy_unavailable","stage":"admission"}}
+```
+
+Ninguna línea es una respuesta observada. El recibo `ok` anterior muestra sólo
+la rama hipotética tras configurar política y superar todos los controles. El anuncio
+y la solicitud deberán compartir el sobre bilateral y sus digests cuando se
+congele el transporte; estas líneas no suplantan el ejemplo de archivo JSON.
+
+Falsadores mínimos adicionales, cada negativo junto a un caso positivo con
+misma política: política ausente/expirada → ningún anuncio de admisión y
+`policy_unavailable`; raíz no preautorizada → rechazo antes de abrir bytes;
+permiso OS retirado → `permission_denied`; `provided_file` sin copia
+persistente → `recovery_requirement_unsatisfied`; retención menor que la
+requerida → mismo rechazo; sello obligatorio ausente → `seal_missing`;
+clasificación fuera de oferta → `policy_unavailable`; cambio de bytes tras
+recibo → `hash_mismatch` en recuperación. Ninguna ruta negativa puede crear
+revisión, devolver bytes alternativos o activar `managed_copy` por fallback.
+
 ## Autoridad, interoperación y primer incremento
 
 Los bytes se tratan como datos no confiables: no se ejecutan macros, código,
@@ -447,8 +538,8 @@ responsables; sus identificadores de propuesta no son compatibles por nombre.
 
 Primer incremento propuesto: contrato base sobre fixture textual sintético
 y perfil PDF acotado sobre fixtures propios, primero con referencia verificada.
-Para el PDF real se exige después decisión de clasificación, custodia,
-retención, ruta autorizada y piloto. Criterios
+Para el PDF real se exige después perfil y política preconfigurados, acceso
+efectivo, retención vigente y piloto; si faltan, los agentes rechazan. Criterios
 previos a conformidad: controles positivo/negativo de bytes, revisión,
 concurrencia, corte entre objeto y Mongo, respuesta perdida, falta de original,
 formato sin perfil, ruta fuera de raíz, enlace simbólico, cambio de archivo
