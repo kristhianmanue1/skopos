@@ -41,6 +41,7 @@ python3 -m skopos watch [--sessions-dir DIR] [--intervalo SEGUNDOS] [--backfill]
 python3 -m skopos reanalyze <turn_id> [--solo-redaccion]    # supersede (ADR-007)
 python3 -m skopos analyze --help                          # filtros y ventana
 python3 -m skopos source --help                           # fuentes v3; sin LLM
+python3 -m skopos custody --help                          # PDF, laboratorio bajo política
 # analyze admite --project, --cli, --anchor, --since, --until, --limit, --dry-run
 # --no-evidence omite evidencia cruda y su relectura/verificación
 ```

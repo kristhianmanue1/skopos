@@ -1,7 +1,9 @@
 # Perfil PDF candidato para la Solicitud B de expertoGobernanza
 
 Estado: **PROPUESTA para revisión bilateral**, 2026-10-08. Versión candidata
-`skopos/pdf-profile/v0.2`; no implementada, aceptada, activada ni publicada.
+`skopos/pdf-profile/v0.2`; no implementada en su totalidad, aceptada ni
+activada. La custodia binaria de laboratorio descrita en
+`2026-10-08-incremento-custodia-pdf.md` no incluye extracción ni localizadores.
 Refina la propuesta PDF v0.1 documentada en la ronda previa; no enmienda
 ADR-020. Depende del
 contrato base candidato `skopos/source-custody/v0.1` descrito en

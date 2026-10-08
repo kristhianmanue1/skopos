@@ -15,6 +15,8 @@ sello del fragmento cuando existe; admite legado sin sello marcado
 `sellado:false`. Ver la reparación histórica P-007 en la hoja de ruta.
 Además, `source` conserva fuentes TXT/WhisperX JSON y runtime DSH JSONL con
 revisión/hash explícitos, sin LLM; no migra automáticamente el índice legado.
+`custody` añade una ruta de laboratorio para originales PDF por referencia,
+sin extracción ni política de host operativa en este repositorio.
 
 ## Estado ahora mismo
 

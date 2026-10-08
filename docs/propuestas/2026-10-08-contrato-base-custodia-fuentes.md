@@ -1,7 +1,10 @@
 # Contrato base candidato de custodia de fuentes
 
 Estado: **PROPUESTA documental**, 2026-10-08. Identificador candidato:
-`skopos/source-custody/v0.1`. No implementado, aceptado ni activado.
+`skopos/source-custody/v0.1`. No implementado en su totalidad, aceptado ni
+activado. Un incremento de laboratorio para custodia mecánica PDF existe en
+`2026-10-08-incremento-custodia-pdf.md`, con esquema propio y sin conformidad
+bilateral declarada.
 Fuentes contrastadas: ADR-020, ADR-021, `docs/contratos/source-store-v3.md` y Solicitud B
 `expertogobernanza/skopos-source/v0.1`. No sustituye esos contratos ni
 declara compatibilidad con ellos. El perfil PDF candidato está en
