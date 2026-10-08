@@ -1,10 +1,9 @@
 schema: pinax/project-manifest/v1
 id: skopos
 proposito: >
-  Memoria observable de sesiones de CLIs de IA: captura de turnos, análisis
-  temático local con Ollama, almacenamiento consultable en MongoDB local,
-  recuperación por tema y vigilante en vivo, con acceso al fragmento completo
-  de origen cuando hace falta.
+  Captura, conserva y recupera fuentes observadas con identidad y procedencia.
+  Mantiene un pipeline de turnos de CLIs de IA y una superficie separada de
+  fuentes explícitas para transcripciones y eventos runtime.
 consumidor_principal: agente
 
 ofrece:
@@ -21,8 +20,14 @@ ofrece:
   - >-
     análisis de turnos ya indexados que aún no lo tienen (ADR-017);
     no toca los que ya tienen análisis — eso es reanalizar
-  - pipeline verificado con datos reales (28 turnos, ~19.6 s/turno, 0 fallos)
   - contratos de parser por CLI aceptados (ADR-010 + SPEC-006) como base de la extensión multi-CLI
+  - >-
+    fuentes explícitas mediante source-store-v3: admisión con revisión y hash,
+    búsqueda literal, recuperación verificada y recibos; perfiles TXT,
+    WhisperX JSON y DSH JSONL sin análisis LLM
+  - >-
+    vistas runtime explícitas y verificadas: proyección textual, fila JSONL
+    original o evento derivado, según selector
 
 no_ofrece:
   - >-
@@ -32,9 +37,12 @@ no_ofrece:
     pendiente en el issue #1, y qwen-code diferido por decisión del dueño)
   - retención, expiración ni borrado selectivo de lo capturado
   - redacción garantizada de secretos en fragmento_completo (evidencia cruda por diseño)
-  - búsqueda semántica (la recuperación usa $text de MongoDB, ADR-006)
+  - búsqueda semántica; el legado usa $text y source/runtime usa subcadena verificada
   - garantía de exactitud del análisis producido por el LLM local
   - ejecución de código o intervención sobre los CLIs observados
+  - almacén universal para cualquier formato ni búsqueda semántica de fuentes
+  - ACL multiusuario propia en la superficie runtime
+  - garantía de completitud, autoría o relevancia semántica de una fuente admitida
 
 publica:
   - { tipo: contrato, id: skopos/rollout-jsonl-de-codex, version: v1 }
@@ -46,9 +54,10 @@ publica:
   - { tipo: contrato, id: skopos/cli-skopos-reanalizar, version: v1 }
   - { tipo: contrato, id: skopos/cli-skopos-analyze, version: v1 }
   - { tipo: contrato, id: skopos/consulta-escrubery-cli, version: v1 }
+  - { tipo: contrato, id: skopos/source-store, version: v3 }
 
 consume:
-  - { tipo: externo, id: mongodb-local, uso: "almacenamiento de turnos y análisis; instalación y operación locales", requerido: true }
+  - { tipo: externo, id: mongodb-local, uso: "almacenamiento de turnos, análisis y fuentes explícitas; instalación y operación locales", requerido: true }
   - { tipo: externo, id: ollama-local, uso: "proveedor de análisis por defecto (qwen3:8b); sustituible conforme a ADR-014, no necesario para indexar o buscar", requerido: false }
   - { tipo: proyecto, id: escrubery, uso: "canal alternativo de obtención de conversaciones (REQ-10); ensayo registrado en el hito 10, no implica operación continua", requerido: false }
 
@@ -61,10 +70,12 @@ fronteras_de_confianza:
   - el soporte de codex-cli, claude-code, cline, kimi-code y opencode está implementado; cada parser nuevo requiere su propia verificación
   - "query comprueba longitud y sello cuando existe; admite legado sin sello marcado sellado:false. P-007 tiene reparación histórica registrada en docs/evidencia/reconstruccion-indice-2026-09-12.md y congelamiento de huérfanos en docs/evidencia/congelamiento-analisis-huerfanos-2026-09-13.md; esos resultados no certifican el corpus vivo actual"
   - search devuelve texto indexado redactado y acotado, sin releer el origen ni verificar su sello
+  - source-store-v3 verifica bytes y localizadores de la copia recibida; un hash no acredita completitud ni autenticidad de origen
+  - la superficie runtime no concede ACL multiusuario por sí misma
   - lo capturado incluye rutas absolutas y se almacena localmente; un proveedor remoto autorizado puede recibir entradas del análisis (ADR-014)
 
 pospuesto:
-  - ampliación a conversaciones de otros orígenes; prime-agent pendiente y qwen-code diferido
+  - ampliación a más orígenes; prime-agent pendiente y qwen-code diferido
   - lectura por sesión, fecha o rango
   - borrado selectivo y política de retención
   - búsqueda semántica si $text resulta insuficiente en uso real
