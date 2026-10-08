@@ -19,12 +19,13 @@ from skopos.indexador import indexar_command
 from skopos.vigilante import watch_command
 from skopos.source_cli import source_command
 from skopos.pdf_custody_cli import custody_command
+from skopos.pdf_custody_host import host_command
 
 COMANDOS = {"query": query_command, "watch": watch_command,
             "analyze": analyze_command,
             "reanalyze": reanalizar_command, "index": indexar_command,
             "search": buscar_command, "source": source_command,
-            "custody": custody_command,
+            "custody": custody_command, "custody-host": host_command,
             # alias heredados (ADR-016 (d)): mismo comando, nombre viejo
             "reanalizar": reanalizar_command, "indexar": indexar_command,
             "buscar": buscar_command}
@@ -38,7 +39,9 @@ Comandos:
   source --database DB <import|search|fetch|receipt>
                              fuentes TXT/ASR/runtime, entrada manual; fetch-runtime disponible
   custody --policy FILE --database DB --envelope-ref REF
-                             custodia PDF por referencia autorizada
+                             custodia PDF de laboratorio (sin frontera de agente)
+  custody-host serve --config FILE | request --socket PATH --envelope-ref REF
+                             canal candidato con configuración fijada por host
   query <tema>              busca por tema en lo ya analizado (SPEC-004)
   watch [--sessions-dir DIR] [--intervalo SEGUNDOS] [--backfill]
                              vigila y procesa turnos nuevos (SPEC-005);

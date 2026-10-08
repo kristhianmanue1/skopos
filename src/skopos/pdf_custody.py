@@ -25,6 +25,7 @@ IDENTIFIER = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z')
 MAX_REQUEST_BYTES = 64 * 1024
 MAX_POLICY_BYTES = 16 * 1024
 MAX_PROVENANCE_BYTES = 256 * 1024
+HOST_POLICY_SCHEMA = 'skopos/pdf-custody-policy/v0.2'
 
 
 class CustodyError(ValueError):
@@ -142,7 +143,8 @@ def load_policy(path):
                 'classification', 'requests_root', 'input_root', 'source_root', 'delivery_root',
                 'retention_until', 'retention_basis', 'max_bytes', 'seal_policy',
                 'seal_profile_id', 'recovery_requirement')
-    if any(key not in policy for key in required) or policy['schema'] != 'skopos/pdf-custody-policy/v0.1':
+    if (any(key not in policy for key in required)
+            or policy['schema'] not in ('skopos/pdf-custody-policy/v0.1', HOST_POLICY_SCHEMA)):
         raise CustodyError('policy_unavailable')
     for field in ('requests_root', 'input_root', 'source_root', 'delivery_root'):
         fd = _root_fd(policy[field])
@@ -165,10 +167,34 @@ def load_policy(path):
         raise CustodyError('retention_policy_missing') from None
     if expiry.tzinfo is None or expiry <= datetime.now(timezone.utc):
         raise CustodyError('retention_policy_missing')
+    if policy['schema'] == HOST_POLICY_SCHEMA:
+        allowed = policy.get('allowed_materials')
+        if not isinstance(allowed, list) or not allowed:
+            raise CustodyError('policy_unavailable')
+        seen = set()
+        for item in allowed:
+            if not isinstance(item, dict) or set(item) != {
+                    'material_id', 'source_revision', 'source_ref', 'source_sha256',
+                    'provenance_ref', 'provenance_sha256'}:
+                raise CustodyError('policy_unavailable')
+            try:
+                material = _identifier(item['material_id'])
+                revision = item['source_revision']
+                if type(revision) is not int or not 1 <= revision < 2**63:
+                    raise CustodyError('policy_unavailable')
+                _parts(item['source_ref'])
+                _digest(item['source_sha256'])
+                _parts(item['provenance_ref'])
+                _digest(item['provenance_sha256'])
+            except CustodyError:
+                raise CustodyError('policy_unavailable') from None
+            if (material, revision) in seen:
+                raise CustodyError('policy_unavailable')
+            seen.add((material, revision))
     return policy
 
 
-def read_request(policy, envelope):
+def read_request(policy, envelope, *, contract_version=VERSION):
     """Ata sobre externo, bytes exactos de solicitud y su identidad."""
     for key in ('request_file_ref', 'request_sha256', 'request_id', 'contract_id', 'contract_version'):
         if key not in envelope:
@@ -180,7 +206,8 @@ def read_request(policy, envelope):
     for key in ('request_id', 'contract_id', 'contract_version'):
         if request.get(key) != envelope[key]:
             raise CustodyError('request_mismatch')
-    if request.get('contract_id') != CONTRACT or request.get('contract_version') != VERSION:
+    if (request.get('contract_id') != CONTRACT
+            or request.get('contract_version') != contract_version):
         raise CustodyError('unsupported_contract')
     _identifier(request['request_id'])
     return request
@@ -206,9 +233,23 @@ def _policy_current(policy):
         raise CustodyError('retention_policy_missing')
 
 
+def _allowed_material(policy, material, revision, source_sha256):
+    """La política v0.2 liga identidad y bytes antes de abrir el original."""
+    if policy['schema'] != HOST_POLICY_SCHEMA:
+        return None
+    for item in policy['allowed_materials']:
+        if item['material_id'] == material and item['source_revision'] == revision:
+            if item['source_sha256'] != _digest(source_sha256):
+                raise CustodyError('material_not_allowed')
+            return item
+    raise CustodyError('material_not_allowed')
+
+
 def _admission_data(request, policy):
     project, material, revision = _identity(request, policy)
     _policy_current(policy)
+    allowed = _allowed_material(policy, material, revision,
+                                request.get('expected_source_sha256'))
     if request.get('operation') != 'admit_original' or request.get('scope') != 'single_object':
         raise CustodyError('unsupported_operation')
     if (request.get('custody_mode') != 'verified_external_reference'
@@ -239,10 +280,18 @@ def _admission_data(request, policy):
         reference = delivery.get('persistent_ref')
         if not reference:
             raise CustodyError('persistent_reference_missing')
-        lateral = _read_under(policy['input_root'], delivery.get('file_ref'), maximum,
-                              stage='admission')
     else:
         raise CustodyError('unsupported_delivery')
+    if allowed is not None and reference != allowed['source_ref']:
+        raise CustodyError('material_not_allowed')
+    provenance = request.get('provenance')
+    if allowed is not None and (not isinstance(provenance, dict)
+            or provenance.get('record_ref') != allowed['provenance_ref']
+            or provenance.get('record_sha256') != allowed['provenance_sha256']):
+        raise CustodyError('material_not_allowed')
+    if mode == 'provided_file':
+        lateral = _read_under(policy['input_root'], delivery.get('file_ref'), maximum,
+                              stage='admission')
     raw = _read_under(policy['source_root'], reference, maximum, stage='admission')
     observed = hashlib.sha256(raw).hexdigest()
     if observed != _digest(request.get('expected_source_sha256')):
@@ -251,7 +300,6 @@ def _admission_data(request, policy):
         raise CustodyError('hash_mismatch', 'admission')
     if not raw.startswith(b'%PDF-'):
         raise CustodyError('unsupported_format')
-    provenance = request.get('provenance')
     if provenance is not None:
         if (not isinstance(provenance, dict)
                 or provenance.get('asserted_by') != policy['owner']
@@ -413,10 +461,22 @@ class PdfCustodyStore:
 
     def receipt(self, request):
         project, material, revision = _identity(request, self.policy)
+        _policy_current(self.policy)
+        allowed = _allowed_material(self.policy, material, revision,
+                                    request.get('expected_source_sha256'))
         document = self.revisions.find_one({'_id': ':'.join((project, material, str(revision)))})
         if document is None:
             return {'admission_status': 'not_found'}
         _verified_document(document, ':'.join((project, material, str(revision))))
+        if (document['policy_id'] != self.policy['policy_id']
+                or document['policy_version'] != self.policy['policy_version']
+                or document['policy_sha256'] != _policy_digest(self.policy)):
+            raise CustodyError('policy_mismatch')
+        if allowed is not None and (document['source_ref'] != allowed['source_ref']
+                or not isinstance(document.get('provenance'), dict)
+                or document['provenance'].get('record_ref') != allowed['provenance_ref']
+                or document['provenance'].get('record_sha256') != allowed['provenance_sha256']):
+            raise CustodyError('material_not_allowed')
         if (document['source_sha256'] != _digest(request.get('expected_source_sha256'))
                 or document['request_sha256'] != _digest(request.get('admission_request_sha256'))):
             raise CustodyError('revision_conflict')
@@ -425,6 +485,8 @@ class PdfCustodyStore:
     def fetch(self, request):
         project, material, revision = _identity(request, self.policy)
         _policy_current(self.policy)
+        allowed = _allowed_material(self.policy, material, revision,
+                                    request.get('expected_source_sha256'))
         if request.get('operation') != 'fetch_original':
             raise CustodyError('unsupported_operation')
         key = ':'.join((project, material, str(revision)))
@@ -432,6 +494,11 @@ class PdfCustodyStore:
         if document is None:
             raise CustodyError('not_found', 'retrieval')
         _verified_document(document, key)
+        if allowed is not None and (document['source_ref'] != allowed['source_ref']
+                or not isinstance(document.get('provenance'), dict)
+                or document['provenance'].get('record_ref') != allowed['provenance_ref']
+                or document['provenance'].get('record_sha256') != allowed['provenance_sha256']):
+            raise CustodyError('material_not_allowed', 'retrieval')
         expected = _digest(request.get('expected_source_sha256'))
         if document['source_sha256'] != expected:
             raise CustodyError('revision_conflict', 'retrieval')
@@ -443,6 +510,12 @@ class PdfCustodyStore:
                           self.policy['max_bytes'], stage='retrieval')
         if len(raw) != document['byte_length'] or hashlib.sha256(raw).hexdigest() != expected:
             raise CustodyError('hash_mismatch', 'retrieval')
+        provenance = document.get('provenance')
+        if provenance is not None:
+            record = _read_under(self.policy['source_root'], provenance['record_ref'],
+                                 MAX_PROVENANCE_BYTES, stage='retrieval')
+            if hashlib.sha256(record).hexdigest() != provenance['record_sha256']:
+                raise CustodyError('hash_mismatch', 'retrieval')
         output_ref = request.get('output_ref')
         _deliver(self.policy['delivery_root'], output_ref, raw)
         return {'material_id': material, 'source_revision': revision,

@@ -142,3 +142,9 @@ ofrecer la copia y ficha atribuidas mediante un sobre correlacionado. Skopos
 debe verificar hash y bytes, y el consumidor debe ensayar recuperación del
 original. Sólo entonces puede describirse como **admisión técnica**. Vigencia
 jurídica, cita, corpus y promoción de fase conservan autoridades separadas.
+
+**Continuación posterior:** el canal candidato de host y la política de
+lista exacta `v0.2` se describen en
+[`2026-10-08-perfil-host-pdf-binario-v0.1.md`](2026-10-08-perfil-host-pdf-binario-v0.1.md).
+La CLI directa descrita aquí sigue siendo de laboratorio; no representa la
+frontera operativa ni cambia el ensayo histórico.

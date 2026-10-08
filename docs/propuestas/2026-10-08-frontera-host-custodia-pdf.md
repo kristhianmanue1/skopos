@@ -98,3 +98,12 @@ versión más estrecha aceptada por ambos agentes, y corrida bilateral con
 recibos archivados. Hasta entonces el resultado correcto es rechazo operativo,
 aunque la mecánica de laboratorio siga pasando. Este documento no instala la
 frontera ni convierte el ensayo en admisión real.
+
+**Actualización posterior:** el mecanismo candidato de socket y lista exacta
+por material quedó especificado en
+[`2026-10-08-perfil-host-pdf-binario-v0.1.md`](2026-10-08-perfil-host-pdf-binario-v0.1.md).
+No está instalado con identidad/ACL separadas. Para el piloto aceptado
+`while_reference_available`, un respaldo independiente no es propiedad
+prometida ni precondición; la pérdida de la copia del consumidor implica
+fallo de recuperación. Esta precisión reemplaza la exigencia general de
+restauración que aparece arriba sólo para ese modo acotado.
