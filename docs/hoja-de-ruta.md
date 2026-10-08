@@ -37,6 +37,15 @@
 | 25 | Ampliación a conversaciones de cualquier origen (prime, agentes en runtimes y sandboxes), más allá de CLIs con rollout en disco — anunciada por el dueño el 2026-09-12. ADR-016 prevé `documento-turno-mongo v3` en inglés; ADR-020 acepta D1 para fuentes separadas; la migración v2 no está aprobada | H25.1 aceptado y publicado. H25.2 implementado y activado localmente en instancia dedicada; recuperación externa completa y relevancia pendientes. Ver evidencia de operación 2026-10-06. Hito 25 no cerrado | `7a30a9d`; integración runtime `d9abbc8` |
 
 Actualización operativa: [H25.2 local](evidencia/h252-operacion-local-2026-10-06.md).
+Actualización separada del piloto de consulta desde agente (2026-10-07):
+[T4 y revisión T5](evidencia/piloto-consulta-agente-t4-t5-2026-10-07.md).
+v0.4 inició 108/108 slots; 107 completaron y Q11-v2/C falló por ocho
+llamadas agotadas. La repetición correctiva con tope 12 tuvo acuse positivo,
+pero no resolvió la tarea. Evaluación semántica y adjudicación pendientes;
+no hay promoción de uso. Continuidad en AN-KLA rev23, registro
+`f-skopos-agent-query-pilot-t4-2026-10-07`, digest
+`sha256:bcd9e87b0159f285d47293907ffffe4b65c98647eea865b52d37947f036243e5`.
+Es una línea de memoria separada de la actualización H25.2 histórica siguiente.
 AN-KLA rev19 verificada: `f-skopos-h252-maintenance-2026-10-06`;
 digest `sha256:33ef48172aae84e4007b5ccc47fcbde7099d4f582b50c4fadca36cd7bf91cfd4`.
 Custodia local mediante Llavero activada; resguardo independiente diferido por

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "zai-coding-plan/glm-5.3-flash",
+  "provider": {
+    "zai-coding-plan": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Z.AI Coding Plan",
+      "options": {
+        "baseURL": "https://api.z.ai/api/coding/paas/v4"
+      },
+      "models": {
+        "glm-5.3-flash": {
+          "id": "glm-5.3-flash",
+          "name": "GLM 5.3 Flash",
+          "reasoning": true,
+          "limit": {
+            "context": 1000000,
+            "output": 131072
+          },
+          "variants": {
+            "high": {
+              "reasoningEffort": "high"
+            },
+            "max": {
+              "reasoningEffort": "max"
+            }
+          }
+        },
+        "glm-5.2": {
+          "id": "glm-5.2",
+          "name": "GLM 5.2",
+          "reasoning": true,
+          "limit": {
+            "context": 1000000,
+            "output": 131072
+          },
+          "variants": {
+            "high": {
+              "reasoningEffort": "high"
+            },
+            "max": {
+              "reasoningEffort": "max"
+            }
+          }
+        }
+      }
+    }
+  },
+  "permission": {
+    "*": "deny",
+    "evidence_search": "allow",
+    "evidence_fetch": "allow"
+  }
+}

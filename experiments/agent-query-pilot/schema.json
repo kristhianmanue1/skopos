@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "skopos/agent-query-pilot/trace/v0",
+  "$defs": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "run_id", "task_id", "variant_id", "condition", "request_id", "attempt_id", "client", "client_version", "model_requested", "model_effective", "model_evidence", "operation", "project_id", "query", "deadline_ms", "result_status", "response_sha256", "response_bytes", "stderr_bytes", "started_at", "finished_at", "elapsed_ms", "returncode", "raw_stdout", "raw_stderr", "result"],
+      "properties": {
+        "schema": {"const": "skopos/agent-query-request/v0"},
+        "run_id": {"type": "string", "minLength": 1},
+        "task_id": {"type": "string", "pattern": "^Q(0[1-9]|1[0-2])$"},
+        "variant_id": {"enum": ["v1", "v2", "v3"]},
+        "condition": {"enum": ["A", "B", "C"]},
+        "request_id": {"type": "string", "minLength": 1},
+        "attempt_id": {"type": "integer", "minimum": 1},
+        "client": {"const": "opencode"},
+        "client_version": {"type": "string"},
+        "model_requested": {"type": "string"},
+        "model_effective": {"type": "null"},
+        "model_evidence": {"type": "null"},
+        "operation": {"enum": ["search", "fetch"]},
+        "project_id": {"type": "string"},
+        "query": {"type": ["string", "null"]},
+        "deadline_ms": {"const": 10000},
+        "result_status": {"enum": ["produced", "failed", "timed_out", "response_too_large", "invalid_json", "context_budget_exceeded"]},
+        "response_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "response_bytes": {"type": "integer", "minimum": 0},
+        "stderr_bytes": {"type": "integer", "minimum": 0},
+        "started_at": {"type": "string"},
+        "finished_at": {"type": "string"},
+        "elapsed_ms": {"type": "integer", "minimum": 0},
+        "returncode": {"type": "integer"},
+        "raw_stdout": {"type": "string"},
+        "raw_stderr": {"type": "string"},
+        "result": {"type": ["object", "null"]}
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["invocation_id", "request_id", "session_id", "message_id", "purpose", "context_sha256", "delivered_bytes", "payload"],
+      "properties": {
+        "invocation_id": {"type": "string", "minLength": 1},
+        "request_id": {"type": "string", "minLength": 1},
+        "session_id": {"type": ["string", "null"]},
+        "message_id": {"type": ["string", "null"]},
+        "purpose": {"enum": ["tool_result", "auto_prefetch"]},
+        "context_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "delivered_bytes": {"type": "integer", "minimum": 0},
+        "payload": {"type": "string"}
+      }
+    }
+  }
+}
