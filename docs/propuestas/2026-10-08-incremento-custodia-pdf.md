@@ -7,6 +7,9 @@ expertoGobernanza, admisión del PDF IMSS, incorporación al corpus ni aceptaci�
 jurídica. Este incremento implementa sólo custodia mecánica del original.
 La respuesta y el registro usan `skopos/pdf-custody-lab/v0.1`, para no fingir
 conformidad con el contrato y perfil completos todavía no implementados.
+Ensayo posterior con copia temporal del PDF y ficha de expertoGobernanza:
+[`pdf-custody-readiness-2026-10-08.md`](../evidencia/pdf-custody-readiness-2026-10-08.md).
+El ensayo no resuelve la política de host ni constituye admisión operativa.
 
 ## Alcance operativo
 
