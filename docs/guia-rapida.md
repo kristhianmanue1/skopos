@@ -16,8 +16,10 @@ sello del fragmento cuando existe; admite legado sin sello marcado
 Además, `source` conserva fuentes TXT/WhisperX JSON y runtime DSH JSONL con
 revisión/hash explícitos, sin LLM; no migra automáticamente el índice legado.
 `custody` añade una ruta de laboratorio para originales PDF por referencia;
-`custody-host` añade un canal candidato con lista exacta de material. No hay
-extracción ni política de host operativa instalada en este repositorio.
+`custody-host` añade un canal con lista exacta de material. Un piloto local
+monousuario admitió técnicamente el PDF IMSS bajo política de referencia
+externa; ver `docs/evidencia/pdf-custody-imss-pilot-2026-10-08.md`. No hay
+extracción, aislamiento entre usuarios demostrado ni despliegue general.
 
 ## Estado ahora mismo
 

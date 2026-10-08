@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import signal
 import socket
 import socketserver
 from pathlib import Path
@@ -89,6 +90,7 @@ class HostGateway:
                     raise CustodyError('policy_mismatch')
                 result = {'policy': {'id': self.policy['policy_id'],
                                      'version': self.policy['policy_version'],
+                                     'policy_sha256': self.policy_sha256,
                                      'custody_modes': ['verified_external_reference'],
                                      'scope': ['single_object'],
                                      'seal_policy': self.policy['seal_policy'],
@@ -168,10 +170,25 @@ def host_command(argv=None):
         with socketserver.UnixStreamServer(config['socket_path'], _Handler) as server:
             server.gateway = gateway
             os.chmod(config['socket_path'], 0o600)
+            socket_details = os.lstat(config['socket_path'])
+            previous_handler = signal.getsignal(signal.SIGTERM)
+
+            def terminate(_signal_number, _frame):
+                raise SystemExit(0)
+
+            signal.signal(signal.SIGTERM, terminate)
             try:
                 server.serve_forever()
             finally:
-                os.unlink(config['socket_path'])
+                signal.signal(signal.SIGTERM, previous_handler)
+                try:
+                    current = os.lstat(config['socket_path'])
+                    if (stat.S_ISSOCK(current.st_mode)
+                            and (current.st_dev, current.st_ino) ==
+                            (socket_details.st_dev, socket_details.st_ino)):
+                        os.unlink(config['socket_path'])
+                except FileNotFoundError:
+                    pass
     finally:
         gateway.close()
     return 0

@@ -85,3 +85,8 @@ política real** requiere los valores y permisos de plataforma anteriores.
 La respuesta documental posterior del consumidor y el diseño acotado de esa
 frontera se contrastan en
 [`2026-10-08-frontera-host-custodia-pdf.md`](../propuestas/2026-10-08-frontera-host-custodia-pdf.md).
+
+**Resultado posterior:** la política local, el canal y la admisión técnica
+bilateral de este PDF se registran en
+[`pdf-custody-imss-pilot-2026-10-08.md`](pdf-custody-imss-pilot-2026-10-08.md).
+Este expediente conserva su diagnóstico previo al piloto.

@@ -21,13 +21,16 @@ marcadores sin sustituirlos por recursos y decisiones autorizados.
 | `source import` | Admite fuente/revisión v3 manualmente | Mongo replica set; sin LLM |
 | `source search/fetch/fetch-runtime/receipt` | Lecturas v3 explícitas | Mongo; sin LLM |
 | `custody` | Custodia mecánica PDF experimental bajo política del host | Mongo para admitir/recuperar; sin LLM |
+| `custody-host serve/request` | Canal PDF con configuración de host fija y material exacto | Mongo dedicado para admisión/recuperación; sin LLM |
 
 `source` exige `--database`; URI predeterminada localhost:27017. No usar ese
 default por comodidad en el perfil dedicado autenticado. El índice legado y
 fuentes v3 no son intercambiables. `project_id` es selector, no autorización.
 Nada en estos ejemplos autoriza exposición de red, envío remoto o reanálisis.
-`custody` usa un esquema de laboratorio separado; no admite el PDF IMSS por
-aparecer en esta guía. Ver [incremento PDF](propuestas/2026-10-08-incremento-custodia-pdf.md).
+`custody` conserva el esquema de laboratorio. `custody-host` admitió el PDF
+IMSS sólo en un piloto local monousuario con política y base dedicadas;
+ver [evidencia bilateral](evidencia/pdf-custody-imss-pilot-2026-10-08.md).
+La CLI directa no es frontera para un agente con shell y credenciales.
 
 ## Turnos y análisis: opciones reales
 

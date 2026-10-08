@@ -16,7 +16,8 @@ from unittest import mock
 import pymongo
 from pymongo.errors import PyMongoError
 
-from skopos.pdf_custody import CustodyError, PdfCustodyStore, load_policy
+from skopos.pdf_custody import (CustodyError, PdfCustodyStore, _policy_digest,
+                               load_policy)
 from skopos.pdf_custody_host import (HOST_SCHEMA, HostGateway, _Handler,
                                     host_command, load_host_config)
 
@@ -140,6 +141,8 @@ class HostFixture(unittest.TestCase):
         self.assertEqual(response['status'], 'ok')
         self.assertEqual(response['result']['format_validation'], 'pdf_header_only')
         self.assertEqual(response['result']['policy']['id'], 'test/one-pdf')
+        self.assertEqual(response['result']['policy']['policy_sha256'],
+                         _policy_digest(gateway.policy))
         self.assertEqual(response['result']['policy']['recovery_requirement'],
                          'while_reference_available')
         self.assertEqual(response['result']['policy']['max_bytes'], 10000)

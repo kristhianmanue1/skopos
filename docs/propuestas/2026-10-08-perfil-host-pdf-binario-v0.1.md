@@ -65,7 +65,7 @@ la seguridad del PDF. No hay red ni OCR en esta ruta.
 | Operación | Campos de solicitud requeridos |
 | --- | --- |
 | Sobre común | `request_file_ref`, SHA-256 de los bytes exactos `request_sha256`, `request_id`, `contract_id=expertogobernanza/skopos-source`, `contract_version=v0.2` |
-| `describe_capabilities` | `request_id`, contrato/versión, `operation`, `project_id`; respuesta con política ID/versión, plazo, máximo de bytes, modo, recuperación, sello y validación `pdf_header_only` |
+| `describe_capabilities` | `request_id`, contrato/versión, `operation`, `project_id`; respuesta con política ID/versión/digest canónico `policy_sha256`, plazo, máximo de bytes, modo, recuperación, sello y validación `pdf_header_only` |
 | `admit_original` | Identidad y revisión, `scope=single_object`, `source_delivery.mode=authorized_reference` y `file_ref` de la lista; SHA del PDF, `media_type_declared=application/pdf`, clasificación, modo/política/versión de custodia, `seal_profile_id`, `recovery_requirement=while_reference_available`, `limits={max_bytes,allow_network:false,allow_ocr:false}`, ficha con `asserted_by`, `claim_status=consumer_declared`, `record_ref` y `record_sha256` |
 | `receipt` | Identidad/revisión, `expected_source_sha256` y `admission_request_sha256` de la admisión original; el sobre de esta consulta lleva un digest **nuevo** |
 | `fetch_original` | Identidad/revisión, `expected_source_sha256` y `output_ref` relativo a `delivery_root`; la referencia de origen proviene del registro admitido |
@@ -132,3 +132,12 @@ comprueba longitud, SHA y bytes antes de usarla.
 Hasta que existan política instalada, permisos efectivos y prueba bilateral,
 el estado del PDF IMSS sigue siendo `not_ready_for_operational_admission`.
 No hay ingreso al corpus, adjudicación jurídica ni respaldo independiente.
+
+**Resultado posterior:** el custodio consumidor aceptó la configuración
+acotada y ambos agentes completaron admisión y recuperación del PDF real,
+incluida repetición tras reiniciar Mongo y host. El perfil de entrada `v0.2`
+y respuesta `skopos/pdf-custody-host/v0.1` queda congelado **para ese piloto**.
+Recibo, política/digest, pruebas y límites efectivos están en
+[`pdf-custody-imss-pilot-2026-10-08.md`](../evidencia/pdf-custody-imss-pilot-2026-10-08.md).
+El estado `not_ready_for_operational_admission` de arriba describe la puerta
+anterior al ensayo; no debe leerse como el resultado posterior del piloto.
