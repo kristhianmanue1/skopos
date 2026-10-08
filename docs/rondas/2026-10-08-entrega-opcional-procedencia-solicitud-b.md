@@ -33,3 +33,19 @@ sobre la línea JSON exacta; las dos respuestas hipotéticas de recuperación
 correlacionan con su nuevo digest. Se añadieron casos falsables para ficha
 ausente, hashes discordantes, bytes inaccesibles y referencia retirada.
 Esto sigue siendo revisión del redactor, no conformidad de runtime.
+
+## Segunda autorrevisión del paquete bilateral
+
+Se intentó refutar el texto publicado en `2b49867`: una solicitud de admisión
+sin recibo correlacionado, un archivo lateral sin destino durable y una
+respuesta `ok` que sólo demostrara que existe una ruta. El contrato candidato
+ahora incluye recibo y fallo hipotéticos para `admit_original`, variante JSON
+completa `provided_file`, reglas de transporte y matriz de controles positivos
+y negativos. El perfil registra recomendación condicionada de referencia
+verificada y decisiones exactas de ambas partes.
+
+Riesgos residuales: ningún recibo procede del runtime; raíces, tiempos de vida,
+política de custodia, sello y clasificación siguen por acordar; el resultado
+de una respuesta perdida y la carrera entre lectura y entrega exigen pruebas
+en laboratorio. Esta revisión sigue siendo propia, sin independencia ni
+aceptación del consumidor.

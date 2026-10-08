@@ -274,19 +274,54 @@ La falta de antecedentes opcionales no es error de captura: se conserva como
 `unknown`. Una contradicción declarada no se oculta ni se resuelve inventando
 oficialidad; se devuelve al consumidor para corrección o decisión.
 
-| Caso falsable en fixture autorizado | Resultado contractual candidato |
-|---|---|
-| Sin `provenance`, con PDF accesible y política que no exige ficha | Calcular hash/longitud del PDF; admisión mecánica posible y procedencia `unknown` |
-| `expected_source_sha256` distinto de los bytes leídos | `invalid_input/hash_mismatch` en `validation`; sin recibo de admisión ni cabeza nueva |
-| `record_sha256` distinto de la ficha entregada, o ficha declarada inaccesible | `invalid_input/hash_mismatch` o `invalid_input/provenance_incomplete` en `validation`; no omitir silenciosamente el antecedente declarado |
-| PDF bajo ruta autorizada pero ausente o ilegible al admitir | `execution_failed/bytes_unavailable` en `admission` (o `permission_denied` si se identifica ese fallo); sin `ok` por metadatos |
-| Ruta fuera de raíz acordada | `invalid_input` en `validation`; nunca abrirla para decidir si existe |
-| Referencia admitida que desaparece antes de `fetch_original` | `execution_failed/bytes_unavailable` en `retrieval`, sin `result` ni derivado sustituto |
-| PDF y ficha con hashes correctos | Comprobación mecánica de esos bytes y atribución de las afirmaciones al consumidor; ninguna afirmación automática de origen, oficialidad o vigencia |
+| Afirmación | Control positivo reproducible | Mutación negativa y rechazo esperado |
+|---|---|---|
+| Admisión con ficha opcional | Fixture PDF y ficha legibles, hashes coincidentes; recibo atribuye declaraciones | Quitar `provenance` del JSON y recalcular digest: admisión mecánica posible, procedencia `unknown` si la política no exige ficha |
+| Hash del PDF | Archivo y `expected_source_sha256` coincidentes | Cambiar un byte del fixture: `invalid_input/hash_mismatch` en `validation`, sin cabeza nueva |
+| Hash de la ficha | Ficha legible y digest coincidente | Cambiar ficha o declararla pero retirarla: `invalid_input/hash_mismatch` o `invalid_input/provenance_incomplete` en `validation`; no descartarla en silencio |
+| Bytes al admitir | Ruta autorizada y PDF legible | Quitar PDF dentro de la raíz: `execution_failed/bytes_unavailable` en `admission` o `permission_denied` si ése es el fallo identificado; sin `ok` |
+| Frontera de ruta | Archivo ordinario bajo raíz acordada | Ruta fuera de raíz o enlace que escape: `invalid_input` en `validation` sin abrir el objetivo |
+| Recuperación por referencia | `fetch_original` lee revisión/hash admitidos y entrega salida verificada | Alterar copia: `execution_failed/hash_mismatch`; retirarla: `execution_failed/bytes_unavailable`, ambos en `retrieval`, sin fallback |
+| Respuesta perdida y reintento | Capturar recibo confirmado; consultar por identidad/solicitud y obtener el mismo estado | Cortar canal después de confirmar: no crear otra revisión; `result_uncertain` hasta reconciliar el recibo |
+| Revisión inmutable | Rev 2 con predecesor rev 1 correcto conserva ambas | Mismo número/hash distinto o predecesor falso: `revision_conflict` o `predecessor_conflict`, sin mover cabeza |
+| Entrega al consumidor | Salida bajo raíz autorizada, escrita y verificada antes de `ok` | Hacer `output_ref` no escribible: `execution_failed/output_unavailable` en `delivery`, sin `result` |
+| Procedencia frente a verificación | Hash de PDF y ficha correctos, afirmaciones atribuidas | Incluir URL o relato falso con hashes locales válidos: ningún ascenso automático a oficialidad o vigencia |
 
-Cada caso requiere control positivo con la misma política y un fixture legible
-para demostrar que la sonda funciona. Estas son expectativas de contrato, no
-resultados de pruebas de runtime.
+Cada mutación necesita su control positivo con la misma política y un fixture
+legible para demostrar que la sonda funciona. **Ninguno de estos ensayos de
+runtime se ha ejecutado para el contrato PDF candidato**; los gates de
+documentación sólo verifican estructura y ejemplos, no estos comportamientos.
+
+### Transporte local candidato y límites por acordar
+
+El archivo de solicitud se codifica en UTF-8; `request_sha256` cubre **todos
+sus bytes exactos**, incluidos espacios o salto final si los tuviera. Los
+ejemplos fijan una sola línea sin salto final. Un sobre separado, no incluido
+en ese digest, contiene `request_file_ref`, `request_sha256`, `contract_id`,
+`contract_version` y `request_id`; el productor abre el archivo bajo una raíz
+de solicitudes acordada, recalcula el digest y compara los otros tres campos
+del sobre con el JSON antes de devolverlos en la respuesta.
+La relación sobre→archivo no autentica al emisor; el acceso lo concede la
+configuración bilateral de raíces y los permisos del proceso, no `project_id`.
+
+Raíces distintas gobiernan solicitudes, archivos laterales, copia persistente
+del consumidor y salidas. Sus rutas reales, propietarios y permisos siguen
+pendientes. Se rechazan `..`, rutas absolutas inesperadas, enlaces simbólicos
+que escapen y cambios de archivo entre validación y lectura. La implementación
+debe abrir un archivo regular dentro de la raíz autorizada, comprobar la
+identidad efectiva del objeto leído y cerrar la carrera con verificación de
+bytes sobre el descriptor usado. En `provided_file`, lateral y `persistent_ref`
+se leen y comparan **antes** de confirmar admisión; el registro fija la
+referencia persistente. `fetch_original` fija proyecto, material, revisión,
+hash y esa referencia admitida; no acepta una nueva ruta de origen.
+
+`output_ref` se resuelve bajo la raíz de salida, se publica después de escribir
+y verificar bytes completos, y queda disponible sólo durante un plazo a
+acordar. El consumidor debe releer y verificar longitud/hash antes de ese
+vencimiento. El productor no anuncia `ok` si la salida no pudo publicarse;
+un timeout obliga a reconciliar el recibo antes de repetir efectos. La vida
+exacta del lateral, de `output_ref`, de la referencia persistente y el método
+de publicación segura requieren acuerdo y prueba bilateral.
 
 ### Ejemplos mínimos de intercambio, no ejecutados
 
@@ -305,18 +340,56 @@ admisión ni acredita que exista runtime PDF.
 ```
 
 El `record_sha256` corresponde a la ficha local observada aquí y debe
-recalcularse al usar el ejemplo. Si se omite `provenance` entero, sólo cambia
-ese campo y el nuevo `request_sha256`; el estado de procedencia será
-`unknown`. La variante `provided_file` cambia
-`source_delivery.mode` a `provided_file` y `file_ref` a una ruta de archivo
-lateral bajo raíz de entrada autorizada; por ejemplo:
-`{"mode":"provided_file","file_ref":"in/eg-b-pdf-admit-002.pdf","persistent_ref":"docs/fuentes/imss/2000-002-001.pdf"}`.
-El transporte coloca el archivo lateral por separado del JSON; para
-`verified_external_reference`, el productor también abre `persistent_ref`
-bajo la raíz del consumidor y comprueba longitud/hash de **ambos** antes de
-admitir. Si no existe una referencia duradera, esta entrega sólo permite
-comprobación puntual. Toda variante requiere nuevo `request_id` y digest del
-archivo de solicitud final.
+recalcularse al usar el ejemplo. Si se omite `provenance` entero, cambia el
+archivo de solicitud y se calcula un `request_sha256` nuevo; el estado de
+procedencia será `unknown`.
+
+**Variante completa `provided_file`.** El siguiente archivo también es una
+sola línea JSON UTF-8 sin salto final. Su digest externo es
+`0b8a24c1f9ec25e7acb44e5b4a68c5f43e5a77e2c4a1f0c21b33990e7194f571`.
+El PDF lateral se entrega fuera del JSON bajo la raíz de entrada acordada;
+`persistent_ref` se resuelve bajo la raíz de custodia del consumidor. Antes
+de emitir recibo de admisión, Skopos leería ambos archivos completos y
+comprobaría longitud y hash idénticos al hash esperado. Si falta la copia
+duradera, no emite `ok` en `verified_external_reference`. El lateral se puede
+retirar después de que el resultado y cualquier reintento incierto queden
+conciliados; plazo y responsable de limpieza requieren acuerdo bilateral.
+
+```json
+{"contract_id":"expertogobernanza/skopos-source","contract_version":"v0.1","request_id":"eg-b-pdf-admit-002","operation":"admit_original","project_id":"expertogobernanza","material_id":"imss-2000-002-001","source_revision":1,"scope":"single_object","source_delivery":{"mode":"provided_file","file_ref":"in/eg-b-pdf-admit-002.pdf","persistent_ref":"docs/fuentes/imss/2000-002-001.pdf"},"expected_source_sha256":"719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323","media_type_declared":"application/pdf","provenance":{"asserted_by":"expertogobernanza","record_ref":"docs/fuentes/imss/2000-002-001-PROCEDENCIA.md","record_sha256":"f934b0ec1bfbe97aae347b86bb3aa4e0831af79f704e571c27702f9203b62bff","origin_url":"https://www.imss.gob.mx/sites/all/statics/pdf/manualesynormas/2000-002-001.pdf","claim":"Descarga HTTPS y cotejo puntual de SHA-256, tamaño y cmp con la copia local el 2026-10-08","claim_status":"consumer_declared"},"classification":"consumer_declared_public","custody_mode":"verified_external_reference","custody_policy_id":"candidate/consumer-reference","custody_policy_version":"v0.1","seal_profile_id":"candidate/not_required","limits":{"max_bytes":2000000,"max_pages":200,"allow_network":false,"allow_ocr":false}}
+```
+
+Sobre externo ilustrativo de esa variante; sus bytes **no** forman parte del
+digest del archivo de solicitud:
+
+```json
+{"request_file_ref":"requests/eg-b-pdf-admit-002.json","request_sha256":"0b8a24c1f9ec25e7acb44e5b4a68c5f43e5a77e2c4a1f0c21b33990e7194f571","contract_id":"expertogobernanza/skopos-source","contract_version":"v0.1","request_id":"eg-b-pdf-admit-002"}
+```
+
+Ambos ejemplos son **alternativas para una primera admisión**, no solicitudes
+sucesivas para crear la misma revisión. Si se intentan ambas, identidad y
+política iguales obligan a reconciliar el recibo existente, no a crear una
+segunda admisión.
+
+**Recibo de admisión hipotético** para la solicitud `admit-001`, suponiendo
+que la política y clasificación ilustrativas fueron aceptadas antes, que
+los bytes siguen accesibles y que todas las comprobaciones pasan. Fechas,
+referencia opaca e identificador de recibo son valores de ejemplo, no una
+ejecución de Skopos. `provenance_checks` distingue lo que comprobaría el
+productor localmente de lo que seguiría siendo declaración del consumidor:
+
+```json
+{"schema":"skopos/source-custody/v0.1","contract_id":"expertogobernanza/skopos-source","contract_version":"v0.1","request_id":"eg-b-pdf-admit-001","request_sha256":"f6705bd3906d581bfb1475e1ab65cc04fed6be6ecf7674e4ab869deecb41b1fc","status":"ok","error":null,"producer_version":"candidate","adapter_version":"skopos/pdf-profile/v0.2","result":{"material":{"project_id":"expertogobernanza","material_id":"imss-2000-002-001","source_revision":1,"previous_source_sha256":null,"scope":"single_object"},"original":{"object_ref":"example:imss-2000-002-001-r1","sha256":"719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323","byte_length":1311822,"media_type_declared":"application/pdf","media_type_observed":"application/pdf","detection_method":"example:pdf-signature","captured_at":"2026-10-08T17:00:00Z","provenance":{"asserted_by":"expertogobernanza","record_sha256":"f934b0ec1bfbe97aae347b86bb3aa4e0831af79f704e571c27702f9203b62bff","claim_status":"consumer_declared","record_ref":"docs/fuentes/imss/2000-002-001-PROCEDENCIA.md","origin_url":"https://www.imss.gob.mx/sites/all/statics/pdf/manualesynormas/2000-002-001.pdf","remote_byte_match":"consumer_declared"},"provenance_checks":[{"field":"original.sha256","status":"matched_locally","actor":"skopos"},{"field":"provenance.record_sha256","status":"matched_locally","actor":"skopos"},{"field":"provenance.origin_url","status":"consumer_declared","actor":"expertogobernanza"},{"field":"provenance.remote_byte_match","status":"consumer_declared","actor":"expertogobernanza"}],"seal_policy":"not_required","seal_check":"not_applicable"},"coverage":{"declared_scope":"single_object","status":"complete_for_declared_scope","exclusions":[],"basis":"full_byte_read"},"custody":{"mode":"verified_external_reference","policy_id":"candidate/consumer-reference","policy_version":"v0.1","owner":"expertogobernanza","classification":"consumer_declared_public","admitted_at":"2026-10-08T17:00:00Z","retention_basis":"example:consumer-policy","recoverability_checked_at":"2026-10-08T17:00:00Z"},"receipt":{"receipt_id":"example:eg-b-pdf-admit-001","admission_status":"admitted","producer_version":"candidate","adapter_version":"skopos/pdf-profile/v0.2"}}}
+```
+
+Fallo hipotético correlacionado: si el PDF difiere del hash esperado al
+validar, no existe `result` consumible ni nueva cabeza. Un fallo de ficha
+declarada usa también `invalid_input` en `validation`, con código tipado por
+acordar; este ejemplo muestra el caso PDF:
+
+```json
+{"schema":"skopos/source-custody/v0.1","contract_id":"expertogobernanza/skopos-source","contract_version":"v0.1","request_id":"eg-b-pdf-admit-001","request_sha256":"f6705bd3906d581bfb1475e1ab65cc04fed6be6ecf7674e4ab869deecb41b1fc","status":"invalid_input","error":{"code":"hash_mismatch","stage":"validation"},"producer_version":"candidate","adapter_version":"skopos/pdf-profile/v0.2"}
+```
 
 **Solicitud distinta de recuperación.** El archivo `fetch_original` siguiente
 es una línea JSON UTF-8 sin salto final, con `request_sha256`
@@ -336,14 +409,14 @@ una admisión previa válida, lectura completa, igualdad de hash y política de
 sello `not_required`:
 
 ```json
-{"contract_id":"expertogobernanza/skopos-source","contract_version":"v0.1","request_id":"eg-b-pdf-fetch-001","request_sha256":"da511d17e6c3d77b68ae07da3c13486bf6370a556fba053f314a7d89c8e46baf","status":"ok","error":null,"producer_version":"candidate","adapter_version":"skopos/pdf-profile/v0.2","result":{"material_id":"imss-2000-002-001","source_revision":1,"source_sha256":"719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323","byte_length":1311822,"bytes_ref":"out/eg-b-pdf-fetch-001.pdf","coverage":{"status":"complete_for_declared_scope","scope":"single_object","exclusions":[]},"seal_check":"not_applicable","custody_mode":"verified_external_reference","custody_owner":"expertogobernanza"}}
+{"schema":"skopos/source-custody/v0.1","contract_id":"expertogobernanza/skopos-source","contract_version":"v0.1","request_id":"eg-b-pdf-fetch-001","request_sha256":"da511d17e6c3d77b68ae07da3c13486bf6370a556fba053f314a7d89c8e46baf","status":"ok","error":null,"producer_version":"candidate","adapter_version":"skopos/pdf-profile/v0.2","result":{"material_id":"imss-2000-002-001","source_revision":1,"source_sha256":"719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323","byte_length":1311822,"bytes_ref":"out/eg-b-pdf-fetch-001.pdf","coverage":{"status":"complete_for_declared_scope","scope":"single_object","exclusions":[]},"seal_check":"not_applicable","custody_mode":"verified_external_reference","custody_owner":"expertogobernanza"}}
 ```
 
 Fallo hipotético si la copia del consumidor ya no se puede leer; `result`
 queda ausente y el recibo anterior no se convierte en recuperación:
 
 ```json
-{"contract_id":"expertogobernanza/skopos-source","contract_version":"v0.1","request_id":"eg-b-pdf-fetch-001","request_sha256":"da511d17e6c3d77b68ae07da3c13486bf6370a556fba053f314a7d89c8e46baf","status":"execution_failed","error":{"code":"bytes_unavailable","stage":"retrieval"},"producer_version":"candidate","adapter_version":"skopos/pdf-profile/v0.2"}
+{"schema":"skopos/source-custody/v0.1","contract_id":"expertogobernanza/skopos-source","contract_version":"v0.1","request_id":"eg-b-pdf-fetch-001","request_sha256":"da511d17e6c3d77b68ae07da3c13486bf6370a556fba053f314a7d89c8e46baf","status":"execution_failed","error":{"code":"bytes_unavailable","stage":"retrieval"},"producer_version":"candidate","adapter_version":"skopos/pdf-profile/v0.2"}
 ```
 
 `bytes_ref` y `producer_version: candidate` son marcadores de diseño, no una

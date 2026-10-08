@@ -270,6 +270,27 @@ gate son decisiones del consumidor/profesional con fuentes y criterios propios.
 
 ## Decisiones para revisión bilateral
 
+**Recomendación documental para este primer caso:** evaluar
+`verified_external_reference` porque expertoGobernanza ya conserva una copia
+local cotejada y no se ha demostrado que necesite recuperación independiente
+tras perderla. La recomendación supone una ruta gobernada, acceso estable para
+Skopos, respaldo y restauración a cargo del consumidor, y aceptación expresa
+de que `fetch_original` fallará si esa copia desaparece. Si el requisito es
+recuperar aun después de perder la copia del consumidor, corresponde estudiar
+`managed_copy` con almacén, respaldo, retiro y enmienda de ADR-020 propios.
+La igualdad de hashes no prueba independencia de respaldos.
+
+**Decisión bilateral pendiente:** versión exacta del contrato y perfil,
+clasificación del manual, raíz/acceso/duración de solicitud, PDF lateral,
+referencia persistente y salida; propietario y retención por modo; política de
+sello; límites de bytes/páginas; responsable de relocalización y prueba de
+recuperación. La ficha del consumidor permite atribuir un cotejo puntual con
+la URL IMSS, pero no decide vigencia jurídica ni aceptación de citas.
+Para operación real se requieren implementación, controles positivo/negativo
+de la matriz del contrato base, pruebas de corte y restauración, evaluación de
+cobertura PDF, rechazo del consumidor ante fallos y aceptación humana
+separada. Publicar este borrador no satisface esa puerta.
+
 **Skopos/productor:** aceptar o rechazar perfil PDF; decidir si referencia
 verificada basta para el caso y cómo resolver/relocalizar la ruta autorizada;
 fijar límites, sello, derivadores, retención de metadatos, recuperación y
