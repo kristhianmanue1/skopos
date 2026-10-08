@@ -82,3 +82,6 @@ retiro. La admisión técnica resultante tampoco habilita corpus, cita ni
 adjudicación jurídica. El siguiente trabajo autorizado en Skopos puede
 preparar un adaptador de host y fixtures de conformidad; **instalarlo con una
 política real** requiere los valores y permisos de plataforma anteriores.
+La respuesta documental posterior del consumidor y el diseño acotado de esa
+frontera se contrastan en
+[`2026-10-08-frontera-host-custodia-pdf.md`](../propuestas/2026-10-08-frontera-host-custodia-pdf.md).
