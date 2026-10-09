@@ -19,10 +19,12 @@ from skopos.source_document_store import SourceDocumentStore
 
 
 SCHEMA = 'skopos/ctim-source-access/v0.1'
+PAGE_SCHEMA = 'skopos/ctim-source-access/v0.2'
 POLICY_SCHEMA = 'skopos/ctim-source-access-policy/v0.1'
 HEX = re.compile(r'[0-9a-f]{64}\Z')
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z')
 MAX_POLICY_BYTES = 32 * 1024
+MAX_PAGE_RESPONSE_BYTES = 64 * 1024
 
 
 class AccessError(ValueError):
@@ -351,6 +353,20 @@ class AccessGateway:
                             'fidelity_status': 'unreviewed'}
         raise AccessError('fragment_not_found', 'retrieval')
 
+    def _page(self, source_id, page_number, value):
+        source = self.inventory[source_id]
+        _, manifest, _ = value
+        page = manifest['pages'][page_number - 1]
+        return {'source_id': source_id, 'source_sha256': source['sha256'],
+                'media_type': source['media_type'],
+                'page_number': page_number, 'page_count': source['pages'],
+                'page_width_points': page['page_width_points'],
+                'page_height_points': page['page_height_points'],
+                'page_rotation': page['page_rotation'],
+                'native_text': page['native_text'], 'ocr_text': page['ocr_text'],
+                'fidelity_status': 'unreviewed',
+                'line_order': 'manifest_extraction_order'}
+
     def handle(self, request):
         started = time.monotonic()
         request_id = request.get('request_id') if isinstance(request, dict) else None
@@ -365,7 +381,9 @@ class AccessGateway:
                       else {'request_id', 'operation', 'term', 'limit'}
                       if operation == 'find_literal'
                       else {'request_id', 'operation', 'source_id', 'item_id'}
-                      if operation == 'fetch_fragment' else None)
+                      if operation == 'fetch_fragment'
+                      else {'request_id', 'operation', 'source_id', 'page_number'}
+                      if operation == 'read_pdf_page' else None)
             if fields is None or set(request) != fields:
                 raise AccessError('invalid_request')
             if operation == 'find_literal' and (not isinstance(request['term'], str)
@@ -378,9 +396,24 @@ class AccessGateway:
                     or not isinstance(request['item_id'], str)
                     or HEX.fullmatch(request['item_id']) is None):
                 raise AccessError('invalid_request')
+            if operation == 'read_pdf_page' and (
+                    not isinstance(request['source_id'], str)
+                    or type(request['page_number']) is not int
+                    or request['page_number'] < 1):
+                raise AccessError('invalid_page')
             self._current()
-            source_ids = (list(self.entries) if operation != 'fetch_fragment'
+            source_ids = (list(self.entries) if operation not in
+                          ('fetch_fragment', 'read_pdf_page')
                           else [request['source_id']])
+            if operation == 'read_pdf_page':
+                source_id = request['source_id']
+                if source_id not in self.entries:
+                    raise AccessError('source_not_allowed')
+                source = self.inventory[source_id]
+                if source['media_type'] != 'application/pdf':
+                    raise AccessError('unsupported_format')
+                if request['page_number'] > source['pages']:
+                    raise AccessError('invalid_page')
             loaded = {source_id: self._source(source_id) for source_id in source_ids}
             coverage = [self._coverage(source_id, loaded[source_id])
                         for source_id in source_ids]
@@ -388,6 +421,10 @@ class AccessGateway:
                 result = {'sources': coverage}
             elif operation == 'find_literal':
                 result = self._find(request['term'], request['limit'], loaded)
+                result['coverage'] = coverage
+            elif operation == 'read_pdf_page':
+                result = self._page(request['source_id'], request['page_number'],
+                                    loaded[request['source_id']])
                 result['coverage'] = coverage
             else:
                 result = self._fetch(request['source_id'], request['item_id'],
@@ -406,11 +443,18 @@ class AccessGateway:
         except (pymongo.errors.PyMongoError, OSError):
             response = {'status': 'execution_failed', 'result': None,
                         'error': {'code': 'store_unavailable', 'stage': 'execution'}}
-        response.update({'schema': SCHEMA, 'request_id': request_id,
+        response.update({'schema': PAGE_SCHEMA if isinstance(request, dict) and
+                         request.get('operation') == 'read_pdf_page' else SCHEMA,
+                         'request_id': request_id,
                          'request_sha256': request_sha256,
                          'policy_sha256': self.policy_file_sha256})
-        if len(_canonical(response)) > 256 * 1024:
+        limit = (MAX_PAGE_RESPONSE_BYTES if isinstance(request, dict) and
+                 request.get('operation') == 'read_pdf_page' else 256 * 1024)
+        response_bytes = len(_canonical(response))
+        if response_bytes + (1 if limit == MAX_PAGE_RESPONSE_BYTES else 0) > limit:
             response.update({'status': 'execution_failed', 'result': None,
-                             'error': {'code': 'response_limit_exceeded',
+                             'error': {'code': 'page_response_limit_exceeded' if
+                                       limit == MAX_PAGE_RESPONSE_BYTES else
+                                       'response_limit_exceeded',
                                        'stage': 'delivery'}})
         return response
