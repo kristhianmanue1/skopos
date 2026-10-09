@@ -1,8 +1,9 @@
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 
 const MAX_CALLS = 8;
 const MAX_CONTEXT = 128 * 1024;
+const MAX_MESSAGE_SNAPSHOT = 512 * 1024;
 function strings(value, found = []) {
   if (typeof value === "string") found.push(value);
   else if (Array.isArray(value)) value.forEach((item) => strings(item, found));
@@ -40,6 +41,17 @@ export const Trace = async () => {
       const violation = callIndex > MAX_CALLS ? "model_call_budget_exceeded"
         : cumulativeBytes > MAX_CONTEXT ? "context_budget_exceeded" : null;
       const serialized = JSON.stringify(output.messages);
+      const capture = process.env.SKOPOS_PILOT_MESSAGE_CAPTURE === "synthetic_bounded_v1";
+      const messageBytes = Buffer.from(serialized, "utf8");
+      const snapshotViolation = capture && messageBytes.length > MAX_MESSAGE_SNAPSHOT
+        ? "message_snapshot_limit_exceeded" : null;
+      const messagesRef = capture && !snapshotViolation
+        ? `messages/call-${String(callIndex).padStart(3, "0")}.json` : null;
+      if (messagesRef) {
+        mkdirSync(runDir + "/messages", { recursive: true, mode: 0o700 });
+        writeFileSync(runDir + "/" + messagesRef, messageBytes,
+          { flag: "wx", mode: 0o600 });
+      }
       appendFileSync(tracePath, JSON.stringify({
         type: "messages_transform",
         call_index: callIndex,
@@ -56,10 +68,12 @@ export const Trace = async () => {
         })),
         delivered_bytes: deliveredBytes,
         cumulative_bytes: cumulativeBytes,
-        violation,
+        violation: violation ?? snapshotViolation,
         messages_sha256: createHash("sha256").update(serialized).digest("hex"),
+        messages_ref: messagesRef,
+        messages_capture: capture ? "synthetic_bounded_v1" : "none",
       }) + "\n");
-      if (violation) throw new Error(violation);
+      if (violation || snapshotViolation) throw new Error(violation ?? snapshotViolation);
     },
   };
 };

@@ -90,6 +90,18 @@ def _record(run_dir, record):
                                 separators=(',', ':')) + '\n')
 
 
+def _search_scope(result):
+    if not isinstance(result, dict):
+        return None
+    excluded = result.get('excluded') or {}
+    unavailable = result.get('unavailable_sources') or {}
+    return {'selection': result.get('selection'),
+            'result_limit': excluded.get('result_limit', 0),
+            'fragment_too_large': excluded.get('fragment_too_large', 0),
+            'unavailable_sources': unavailable,
+            'interpretation': 'literal_observed_heads_only_no_global_absence'}
+
+
 def invoke(run_dir, value):
     run_dir = Path(run_dir)
     config = json.loads((run_dir / 'config.json').read_text())
@@ -138,11 +150,15 @@ def invoke(run_dir, value):
                   'elapsed_ms': elapsed_ms, 'returncode': returncode,
                   'raw_stdout': 'raw/' + request_id + '.stdout',
                   'raw_stderr': 'raw/' + request_id + '.stderr',
-                  'result': payload}
+                  'result': payload,
+                  'search_scope': (_search_scope(payload)
+                                   if request['operation'] == 'search'
+                                   and status == 'produced' else None)}
         encoded = json.dumps(record, ensure_ascii=False, separators=(',', ':')).encode()
         if state['output_bytes'] + len(encoded) > MAX_CONTEXT:
             record['result_status'] = 'context_budget_exceeded'
             record['result'] = None
+            record['search_scope'] = None
             encoded = json.dumps(record, ensure_ascii=False, separators=(',', ':')).encode()
         state['output_bytes'] += len(encoded)
         state_path.write_text(json.dumps(state, sort_keys=True) + '\n')

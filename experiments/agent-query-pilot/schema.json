@@ -33,7 +33,8 @@
         "returncode": {"type": "integer"},
         "raw_stdout": {"type": "string"},
         "raw_stderr": {"type": "string"},
-        "result": {"type": ["object", "null"]}
+        "result": {"type": ["object", "null"]},
+        "search_scope": {"type": ["object", "null"]}
       }
     },
     "delivery": {

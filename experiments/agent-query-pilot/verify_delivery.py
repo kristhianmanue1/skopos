@@ -1,8 +1,12 @@
 """Comprueba correlación de entregas con el hook de llamada de OpenCode."""
 import hashlib
 import json
+import os
 from pathlib import Path
+import stat
 import sys
+
+MAX_MESSAGE_SNAPSHOT = 512 * 1024
 
 
 def _jsonl(path):
@@ -11,7 +15,48 @@ def _jsonl(path):
     return [json.loads(line) for line in path.read_text().splitlines() if line]
 
 
-def verify(run_dir):
+def _strings(value):
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [leaf for item in value for leaf in _strings(item)]
+    if isinstance(value, dict):
+        return [leaf for item in value.values() for leaf in _strings(item)]
+    return []
+
+
+def _snapshot(run_dir, call, index, capture_expected, errors):
+    required = capture_expected or call.get('messages_capture') == 'synthetic_bounded_v1'
+    reference = call.get('messages_ref')
+    if reference is None:
+        if required:
+            errors.append('messages_snapshot_missing')
+        return 'not_recomputable', None
+    if reference != 'messages/call-%03d.json' % index:
+        errors.append('messages_snapshot_reference_mismatch')
+        return 'mismatch', None
+    path = run_dir / reference
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        with os.fdopen(descriptor, 'rb') as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise ValueError('not_regular')
+            raw = stream.read(MAX_MESSAGE_SNAPSHOT + 1)
+        if len(raw) > MAX_MESSAGE_SNAPSHOT:
+            raise ValueError('too_large')
+        messages = json.loads(raw)
+    except (OSError, ValueError, UnicodeError):
+        errors.append('messages_snapshot_unavailable')
+        return 'mismatch', None
+    if (hashlib.sha256(raw).hexdigest() != call.get('messages_sha256')
+            or not isinstance(messages, list)
+            or len(messages) != call.get('message_count')):
+        errors.append('messages_digest_mismatch')
+        return 'mismatch', None
+    return 'verified', _strings(messages)
+
+
+def verify(run_dir, capture_expected=False):
     run_dir = Path(run_dir)
     deliveries = _jsonl(run_dir / 'deliveries.jsonl')
     calls = _jsonl(run_dir / 'call-trace.jsonl')
@@ -45,9 +90,13 @@ def verify(run_dir):
     trace_by_pair = {}
     cumulative = 0
     accepted_cumulative = 0
+    message_checks = []
     for index, call in enumerate(calls, 1):
         if call['call_index'] != index:
             errors.append('call_order')
+        message_status, leaves = _snapshot(run_dir, call, index,
+                                           capture_expected, errors)
+        message_checks.append({'call_index': index, 'status': message_status})
         matches = call['matched_deliveries']
         expected_bytes = 0
         for match in matches:
@@ -71,6 +120,8 @@ def verify(run_dir):
                 errors.append('effective_digest_mismatch')
             if len(effective.encode()) != match.get('effective_bytes'):
                 errors.append('effective_size_mismatch')
+            if leaves is not None and not any(effective in leaf for leaf in leaves):
+                errors.append('message_match_missing')
             expected_bytes += len(effective.encode())
         cumulative += expected_bytes
         if call['delivered_bytes'] != expected_bytes or call['cumulative_bytes'] != cumulative:
@@ -96,7 +147,9 @@ def verify(run_dir):
             'incorporated_deliveries': len(trace_by_pair),
             'cumulative_delivered_bytes': accepted_cumulative,
             'attempted_context_bytes': cumulative,
-            'session_ids': sorted(session_ids)}
+            'session_ids': sorted(session_ids),
+            'delivery_observation': 'hook_message_presence_only',
+            'messages_sha256_checks': message_checks}
 
 
 def main():

@@ -43,13 +43,13 @@ function invoke(value, context) {
 }
 
 export const search = tool({
-  description: "Busca literalmente en fuentes verificadas del proyecto de esta tarea. Devuelve identidades, exclusiones y fuentes indisponibles; una búsqueda vacía no demuestra inexistencia global.",
+  description: "Busca subcadenas en cabezas observadas. Lee search_scope y result.excluded: si result_limit o fragment_too_large es mayor que cero, faltan resultados. unavailable_sources informa fuentes no consultables. Nunca concluyas inexistencia global por una búsqueda vacía o limitada.",
   args: { term: tool.schema.string().describe("Subcadena literal que buscar") },
   async execute(args, context) { return await invoke({ operation: "search", term: args.term }, context); },
 });
 
 export const fetch = tool({
-  description: "Lee una proyección textual de una revisión explícita usando los selectores e identidad del catálogo o de un resultado. Conserva fuente, revisión y hash.",
+  description: "Lee una proyección textual sólo si tienes identidad exacta de fuente, revisión, hash y text_id del catálogo o resultado. Conserva esos cuatro campos al citar.",
   args: {
     source_id: tool.schema.string(),
     source_revision: tool.schema.number().int(),
