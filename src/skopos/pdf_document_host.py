@@ -14,12 +14,14 @@ import sys
 import pymongo
 from pymongo.errors import PyMongoError
 
-from skopos.pdf_custody import CustodyError, _identifier, _read_under
+from skopos.pdf_custody import (CustodyError, SOURCE_POLICY_SCHEMA, _identifier,
+                               _read_under, load_policy)
 from skopos.pdf_document_extract import DocumentExtractionError
 from skopos.pdf_document_store import (CONTRACT_ID, CONTRACT_VERSION,
                                        DocumentError, PdfDocumentStore,
                                        _canonical, load_document_policy)
 from skopos.pdf_document_policy_v02 import load_document_policy_v02
+from skopos.source_document_store import SourceDocumentStore
 
 
 HOST_SCHEMA = 'skopos/pdf-document-host/v0.1'
@@ -137,7 +139,10 @@ class DocumentGateway:
             if request.get('project_id') != self.policy['project_id']:
                 raise DocumentError('project_mismatch')
             operation = request.get('operation')
-            store = PdfDocumentStore(self.client[self.config['database']], self.policy)
+            custody = load_policy(self.policy['custody_policy_path'])
+            store_type = (SourceDocumentStore if custody['schema'] == SOURCE_POLICY_SCHEMA
+                          else PdfDocumentStore)
+            store = store_type(self.client[self.config['database']], self.policy)
             if operation == 'describe_document_capabilities':
                 store._source({
                     'material_id': self.policy['material_id'],
