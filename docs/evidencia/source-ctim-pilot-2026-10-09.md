@@ -172,4 +172,8 @@ cambia las políticas privadas ni los recibos ya admitidos.
 Una revisión posterior señaló un registro con `policy_sha256` ausente pero
 `record_sha256` recomputado. El adaptador ahora responde
 `custody_receipt_mismatch` en vez de propagar `KeyError`; un fixture construye
-ese registro y verifica el rechazo tipado. Tampoco modifica recibos existentes.
+ese registro y verifica el rechazo tipado. La prueba primero sirve el recibo
+válido con el `request_sha256` real. Una mutación controlada que repuso sólo
+`document['policy_sha256']` produjo `KeyError` y fallo de esa prueba; al
+restaurar `.get`, la misma prueba pasó. El código final conserva `.get` y no
+modifica recibos existentes.
