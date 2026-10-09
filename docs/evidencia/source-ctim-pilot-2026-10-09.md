@@ -168,3 +168,8 @@ coincidencias; la consulta del recibo ahora usa primario y read concern
 `majority`, como `PdfCustodyStore`. Un fixture coloca el PDF en segundo lugar
 y otro exige rechazo de una coincidencia duplicada. Esta corrección no
 cambia las políticas privadas ni los recibos ya admitidos.
+
+Una revisión posterior señaló un registro con `policy_sha256` ausente pero
+`record_sha256` recomputado. El adaptador ahora responde
+`custody_receipt_mismatch` en vez de propagar `KeyError`; un fixture construye
+ese registro y verifica el rechazo tipado. Tampoco modifica recibos existentes.

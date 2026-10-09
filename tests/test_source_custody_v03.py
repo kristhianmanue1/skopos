@@ -167,6 +167,25 @@ class SourceCustodyV03Tests(unittest.TestCase):
         with self.assertRaisesRegex(DocumentError, 'custody_policy_mismatch'):
             store._source(supplied)
 
+    def test_pdf_derivative_typed_error_when_record_lacks_policy_digest(self):
+        custody = load_policy(self.policy_path)
+        document = _admission_data(self.request('pdf'), custody)
+        document.pop('policy_sha256')
+        document['record_sha256'] = _record_digest(document)
+        database = mock.MagicMock()
+        database.get_collection.return_value.find_one.return_value = document
+        policy = {'custody_policy_path': str(self.policy_path),
+                  'custody_policy_sha256': _policy_digest(custody),
+                  'project_id': 'expertogobernanza', 'material_id': 'pdf',
+                  'source_revision': 1, 'source_sha256': hashlib.sha256(self.pdf).hexdigest(),
+                  'provenance_sha256': hashlib.sha256(self.provenance).hexdigest(),
+                  'custody_receipt_id': 'expertogobernanza:pdf:1:' + 'a' * 16}
+        store = SourceDocumentStore(database, policy)
+        supplied = {key: policy[key] for key in ('material_id', 'source_revision',
+                    'source_sha256', 'custody_receipt_id', 'custody_policy_sha256')}
+        with self.assertRaisesRegex(DocumentError, 'custody_receipt_mismatch'):
+            store._source(supplied)
+
 
 if __name__ == '__main__':
     unittest.main()

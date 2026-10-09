@@ -58,7 +58,7 @@ class SourceDocumentStore(PdfDocumentStore):
         provenance = document.get('provenance')
         if (key + ':' + document['request_sha256'][:16] != policy['custody_receipt_id']
                 or document['source_sha256'] != policy['source_sha256']
-                or document['policy_sha256'] != policy['custody_policy_sha256']
+                or document.get('policy_sha256') != policy['custody_policy_sha256']
                 or not isinstance(provenance, dict)
                 or provenance.get('record_sha256') != policy['provenance_sha256']
                 or provenance.get('record_ref') != allowed['provenance_ref']
