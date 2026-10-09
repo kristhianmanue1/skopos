@@ -12,7 +12,8 @@ import stat
 import pymongo
 from pymongo.errors import PyMongoError
 
-from skopos.pdf_custody import (HOST_POLICY_SCHEMA, MAX_REQUEST_BYTES,
+from skopos.pdf_custody import (HOST_POLICY_SCHEMA, SOURCE_POLICY_SCHEMA,
+                               MAX_REQUEST_BYTES,
                                CustodyError, PdfCustodyStore, _load_json,
                                _policy_current, _policy_digest, _read_under,
                                load_policy, read_request)
@@ -20,6 +21,7 @@ from skopos.pdf_custody_cli import _response
 
 
 HOST_SCHEMA = 'skopos/pdf-custody-host/v0.1'
+SOURCE_HOST_SCHEMA = 'skopos/source-custody-host/v0.3'
 HOST_CONTRACT_VERSION = 'v0.2'
 MAX_CALL_BYTES = 4096
 
@@ -39,7 +41,7 @@ def load_host_config(path):
         raise CustodyError('host_config_unavailable') from None
     config = _load_json(raw, MAX_CALL_BYTES)
     required = {'schema', 'policy_path', 'mongo_uri', 'database', 'socket_path'}
-    if set(config) != required or config['schema'] != HOST_SCHEMA:
+    if set(config) != required or config['schema'] not in (HOST_SCHEMA, SOURCE_HOST_SCHEMA):
         raise CustodyError('host_config_unavailable')
     for field in ('policy_path', 'socket_path'):
         if not isinstance(config[field], str) or not os.path.isabs(config[field]):
@@ -58,8 +60,12 @@ class HostGateway:
     def __init__(self, config, client=None):
         self.config = config
         self.policy = load_policy(config['policy_path'])
-        if self.policy['schema'] != HOST_POLICY_SCHEMA:
+        expected = (SOURCE_POLICY_SCHEMA if config['schema'] == SOURCE_HOST_SCHEMA
+                    else HOST_POLICY_SCHEMA)
+        if self.policy['schema'] != expected:
             raise CustodyError('policy_unavailable')
+        self.contract_version = ('v0.3' if expected == SOURCE_POLICY_SCHEMA
+                                 else HOST_CONTRACT_VERSION)
         self.policy_sha256 = _policy_digest(self.policy)
         self.client = (client if client is not None else pymongo.MongoClient(
             config['mongo_uri'], serverSelectionTimeoutMS=2000))
@@ -78,7 +84,7 @@ class HostGateway:
                 self.policy['requests_root'], call['envelope_ref'], MAX_REQUEST_BYTES),
                 MAX_REQUEST_BYTES)
             request = read_request(self.policy, envelope,
-                                   contract_version=HOST_CONTRACT_VERSION)
+                                   contract_version=self.contract_version)
             request['_request_sha256'] = envelope['request_sha256']
             current_policy = load_policy(self.config['policy_path'])
             if _policy_digest(current_policy) != self.policy_sha256:
@@ -99,8 +105,13 @@ class HostGateway:
                                      'recovery_requirement': self.policy['recovery_requirement'],
                                      'max_bytes': self.policy['max_bytes']},
                           'operations': ['admit_original', 'fetch_original', 'receipt'],
-                          'format_validation': 'pdf_header_only',
-                          'binary_custody_profile': HOST_SCHEMA}
+                          'format_validation': ('pdf_or_html_signature_only'
+                                                if self.contract_version == 'v0.3'
+                                                else 'pdf_header_only'),
+                          'binary_custody_profile': self.config['schema']}
+                if self.contract_version == 'v0.3':
+                    result['media_types'] = sorted({item['media_type'] for item in
+                                                    self.policy['allowed_materials']})
             elif operation in ('admit_original', 'fetch_original', 'receipt'):
                 store = PdfCustodyStore(self.client[self.config['database']], self.policy)
                 result = {'admit_original': store.admit,
@@ -117,9 +128,11 @@ class HostGateway:
         except (PyMongoError, OSError):
             response = _response(request, 'execution_failed',
                                  error={'code': 'store_unavailable', 'stage': 'execution'})
-        response['schema'] = HOST_SCHEMA
-        response['producer_version'] = HOST_SCHEMA
-        response['adapter_version'] = 'skopos/pdf-binary-reference/v0.1'
+        response['schema'] = self.config['schema']
+        response['producer_version'] = self.config['schema']
+        response['adapter_version'] = ('skopos/source-reference/v0.3'
+                                       if self.contract_version == 'v0.3'
+                                       else 'skopos/pdf-binary-reference/v0.1')
         return response
 
 
@@ -132,7 +145,7 @@ class _Handler(socketserver.StreamRequestHandler):
             response = self.server.gateway.handle(call)
         except (CustodyError, OSError) as error:
             code = error.code if isinstance(error, CustodyError) else 'invalid_request'
-            response = {'schema': HOST_SCHEMA, 'status': 'invalid_input',
+            response = {'schema': self.server.gateway.config['schema'], 'status': 'invalid_input',
                         'error': {'code': code, 'stage': 'validation'},
                         'result': None}
         try:

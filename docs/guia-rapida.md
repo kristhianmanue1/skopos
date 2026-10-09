@@ -22,6 +22,10 @@ externa; ver `docs/evidencia/pdf-custody-imss-pilot-2026-10-08.md`. No hay
 extracción, aislamiento entre usuarios demostrado ni despliegue general.
 Su operación bajo demanda tiene un procedimiento separado en
 `docs/evidencia/pdf-custody-pilot-operations-2026-10-08.md`.
+El perfil local v0.3 del mismo host admite originales PDF/HTML por referencia
+bajo políticas por material y procedencia en raíz separada; los derivados PDF
+siguen separados y el HTML sólo tiene un artefacto textual local acotado.
+Ver `docs/contratos/source-custody-v0.3-local.md` y su evidencia CTIM.
 
 ## Estado ahora mismo
 

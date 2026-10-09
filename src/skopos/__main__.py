@@ -43,7 +43,7 @@ Comandos:
   custody --policy FILE --database DB --envelope-ref REF
                              custodia PDF de laboratorio (sin frontera de agente)
   custody-host serve --config FILE | request --socket PATH --envelope-ref REF
-                             canal candidato con configuración fijada por host
+                             canal fijado por host: PDF v0.2 o PDF/HTML v0.3
   document-host serve --config FILE | request --socket PATH --envelope-ref REF
                              derivados PDF locales en política separada
   query <tema>              busca por tema en lo ya analizado (SPEC-004)
