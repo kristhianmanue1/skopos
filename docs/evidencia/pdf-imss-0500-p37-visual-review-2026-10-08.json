@@ -1,0 +1,27 @@
+{
+  "schema": "skopos/pdf-visual-self-review/v0.1",
+  "review_status": "producer_self_review_not_independent",
+  "source_sha256": "ce665959759f74331464471c71dc9cff107e061de09b8be5419a7cf1302e48b7",
+  "page_number_physical": 37,
+  "derivation_id": "2f6e9554c1f273485c4e06a65d3608072c614df601607d12d43335f2e52c1c82",
+  "manifest_sha256": "9ed5ee6ddcbdcd679782e6899f672653cee3135eeaf7b3a68f1504aefe1e13e7",
+  "render_sha256": "b08604ec2ac76433c4cc0454ed343f060eb96cab9ab722fd14f9ec4d01af6cb2",
+  "render_size_pixels": [1855, 2400],
+  "observations": [
+    {
+      "literal_label_seen": "DIRECCIÓN DE PRESTACIONES MÉDICAS",
+      "box_bbox_normalized": [0.127224, 0.328333, 0.196765, 0.350417],
+      "graph_node_item_id": "ea4f2566e9c40583d8cde106240bd3e3bfde3c1542412a67bcc80d4776f289ca",
+      "graph_node_machine_label": "MÉDICAS",
+      "machine_label_fidelity": "incomplete",
+      "incoming_vertical_stroke_bbox_normalized_approx": [0.161, 0.3208, 0.164, 0.3284],
+      "stroke_observation": "visible_local_stroke_to_shared_horizontal_bus",
+      "hierarchy_direction": "not_adjudicated_from_unarrowed_diagram"
+    }
+  ],
+  "limits": [
+    "Visual self-review of one render, not an independent annotation set.",
+    "The graph manifest has 52 nodes and 39 edges but misses the complete DPM label.",
+    "The observed stroke does not validate all graph edges or legal authority."
+  ]
+}
