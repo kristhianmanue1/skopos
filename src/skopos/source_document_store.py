@@ -2,6 +2,9 @@
 
 import hashlib
 
+from pymongo import ReadPreference
+from pymongo.read_concern import ReadConcern
+
 from skopos.pdf_custody import (SOURCE_POLICY_SCHEMA, SOURCE_SCHEMA, _policy_digest,
                                _read_under, _verified_document)
 from skopos.pdf_document_store import DocumentError, PdfDocumentStore
@@ -9,6 +12,12 @@ from skopos.pdf_document_store import DocumentError, PdfDocumentStore
 
 class SourceDocumentStore(PdfDocumentStore):
     """Reutiliza el motor PDF, verificando la nueva frontera de procedencia."""
+
+    def __init__(self, database, policy):
+        super().__init__(database, policy)
+        self.custody_revisions = database.get_collection(
+            'source_custody_revisions_v1', read_concern=ReadConcern('majority'),
+            read_preference=ReadPreference.PRIMARY)
 
     def _source(self, supplied):
         policy = self.policy
@@ -24,7 +33,12 @@ class SourceDocumentStore(PdfDocumentStore):
         if (self.custody['schema'] != SOURCE_POLICY_SCHEMA
                 or _policy_digest(self.custody) != policy['custody_policy_sha256']):
             raise DocumentError('custody_policy_mismatch')
-        allowed = self.custody['allowed_materials'][0]
+        matches = [item for item in self.custody['allowed_materials']
+                   if item['material_id'] == policy['material_id']
+                   and item['source_revision'] == policy['source_revision']]
+        if len(matches) != 1:
+            raise DocumentError('custody_policy_mismatch')
+        allowed = matches[0]
         if allowed['media_type'] != 'application/pdf':
             raise DocumentError('unsupported_format')
         if (allowed['material_id'] != policy['material_id']
@@ -34,7 +48,7 @@ class SourceDocumentStore(PdfDocumentStore):
             raise DocumentError('custody_policy_mismatch')
         key = ':'.join((policy['project_id'], policy['material_id'],
                         str(policy['source_revision'])))
-        document = self.database.source_custody_revisions_v1.find_one({'_id': key})
+        document = self.custody_revisions.find_one({'_id': key})
         if document is None:
             raise DocumentError('custody_receipt_missing')
         try:

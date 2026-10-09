@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import copy
 from pathlib import Path
 import tempfile
 import unittest
@@ -124,12 +125,14 @@ class SourceCustodyV03Tests(unittest.TestCase):
             HostGateway(load_host_config(path), client=mock.MagicMock())
 
     def test_pdf_derivative_checks_policy_and_separate_provenance(self):
+        self.policy['allowed_materials'].reverse()
+        self.policy_path.write_text(json.dumps(self.policy))
         custody = load_policy(self.policy_path)
         request = self.request('pdf')
         document = _admission_data(request, custody)
         document['record_sha256'] = _record_digest(document)
         database = mock.MagicMock()
-        database.source_custody_revisions_v1.find_one.return_value = document
+        database.get_collection.return_value.find_one.return_value = document
         policy = {'custody_policy_path': str(self.policy_path),
                   'custody_policy_sha256': _policy_digest(custody),
                   'project_id': 'expertogobernanza', 'material_id': 'pdf',
@@ -140,7 +143,27 @@ class SourceCustodyV03Tests(unittest.TestCase):
         supplied = {key: policy[key] for key in ('material_id', 'source_revision',
                     'source_sha256', 'custody_receipt_id', 'custody_policy_sha256')}
         self.assertEqual(store._source(supplied), self.pdf)
+        collection_call = database.get_collection.call_args
+        self.assertEqual(collection_call.args[0], 'source_custody_revisions_v1')
+        self.assertEqual(collection_call.kwargs['read_concern'].level, 'majority')
+        self.assertEqual(str(collection_call.kwargs['read_preference']), 'Primary()')
         store.custody['allowed_materials'][0]['provenance_ref'] = 'other.txt'
+        with self.assertRaisesRegex(DocumentError, 'custody_policy_mismatch'):
+            store._source(supplied)
+
+    def test_pdf_derivative_rejects_ambiguous_material(self):
+        custody = load_policy(self.policy_path)
+        custody['allowed_materials'].append(copy.deepcopy(custody['allowed_materials'][0]))
+        policy = {'custody_policy_path': str(self.policy_path),
+                  'custody_policy_sha256': _policy_digest(custody),
+                  'project_id': 'expertogobernanza', 'material_id': 'pdf',
+                  'source_revision': 1, 'source_sha256': hashlib.sha256(self.pdf).hexdigest(),
+                  'provenance_sha256': hashlib.sha256(self.provenance).hexdigest(),
+                  'custody_receipt_id': 'expertogobernanza:pdf:1:' + 'a' * 16}
+        store = SourceDocumentStore(mock.MagicMock(), policy)
+        store.custody = custody
+        supplied = {key: policy[key] for key in ('material_id', 'source_revision',
+                    'source_sha256', 'custody_receipt_id', 'custody_policy_sha256')}
         with self.assertRaisesRegex(DocumentError, 'custody_policy_mismatch'):
             store._source(supplied)
 

@@ -48,6 +48,12 @@ cotejo externo. El límite del perfil DA es 403 páginas físicas, pero la corri
 de este piloto sólo derivó p1 y p282. El perfil CTIM limita 91 páginas y la
 corrida sólo derivó p3, p6, p15 y p20.
 
+La política de custodia v0.3 puede listar varios materiales; el loader de
+derivados v0.2 sigue exigiendo exactamente uno por política. El adaptador
+selecciona por `material_id` y revisión y rechaza coincidencias ambiguas.
+Lee el recibo en primario con read concern `majority`. Esto no habilita aún
+una política de derivados multifuente ni demuestra aislamiento multiusuario.
+
 Para HTML DOF, `html_derivative.py` produce un artefacto **local**, fuera
 del contrato de host de derivados PDF. Acepta Latin-1 declarado o UTF-8
 declarado/inferido tras decodificación estricta; rechaza otras codificaciones.

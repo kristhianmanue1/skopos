@@ -156,3 +156,15 @@ no fueron ejecutados aquí. Las páginas PDF son parciales; el HTML no tiene
 contrato de búsqueda de host, sólo artefacto local. No se ensayó DOCX,
 conversaciones ni admisión a AN-KLA. No se atribuye a esta corrida una
 decisión de vigente para ninguna fuente.
+
+## Autorrevisión posterior del PR #5
+
+Una revisión externa preliminar señaló el uso de `allowed_materials[0]` en
+`SourceDocumentStore._source()`. El loader de derivados v0.2 obliga a una
+política por material, por lo que los cinco pilotos no dependían del orden,
+pero el adaptador aceptaba una suposición innecesaria. Se corrigió para
+seleccionar por `material_id` y revisión y fallar ante cero o varias
+coincidencias; la consulta del recibo ahora usa primario y read concern
+`majority`, como `PdfCustodyStore`. Un fixture coloca el PDF en segundo lugar
+y otro exige rechazo de una coincidencia duplicada. Esta corrección no
+cambia las políticas privadas ni los recibos ya admitidos.
