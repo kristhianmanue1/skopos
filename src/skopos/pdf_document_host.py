@@ -19,12 +19,29 @@ from skopos.pdf_document_extract import DocumentExtractionError
 from skopos.pdf_document_store import (CONTRACT_ID, CONTRACT_VERSION,
                                        DocumentError, PdfDocumentStore,
                                        _canonical, load_document_policy)
+from skopos.pdf_document_policy_v02 import load_document_policy_v02
 
 
 HOST_SCHEMA = 'skopos/pdf-document-host/v0.1'
+HOST_CONFIG_V02 = 'skopos/pdf-document-host-config/v0.2'
 MAX_CALL_BYTES = 4096
 MAX_REQUEST_BYTES = 64 * 1024
 MAX_RESPONSE_BYTES = 64 * 1024
+
+
+def _policy_loader(config):
+    loader = (load_document_policy_v02 if config['schema'] == HOST_CONFIG_V02
+              else load_document_policy)
+    if loader is load_document_policy:
+        return loader
+
+    def checked(path):
+        try:
+            return loader(path)
+        except (KeyError, TypeError):
+            raise DocumentError('policy_unavailable') from None
+
+    return checked
 
 
 def load_host_config(path):
@@ -43,7 +60,7 @@ def load_host_config(path):
     if (len(raw) > MAX_CALL_BYTES or not isinstance(config, dict)
             or set(config) != {'schema', 'policy_path', 'mongo_uri',
                                'database', 'socket_path'}
-            or config['schema'] != HOST_SCHEMA):
+            or config['schema'] not in (HOST_SCHEMA, HOST_CONFIG_V02)):
         raise DocumentError('host_config_unavailable')
     for field in ('policy_path', 'socket_path'):
         if not isinstance(config[field], str) or not os.path.isabs(config[field]):
@@ -94,7 +111,8 @@ def _read_request(policy, envelope):
 class DocumentGateway:
     def __init__(self, config, client=None):
         self.config = config
-        self.policy = load_document_policy(config['policy_path'])
+        self._load_policy = _policy_loader(config)
+        self.policy = self._load_policy(config['policy_path'])
         self.policy_sha256 = hashlib.sha256(_canonical(self.policy)).hexdigest()
         self.client = (client if client is not None else pymongo.MongoClient(
             config['mongo_uri'], serverSelectionTimeoutMS=2000))
@@ -113,7 +131,7 @@ class DocumentGateway:
                                          call['envelope_ref'], MAX_REQUEST_BYTES),
                              MAX_REQUEST_BYTES)
             request = _read_request(self.policy, envelope)
-            current = load_document_policy(self.config['policy_path'])
+            current = self._load_policy(self.config['policy_path'])
             if hashlib.sha256(_canonical(current)).hexdigest() != self.policy_sha256:
                 raise DocumentError('policy_mismatch')
             if request.get('project_id') != self.policy['project_id']:

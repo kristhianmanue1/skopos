@@ -127,8 +127,10 @@ def _stop_child(process):
 def _record_counts(config):
     with MongoClient(config['mongo_uri'], serverSelectionTimeoutMS=1000) as client:
         database = client[config['database']]
-        return (database.pdf_custody_revisions_v1.count_documents({}),
-                database.pdf_custody_heads_v1.count_documents({}))
+        material = 'expertogobernanza:imss-2000-002-001'
+        return (database.pdf_custody_revisions_v1.count_documents(
+                    {'_id': material + ':1'}),
+                database.pdf_custody_heads_v1.count_documents({'_id': material}))
 
 
 def serve():
