@@ -1,0 +1,576 @@
+{
+  "graph_derivation_id": "1ef12d5a480075214369e9d19dcb6949370119e212b84007ce1b1a5ef1b7b8cf",
+  "graph_manifest_sha256": "8a1880b84b0e52f934f09759f3a83efb5a3a752afda914d6c5cce9c7803aaaee",
+  "graph_pages": [
+    {
+      "label_counterexample": {
+        "extracted_label": "PLANEACION E NOVACIÓN EN SALU",
+        "item_id": "c7dede0ba0bcade91c037ea4aba4dd85cb608378a5565ed2015e0bea1386eac1",
+        "node_id": "n2",
+        "visual_label": "UNIDAD DE PLANEACIÓN E INNOVACIÓN EN SALUD"
+      },
+      "observed_box_count": 8,
+      "page_number": 18,
+      "visual_parent_children": {
+        "n1": [
+          "n2",
+          "n3",
+          "n4",
+          "n5",
+          "n6",
+          "n7"
+        ],
+        "n7": [
+          "n8"
+        ]
+      }
+    },
+    {
+      "label_counterexample": {
+        "extracted_label": "",
+        "item_id": "7c5e51d917932a9fcad935732161929c816d4be9fd30f6d52e78eebeed1b1835",
+        "node_id": "n4",
+        "visual_label": "COORDINACIÓN DE UNIDADES DE PRIMER NIVEL"
+      },
+      "observed_box_count": 32,
+      "page_number": 19,
+      "visual_parent_children": {
+        "n1": [
+          "n2"
+        ],
+        "n10": [
+          "n11",
+          "n19"
+        ],
+        "n2": [
+          "n3",
+          "n4",
+          "n5",
+          "n6",
+          "n7",
+          "n8",
+          "n9"
+        ],
+        "n3": [
+          "n10",
+          "n12",
+          "n20"
+        ],
+        "n4": [
+          "n13",
+          "n21",
+          "n27",
+          "n31"
+        ],
+        "n5": [
+          "n14",
+          "n22",
+          "n28",
+          "n32"
+        ],
+        "n6": [
+          "n15",
+          "n23",
+          "n29"
+        ],
+        "n7": [
+          "n16",
+          "n24"
+        ],
+        "n8": [
+          "n17",
+          "n25"
+        ],
+        "n9": [
+          "n18",
+          "n26",
+          "n30"
+        ]
+      }
+    },
+    {
+      "label_counterexample": {
+        "extracted_label": "",
+        "item_id": "755c1f8a43c6aaab668001312f2c8b90eace379af5b6256423037647289e7ea4",
+        "node_id": "n3",
+        "visual_label": "COORDINACIÓN DE EDUCACIÓN EN SALUD"
+      },
+      "observed_box_count": 10,
+      "page_number": 20,
+      "visual_parent_children": {
+        "n1": [
+          "n2"
+        ],
+        "n2": [
+          "n3",
+          "n4"
+        ],
+        "n3": [
+          "n5",
+          "n7",
+          "n9"
+        ],
+        "n4": [
+          "n6",
+          "n8",
+          "n10"
+        ]
+      }
+    },
+    {
+      "label_counterexample": {
+        "extracted_label": "",
+        "item_id": "fb858e8c94d250456d4936a9fd006ae4054cd0a996664bb70e515fdf6813016f",
+        "node_id": "n10",
+        "visual_label": "DIVISIÓN DE MEDICAMENTOS Y REACTIVOS"
+      },
+      "observed_box_count": 19,
+      "page_number": 21,
+      "visual_parent_children": {
+        "n1": [
+          "n2"
+        ],
+        "n2": [
+          "n3",
+          "n4",
+          "n5",
+          "n6"
+        ],
+        "n3": [
+          "n7",
+          "n11",
+          "n15",
+          "n18"
+        ],
+        "n4": [
+          "n10",
+          "n14",
+          "n16",
+          "n19"
+        ],
+        "n5": [
+          "n8",
+          "n12"
+        ],
+        "n6": [
+          "n9",
+          "n13",
+          "n17"
+        ]
+      }
+    },
+    {
+      "label_counterexample": {
+        "extracted_label": "",
+        "item_id": "64e2e2c8dd72a949d9df4111e28a44c0008a64f9effcd7c270fdab0c4a006e38",
+        "node_id": "n10",
+        "visual_label": "COORDINACIÓN TÉCNICA DE INFRAESTRUCTURA MÉDICA"
+      },
+      "observed_box_count": 17,
+      "page_number": 22,
+      "visual_parent_children": {
+        "n1": [
+          "n2"
+        ],
+        "n10": [
+          "n15"
+        ],
+        "n11": [
+          "n16"
+        ],
+        "n2": [
+          "n3",
+          "n4",
+          "n5",
+          "n6"
+        ],
+        "n3": [
+          "n8",
+          "n12",
+          "n17"
+        ],
+        "n4": [
+          "n7",
+          "n14"
+        ],
+        "n5": [
+          "n9",
+          "n13"
+        ],
+        "n6": [
+          "n10",
+          "n11"
+        ]
+      }
+    }
+  ],
+  "limits": "Visual review by producing agent; graph edges remain hypotheses pending independent adjudication.",
+  "native_derivation_id": "372fdaef7fb1171ec8dce708b79ef1e32b38e43dfb1b079e6b27ae070d8f7587",
+  "native_manifest_sha256": "7f81b1616b10549439cd536737e76663cfea7cec3bf7a6ec3fbf10241d8292ed",
+  "render_dpi": 200,
+  "review_type": "nonblind_self_review",
+  "schema": "skopos/imss-visual-self-review/v0.1",
+  "source_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+  "text_samples": [
+    {
+      "bbox": [
+        0.10925490196078431,
+        0.3993813131313131,
+        0.8714575163398695,
+        0.41627525252525255
+      ],
+      "item_id": "496c446292f4a1d20448461801d183f82c7984f4ddae756005d45ed7e4476ad8",
+      "page_number": 2,
+      "quantile": 0.25,
+      "skopos_text": "7 Funciones Sustantivas 23",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "7 Funciones Sustantivas 23",
+      "word_count": 4
+    },
+    {
+      "bbox": [
+        0.8495751633986929,
+        0.5910732323232324,
+        0.8714575163398695,
+        0.6079671717171717
+      ],
+      "item_id": "5fac17143cc1a0abc2cf48dd564179ec9f9db8938eb8e02a7e350651b3ee82cd",
+      "page_number": 2,
+      "quantile": 0.5,
+      "skopos_text": "42",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "42",
+      "word_count": 1
+    },
+    {
+      "bbox": [
+        0.10925490196078431,
+        0.7304671717171718,
+        0.8714575163398695,
+        0.7473611111111111
+      ],
+      "item_id": "f812b946134a3ff0181badfddd16214a50a5b45e2cdb78df0c0063ac0d98fc0f",
+      "page_number": 2,
+      "quantile": 0.75,
+      "skopos_text": "7.1.1.3.3 División Transversal de Servicios Paramédicos y Apoyo 56",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "7.1.1.3.3 División Transversal de Servicios Paramédicos y Apoyo 56",
+      "word_count": 13
+    },
+    {
+      "bbox": [
+        0.10415686274509804,
+        0.31226010101010093,
+        0.9028823529411762,
+        0.3291540404040403
+      ],
+      "item_id": "f4668ddca072304ecb2f0e83a1107da89cb5bd5ec60797e2a35c47258a6a8eb7",
+      "page_number": 8,
+      "quantile": 0.25,
+      "skopos_text": "Organización y Mejora de Procesos informó la autorización para incorporar la División de",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "Organización y Mejora de Procesos informó la autorización para incorporar la División de",
+      "word_count": 13
+    },
+    {
+      "bbox": [
+        0.10415686274509804,
+        0.5039267676767676,
+        0.9026078431372545,
+        0.5208207070707069
+      ],
+      "item_id": "67f448fdd48d8d32b1e6fa521a813c64e7d502e5134b8b5356cc9415c28ee1da",
+      "page_number": 8,
+      "quantile": 0.5,
+      "skopos_text": "Adicciones; cada una de ellas con dos divisiones a su cargo: Gestión del Cuidado de",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "Adicciones; cada una de ellas con dos divisiones a su cargo: Gestión del Cuidado de",
+      "word_count": 15
+    },
+    {
+      "bbox": [
+        0.10415686274509804,
+        0.6781944444444445,
+        0.9027843137254901,
+        0.6950883838383839
+      ],
+      "item_id": "edd58942edf2a52be51fcda02b5f46cdf356d734d4afe1113db54ccb90cf8719",
+      "page_number": 8,
+      "quantile": 0.75,
+      "skopos_text": "prestación de servicios médicos a la población sin seguridad social que eran proporcionados",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "prestación de servicios médicos a la población sin seguridad social que eran proporcionados",
+      "word_count": 13
+    },
+    {
+      "bbox": [
+        0.11572549019607843,
+        0.19025252525252523,
+        0.9028954248366011,
+        0.20714646464646458
+      ],
+      "item_id": "4b2cac3d59c14b53402ad5a6cf556fb161844932b40041c5cbd6f89d37faa0ed",
+      "page_number": 17,
+      "quantile": 0.25,
+      "skopos_text": "5.12 Analizará las necesidades para planear la infraestructura, el equipamiento,",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "5.12 Analizará las necesidades para planear la infraestructura, el equipamiento,",
+      "word_count": 11
+    },
+    {
+      "bbox": [
+        0.18513071895424837,
+        0.22510101010101002,
+        0.646934640522876,
+        0.24199494949494949
+      ],
+      "item_id": "9b97d447656812d99cd37b00f8a3308d73bf365672cc6d3e645c0b3d19fa0a94",
+      "page_number": 17,
+      "quantile": 0.5,
+      "skopos_text": "utilizan para otorgar servicios de salud en el Instituto.",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "utilizan para otorgar servicios de salud en el Instituto.",
+      "word_count": 9
+    },
+    {
+      "bbox": [
+        0.18513071895424837,
+        0.25994949494949493,
+        0.9027385620915033,
+        0.2768434343434343
+      ],
+      "item_id": "b16dcb95ed905f68546996ac62840671ec862fd9faf2b61a6c7a47364b49f27e",
+      "page_number": 17,
+      "quantile": 0.75,
+      "skopos_text": "Colaborará en materia de verificación de la calidad y optimización de insumos para",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "Colaborará en materia de verificación de la calidad y optimización de insumos para",
+      "word_count": 13
+    },
+    {
+      "bbox": [
+        0.11572549019607843,
+        0.34710858585858584,
+        0.9030130718954248,
+        0.3640025252525252
+      ],
+      "item_id": "ecd28464312960ded0640af5ee3beb602422c2ba76af9db43bbdc4c8711dc801",
+      "page_number": 23,
+      "quantile": 0.25,
+      "skopos_text": "3. Determinar acciones dirigidas a la atención de la salud de los grupos en situación de",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "3. Determinar acciones dirigidas a la atención de la salud de los grupos en situación de",
+      "word_count": 16
+    },
+    {
+      "bbox": [
+        0.17375816993464052,
+        0.52135101010101,
+        0.9028562091503269,
+        0.5382449494949495
+      ],
+      "item_id": "a71bbc80ca71bf766ea4aed79fce7e716a0936f204918e9fedb5f680bc07f920",
+      "page_number": 23,
+      "quantile": 0.5,
+      "skopos_text": "reproductiva, materna, neonatal e infantil, salud mental y adicciones, así como la",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "reproductiva, materna, neonatal e infantil, salud mental y adicciones, así como la",
+      "word_count": 12
+    },
+    {
+      "bbox": [
+        0.17375816993464052,
+        0.6781944444444445,
+        0.9030522875816995,
+        0.6950883838383839
+      ],
+      "item_id": "9192b50d5038c784419e085144a9bd7d7077ff382a66511552d4b65cc23968bd",
+      "page_number": 23,
+      "quantile": 0.75,
+      "skopos_text": "funcional y el intercambio de servicios en la atención de problemas de salud, a través",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "funcional y el intercambio de servicios en la atención de problemas de salud, a través",
+      "word_count": 15
+    },
+    {
+      "bbox": [
+        0.17375816993464052,
+        0.20767676767676768,
+        0.9029934640522871,
+        0.22457070707070714
+      ],
+      "item_id": "48a65d556626f0eff53c3040e68da8b2a4262de3e5c111a59ce748c4a63b9bbe",
+      "page_number": 61,
+      "quantile": 0.25,
+      "skopos_text": "y en materia de auxiliares de diagnóstico y tratamiento, y someter a consideración",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "y en materia de auxiliares de diagnóstico y tratamiento, y someter a consideración",
+      "word_count": 13
+    },
+    {
+      "bbox": [
+        0.17375816993464052,
+        0.25994949494949493,
+        0.3710130718954248,
+        0.2768434343434343
+      ],
+      "item_id": "339975e84f53f35529c4b6c0457676c43e24214ef68c80438b3672a683ed2d72",
+      "page_number": 61,
+      "quantile": 0.5,
+      "skopos_text": "Prestaciones Médicas.",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "Prestaciones Médicas.",
+      "word_count": 2
+    },
+    {
+      "bbox": [
+        0.17375816993464052,
+        0.3296843434343435,
+        0.9029346405228759,
+        0.34657828282828285
+      ],
+      "item_id": "9a7371f1b228729ee8ee48d659d06395636cb101632fba30a8e3ded94ca58f6e",
+      "page_number": 61,
+      "quantile": 0.75,
+      "skopos_text": "Especialidad y sus Unidades Médicas Complementarias, para que se registren y",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "Especialidad y sus Unidades Médicas Complementarias, para que se registren y",
+      "word_count": 11
+    },
+    {
+      "bbox": [
+        0.11572549019607843,
+        0.3296843434343435,
+        0.906797385620915,
+        0.34657828282828285
+      ],
+      "item_id": "e6864bfd86c2245b0253c825aba5ff0d80c31959f4b6ef8c56e240cfe5483e65",
+      "page_number": 100,
+      "quantile": 0.25,
+      "skopos_text": "10. Dirigir las actividades de investigación científica, medicina de precisión, desarrollo y",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "10. Dirigir las actividades de investigación científica, medicina de precisión, desarrollo y",
+      "word_count": 12
+    },
+    {
+      "bbox": [
+        0.17375816993464052,
+        0.48650252525252524,
+        0.9070032679738564,
+        0.5033964646464646
+      ],
+      "item_id": "315a2d813e337ffecaa6f1574eed78e9295e1e26622d0f103956480c5eab6f58",
+      "page_number": 100,
+      "quantile": 0.5,
+      "skopos_text": "aprovechamiento del conocimiento e innovación generada por la investigación",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "aprovechamiento del conocimiento e innovación generada por la investigación",
+      "word_count": 9
+    },
+    {
+      "bbox": [
+        0.17375816993464052,
+        0.660770202020202,
+        0.9069934640522874,
+        0.6776641414141414
+      ],
+      "item_id": "93f68481cbdcc9311cbc00c3107998761dc13920b30bd45eb208513f22a6ffd6",
+      "page_number": 100,
+      "quantile": 0.75,
+      "skopos_text": "tecnológico en salud, a fin de fomentar el desarrollo profesional del personal de salud",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "tecnológico en salud, a fin de fomentar el desarrollo profesional del personal de salud",
+      "word_count": 14
+    },
+    {
+      "bbox": [
+        0.17375816993464052,
+        0.2773737373737373,
+        0.9031013071895426,
+        0.29426767676767673
+      ],
+      "item_id": "aa5cacc872ae45c66006e0ea2ea61add9ae948032d8e1159f487ebf20483bfd9",
+      "page_number": 145,
+      "quantile": 0.25,
+      "skopos_text": "laboratorios clínicos para el seguimiento a brotes por infecciones asociadas a la",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "laboratorios clínicos para el seguimiento a brotes por infecciones asociadas a la",
+      "word_count": 12
+    },
+    {
+      "bbox": [
+        0.17375816993464052,
+        0.38195707070707074,
+        0.9027777777777778,
+        0.3988510101010101
+      ],
+      "item_id": "44f82697fc7b35642ce4dc7ce2f052d9bce128e2b30784da4c597ff1a9ba025f",
+      "page_number": 145,
+      "quantile": 0.5,
+      "skopos_text": "de microbiología de los laboratorios clínicos del Instituto, en cumplimiento de la",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "de microbiología de los laboratorios clínicos del Instituto, en cumplimiento de la",
+      "word_count": 12
+    },
+    {
+      "bbox": [
+        0.11572549019607843,
+        0.5039267676767676,
+        0.9030130718954248,
+        0.5208207070707069
+      ],
+      "item_id": "dc7911f83749b7ceec5bd1227bcafdd74566bfa3d62a174fbde6fab5063ca5d2",
+      "page_number": 145,
+      "quantile": 0.75,
+      "skopos_text": "15. Establecer la estructura organizacional, infraestructura y personal mínimos",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "15. Establecer la estructura organizacional, infraestructura y personal mínimos",
+      "word_count": 9
+    },
+    {
+      "bbox": [
+        0.11572549019607843,
+        0.19025252525252523,
+        0.903052287581699,
+        0.20714646464646458
+      ],
+      "item_id": "31986f71bcf6a511412c6a9e6a86485b0cfe3c608c00695639ba4df56e663b39",
+      "page_number": 188,
+      "quantile": 0.25,
+      "skopos_text": "12. Verificar la participación de las Coordinaciones Normativas de la DPM en materia de",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "12. Verificar la participación de las Coordinaciones Normativas de la DPM en materia de",
+      "word_count": 14
+    },
+    {
+      "bbox": [
+        0.17375816993464052,
+        0.20767676767676768,
+        0.9031503267973857,
+        0.22457070707070714
+      ],
+      "item_id": "b3993a85b8e5060727944341a56ad8df363047e312026fd01cc91a819762cc14",
+      "page_number": 188,
+      "quantile": 0.5,
+      "skopos_text": "Control Interno y Administración de Riesgos en las unidades médicas, para impulsar",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "Control Interno y Administración de Riesgos en las unidades médicas, para impulsar",
+      "word_count": 12
+    },
+    {
+      "bbox": [
+        0.17375816993464052,
+        0.22510101010101002,
+        0.593307189542484,
+        0.24199494949494949
+      ],
+      "item_id": "425a7f418ecafb4ea9db15599afdc016df350e4130041e8ab1117ce6f1e4cab8",
+      "page_number": 188,
+      "quantile": 0.75,
+      "skopos_text": "la mejora en la calidad y seguridad del paciente.",
+      "visual_review": "match_in_rendered_crop",
+      "visual_transcription": "la mejora en la calidad y seguridad del paciente.",
+      "word_count": 9
+    }
+  ]
+}
