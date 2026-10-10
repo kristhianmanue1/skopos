@@ -2,7 +2,9 @@
 
 Estado: ensayo local ejecutado. La evidencia operativa completa permanece bajo
 `runs/ctim-rs1-draft-local-v1/renewal-2026-10-19/` (ignorado por Git).
-No se copió el PDF ni se admitió al corpus. El inventario de ocho fuentes,
+No se estableció una copia persistente bajo custodia ni se admitió al corpus.
+La derivación creó un archivo de trabajo temporal y lo eliminó al terminar.
+El inventario de ocho fuentes,
 los siete perfiles ajenos a RS1 y los recibos históricos no se modificaron.
 
 ## Identidad y política
