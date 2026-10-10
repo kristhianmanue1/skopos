@@ -14,6 +14,7 @@ from skopos.pdf_custody import (SOURCE_POLICY_SCHEMA, SOURCE_SCHEMA,
                                PdfCustodyStore, _policy_digest,
                                _read_under, _verified_document, load_policy)
 from skopos.pdf_document_policy_v02 import load_document_policy_v02
+from skopos.pdf_document_policy_v03 import load_document_policy_v03
 from skopos.pdf_document_store import PdfDocumentStore, load_document_policy
 from skopos.source_document_store import SourceDocumentStore
 
@@ -169,7 +170,9 @@ class AccessGateway:
             schema = json.loads(raw)['schema']
         except (UnicodeError, ValueError, KeyError, TypeError):
             raise AccessError('policy_unavailable') from None
-        loader = (load_document_policy_v02 if schema == 'skopos/pdf-document-policy/v0.2'
+        loader = (load_document_policy_v03 if schema == 'skopos/pdf-document-policy/v0.3'
+                  else load_document_policy_v02
+                  if schema == 'skopos/pdf-document-policy/v0.2'
                   else load_document_policy)
         policy = loader(entry['document_policy_path'])
         if (self.policy['schema'] == EXTENSIBLE_POLICY_SCHEMA
