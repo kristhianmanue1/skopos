@@ -21,6 +21,7 @@ from skopos.source_document_store import SourceDocumentStore
 SCHEMA = 'skopos/ctim-source-access/v0.1'
 PAGE_SCHEMA = 'skopos/ctim-source-access/v0.2'
 POLICY_SCHEMA = 'skopos/ctim-source-access-policy/v0.1'
+EXTENSIBLE_POLICY_SCHEMA = 'skopos/ctim-source-access-policy/v0.2'
 HEX = re.compile(r'[0-9a-f]{64}\Z')
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z')
 MAX_POLICY_BYTES = 32 * 1024
@@ -68,8 +69,10 @@ def load_access_policy(path):
     required = {'schema', 'inventory_root', 'inventory_ref', 'inventory_sha256',
                 'mongo_uri', 'database', 'socket_path', 'sources'}
     if (not isinstance(policy, dict) or set(policy) != required
-            or policy['schema'] != POLICY_SCHEMA
-            or not isinstance(policy['sources'], list) or len(policy['sources']) != 7
+            or policy['schema'] not in (POLICY_SCHEMA, EXTENSIBLE_POLICY_SCHEMA)
+            or not isinstance(policy['sources'], list)
+            or (len(policy['sources']) != 7 if policy['schema'] == POLICY_SCHEMA
+                else len(policy['sources']) < 1)
             or not isinstance(policy['mongo_uri'], str)
             or not policy['mongo_uri'].startswith('mongodb://127.0.0.1:37034/')
             or not isinstance(policy['database'], str) or not policy['database']
@@ -89,7 +92,7 @@ def load_access_policy(path):
     if (not isinstance(inventory, dict)
             or inventory.get('schema') != 'expertogobernanza/source-inventory/v1'
             or not isinstance(inventory.get('sources'), list)
-            or len(inventory['sources']) != 7):
+            or len(inventory['sources']) != len(policy['sources'])):
         raise AccessError('inventory_mismatch')
     if any(not isinstance(item, dict) or not isinstance(item.get('id'), str)
            or item.get('media_type') not in ('application/pdf', 'text/html')
@@ -99,7 +102,7 @@ def load_access_policy(path):
            or item['bytes'] < 1 for item in inventory['sources']):
         raise AccessError('inventory_mismatch')
     indexed = {item['id']: item for item in inventory['sources']}
-    if len(indexed) != 7:
+    if len(indexed) != len(inventory['sources']):
         raise AccessError('inventory_mismatch')
     seen = set()
     for entry in policy['sources']:
@@ -114,6 +117,9 @@ def load_access_policy(path):
         expected = (common | {'document_policy_path', 'derivation_id',
                               'manifest_sha256'} if source['media_type'] == 'application/pdf'
                     else common | {'derivative_path', 'derivative_sha256'})
+        if (policy['schema'] == EXTENSIBLE_POLICY_SCHEMA
+                and source['media_type'] == 'application/pdf'):
+            expected.add('custody_material_id')
         if set(entry) != expected:
             raise AccessError('policy_unavailable')
         for field in expected - {'source_id'}:
@@ -125,6 +131,9 @@ def load_access_policy(path):
                 raise AccessError('policy_unavailable')
         if source['media_type'] == 'application/pdf' and HEX.fullmatch(
                 entry['derivation_id']) is None:
+            raise AccessError('policy_unavailable')
+        if ('custody_material_id' in entry and ID.fullmatch(
+                entry['custody_material_id']) is None):
             raise AccessError('policy_unavailable')
     if seen != set(indexed):
         raise AccessError('policy_unavailable')
@@ -163,6 +172,9 @@ class AccessGateway:
         loader = (load_document_policy_v02 if schema == 'skopos/pdf-document-policy/v0.2'
                   else load_document_policy)
         policy = loader(entry['document_policy_path'])
+        if (self.policy['schema'] == EXTENSIBLE_POLICY_SCHEMA
+                and policy['material_id'] != entry['custody_material_id']):
+            raise AccessError('source_mismatch')
         if (policy['custody_policy_path'] != entry['custody_policy_path']
                 or policy['source_sha256'] != source['sha256']
                 or policy['max_page'] != source['pages']

@@ -1,8 +1,13 @@
 """Controles del contrato de consulta CTIM, sin Mongo ni originales privados."""
 
 import unittest
+import hashlib
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
-from skopos.ctim_source_access import AccessError, AccessGateway, _canonical
+from skopos.ctim_source_access import (AccessError, AccessGateway, _canonical,
+                                      load_access_policy)
 
 
 class GatewayContractTests(unittest.TestCase):
@@ -116,6 +121,95 @@ class GatewayContractTests(unittest.TestCase):
                          'page_response_limit_exceeded')
         self.assertIsNone(oversized['result'])
         self.assertLess(len(_canonical(oversized)) + 1, 64 * 1024)
+
+    def test_pdf_policy_cannot_alias_another_material_identity(self):
+        self.gateway.policy = {'schema': 'skopos/ctim-source-access-policy/v0.2'}
+        self.gateway.entries['source-a'] = {
+            'custody_policy_path': '/unused/custody.json',
+            'document_policy_path': '/unused/document.json',
+            'custody_material_id': 'source-a'}
+        with patch('skopos.ctim_source_access.load_policy',
+                   return_value={'schema': 'skopos/source-custody-policy/v0.3'}), \
+                patch('skopos.ctim_source_access._file',
+                      return_value=b'{"schema":"skopos/pdf-document-policy/v0.2"}'), \
+                patch('skopos.ctim_source_access.load_document_policy_v02',
+                      return_value={'material_id': 'source-b'}):
+            with self.assertRaisesRegex(AccessError, 'source_mismatch'):
+                self.gateway._pdf('source-a')
+
+
+class ExtensibleProfileTests(unittest.TestCase):
+    def test_eighth_registered_pdf_is_selectable_without_opening_unknown_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sources = [{'id': 'source-' + str(index),
+                        'media_type': 'application/pdf', 'sha256': 'a' * 64,
+                        'bytes': 4, 'pages': 1} for index in range(1, 9)]
+            inventory = {'schema': 'expertogobernanza/source-inventory/v1',
+                         'sources': sources}
+            inventory_raw = _canonical(inventory)
+            (root / 'inventory.json').write_bytes(inventory_raw)
+            entries = [{'source_id': source['id'],
+                        'custody_policy_path': str(root / 'custody.json'),
+                        'custody_material_id': source['id'],
+                        'document_policy_path': str(root / 'document.json'),
+                        'derivation_id': 'b' * 64,
+                        'manifest_sha256': 'c' * 64} for source in sources]
+            policy = {'schema': 'skopos/ctim-source-access-policy/v0.2',
+                      'inventory_root': str(root),
+                      'inventory_ref': 'inventory.json',
+                      'inventory_sha256': hashlib.sha256(inventory_raw).hexdigest(),
+                      'mongo_uri': 'mongodb://127.0.0.1:37034/',
+                      'database': 'synthetic',
+                      'socket_path': str(root / 'access.sock'),
+                      'sources': entries}
+            path = root / 'policy.json'
+            path.write_bytes(_canonical(policy))
+            loaded, indexed, _ = load_access_policy(path)
+            self.assertEqual(len(indexed), 8)
+            self.assertEqual(loaded['schema'], policy['schema'])
+            gateway = AccessGateway(path, client=object())
+            page = {'page_number': 1, 'page_width_points': 612,
+                    'page_height_points': 792, 'page_rotation': 0,
+                    'native_text': {'status': 'extracted', 'lines': []},
+                    'ocr_text': {'status': 'not_run', 'lines': []}}
+            gateway._source = lambda _id: (None, {'pages': [page]}, 4)
+            request = {'request_id': 'eighth', 'operation': 'read_pdf_page',
+                       'source_id': 'source-8', 'page_number': 1}
+            self.assertEqual(gateway.handle(request)['status'], 'ok')
+            request['source_id'] = 'source-9'
+            rejected = gateway.handle(request)
+            self.assertEqual(rejected['error']['code'], 'source_not_allowed')
+            self.assertIsNone(rejected['result'])
+            inventory['sources'].append({'id': 'source-9',
+                                         'media_type': 'application/pdf',
+                                         'sha256': 'a' * 64,
+                                         'bytes': 4, 'pages': 1})
+            expanded_raw = _canonical(inventory)
+            (root / 'inventory.json').write_bytes(expanded_raw)
+            policy['inventory_sha256'] = hashlib.sha256(expanded_raw).hexdigest()
+            path.write_bytes(_canonical(policy))
+            with self.assertRaisesRegex(AccessError, 'inventory_mismatch'):
+                load_access_policy(path)
+            inventory['sources'].pop()
+            (root / 'inventory.json').write_bytes(inventory_raw)
+            policy['inventory_sha256'] = hashlib.sha256(inventory_raw).hexdigest()
+            policy['schema'] = 'skopos/ctim-source-access-policy/v0.1'
+            for entry in entries:
+                entry.pop('custody_material_id')
+            path.write_bytes(_canonical(policy))
+            with self.assertRaisesRegex(AccessError, 'policy_unavailable'):
+                load_access_policy(path)
+            policy['schema'] = 'skopos/ctim-source-access-policy/v0.2'
+            for entry in entries:
+                entry['custody_material_id'] = entry['source_id']
+            inventory['sources'][7]['media_type'] = 'conversation'
+            inventory_raw = _canonical(inventory)
+            (root / 'inventory.json').write_bytes(inventory_raw)
+            policy['inventory_sha256'] = hashlib.sha256(inventory_raw).hexdigest()
+            path.write_bytes(_canonical(policy))
+            with self.assertRaisesRegex(AccessError, 'inventory_mismatch'):
+                load_access_policy(path)
 
 
 if __name__ == '__main__':
