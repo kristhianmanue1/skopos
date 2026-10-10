@@ -21,18 +21,21 @@ from skopos.pdf_document_store import (CONTRACT_ID, CONTRACT_VERSION,
                                        DocumentError, PdfDocumentStore,
                                        _canonical, load_document_policy)
 from skopos.pdf_document_policy_v02 import load_document_policy_v02
+from skopos.pdf_document_policy_v03 import load_document_policy_v03
 from skopos.source_document_store import SourceDocumentStore
 
 
 HOST_SCHEMA = 'skopos/pdf-document-host/v0.1'
 HOST_CONFIG_V02 = 'skopos/pdf-document-host-config/v0.2'
+HOST_CONFIG_V03 = 'skopos/pdf-document-host-config/v0.3'
 MAX_CALL_BYTES = 4096
 MAX_REQUEST_BYTES = 64 * 1024
 MAX_RESPONSE_BYTES = 64 * 1024
 
 
 def _policy_loader(config):
-    loader = (load_document_policy_v02 if config['schema'] == HOST_CONFIG_V02
+    loader = (load_document_policy_v03 if config['schema'] == HOST_CONFIG_V03
+              else load_document_policy_v02 if config['schema'] == HOST_CONFIG_V02
               else load_document_policy)
     if loader is load_document_policy:
         return loader
@@ -62,7 +65,8 @@ def load_host_config(path):
     if (len(raw) > MAX_CALL_BYTES or not isinstance(config, dict)
             or set(config) != {'schema', 'policy_path', 'mongo_uri',
                                'database', 'socket_path'}
-            or config['schema'] not in (HOST_SCHEMA, HOST_CONFIG_V02)):
+            or config['schema'] not in (HOST_SCHEMA, HOST_CONFIG_V02,
+                                        HOST_CONFIG_V03)):
         raise DocumentError('host_config_unavailable')
     for field in ('policy_path', 'socket_path'):
         if not isinstance(config[field], str) or not os.path.isabs(config[field]):
