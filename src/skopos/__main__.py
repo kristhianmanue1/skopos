@@ -21,6 +21,7 @@ from skopos.source_cli import source_command
 from skopos.pdf_custody_cli import custody_command
 from skopos.pdf_custody_host import host_command
 from skopos.pdf_document_host import document_host_command
+from skopos.ctim_source_access_host import host_command as ctim_access_command
 
 COMANDOS = {"query": query_command, "watch": watch_command,
             "analyze": analyze_command,
@@ -28,6 +29,7 @@ COMANDOS = {"query": query_command, "watch": watch_command,
             "search": buscar_command, "source": source_command,
             "custody": custody_command, "custody-host": host_command,
             "document-host": document_host_command,
+            "ctim-source-access": ctim_access_command,
             # alias heredados (ADR-016 (d)): mismo comando, nombre viejo
             "reanalizar": reanalizar_command, "indexar": indexar_command,
             "buscar": buscar_command}
@@ -46,6 +48,8 @@ Comandos:
                              canal fijado por host: PDF v0.2 o PDF/HTML v0.3
   document-host serve --config FILE | request --socket PATH --envelope-ref REF
                              derivados PDF locales en política separada
+  ctim-source-access serve --policy FILE | request --socket PATH --request-file FILE
+                             inventario, búsqueda literal y fragmento CTIM local
   query <tema>              busca por tema en lo ya analizado (SPEC-004)
   watch [--sessions-dir DIR] [--intervalo SEGUNDOS] [--backfill]
                              vigila y procesa turnos nuevos (SPEC-005);
