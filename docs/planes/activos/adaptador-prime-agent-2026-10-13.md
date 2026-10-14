@@ -18,7 +18,13 @@ es observable por Skopos.
   (242 líneas) y `src/skopos/claude_code.py` (236), con ficha
   `parser-X/v1` bajo ADR-010/SPEC-006 y tests dedicados.
 - JSONL append-only por archivo: aplica el cursor incremental de ADR-011
-  (mismo frente que codex), no el de filas de ADR-013.
+  (verificado en ronda: `AlmacenCursores` es genérico por ruta y `ciclo()` lo
+  aplica a toda fuente de archivo — claude/kimi/cline lo usan igual que
+  codex), no el de filas de ADR-013.
+- La cifra «sin namespace la dedup pierde ~35%» proviene del texto del issue #1
+  (ronda del dueño 2026-09-02, **sin acta en `docs/rondas/`** — hueco
+  archivístico detectado por la ronda adversarial): T1 la **remide** sobre
+  las sesiones vivas en vez de heredarla.
 - Descarte verificado: la ruta runtime v3 (`import_file` con
   `dsh-session-v0-jsonl` o texto) NO absorbe a prime-agent — importar como
   texto perdería la estructura de turnos y es custodia explícita por archivo,
@@ -38,24 +44,24 @@ TAREA T0 — decisión de alcance sobre sub-agentes
 Consumes: este plan; issue #1; AGENTS.md.
 Produce: decisión registrada del Operador sobre rlmDepth.
 Steps:
-- [ ] Decidir el filtro rlmDepth; recomendación del agente: sólo sesiones padre (rlmDepth 0) — los sub-agentes ya llegan resumidos vía child_usage_attributed e indexarlos duplica el corpus con eco.
+- [ ] Decidir el filtro rlmDepth; recomendación del agente: sólo sesiones padre (rlmDepth 0) — los sub-agentes ya llegan resumidos vía child_usage_attributed e indexarlos duplica el corpus con eco. Nota de ronda: hoy las 8 sesiones en disco son todas rlmDepth 0 (la hija referida en un custom_message no existe en disco), y `FUENTES_POR_DEFECTO` es (dir, glob) sin gancho de filtro: el filtro vive en la ficha, como incompatibilidad tipada (rlmDepth>0 → diagnóstico propio), no en el registro de fuentes.
   Verificación: decisión explícita del Operador en el acta de la sesión; sin ella no iniciar T1.
 
 TAREA T1 — ficha y adaptador
-Consumes: T0; src/skopos/kimi_code.py; docs/contratos/f1-contratos.md.
+Consumes: T0; src/skopos/kimi_code.py; docs/adr/ADR-010-contrato-parser-por-cli.md.
 Produce: se crea src/skopos/prime_agent.py con ficha parser-prime-agent/v1 bajo parser-contrato/v1.
 Steps:
-- [ ] Declarar la ficha: identidad, marcas de estructura, alcance de escaneo, fuentes de session_id/turn_id/timestamp_cierre; turn_id namespaced prime:<session>:<id> (sin namespace la dedup de ADR-005 pierde ~35% según la ronda 2026-09-02).
-  Verificación: ficha válida contra el contrato; cero extracción de thinking/toolCall (exclusión de la ronda).
-- [ ] Derivar el cierre de turno user→user sobre las sesiones reales (8 disponibles).
-  Verificación: contraste sobre archivos vivos; sin turnos cruzando sesiones; sin turno abierto al final de archivo salvo sesión activa.
+- [ ] Declarar la ficha: identidad, marcas de estructura, alcance de escaneo, fuentes de session_id/turn_id/timestamp_cierre; turn_id namespaced prime:<session>:<id>. session_id se toma de la cabecera `session` del archivo, no del nombre — en 1 de 8 archivos difieren (verificado en ronda); el namespace `prime:` está libre y almacenamiento no valida formato más allá de no-vacío.
+  Verificación: ficha válida contra ADR-010 §8; remedición de colisiones de dedup sobre las 8 sesiones (el ~35% del issue #1 es referencia, no dato); cero extracción de thinking/toolCall/toolResult — toolResult es un rol de message con texto (612 en el corpus, el segundo depósito por volumen) y queda declarado frontera, no contenido.
+- [ ] Derivar el cierre de turno user→user sobre las sesiones reales (8 disponibles; 0 casos de usuarios consecutivos medidos en ronda).
+  Verificación: contraste sobre archivos vivos; sin turnos cruzando sesiones; criterio de final falsifiable: si el archivo termina sin mensaje de usuario que cierre, el último turno queda registrado en estado abierto con su posición física — sin invocar «sesión activa» (indistinguible de abandonada en disco; ronda: un archivo termina en stopReason error con session_state active).
 
 TAREA T2 — registro y pruebas
 Consumes: T1; src/skopos/vigilante.py; src/skopos/parseo.py; tests/test_kimi_code.py.
 Produce: fuente registrada en el vigilante, selección en parsear() y suite en verde con tests dedicados.
 Steps:
 - [ ] Registrar (~/.prime/agent/sessions, *.jsonl) en FUENTES_POR_DEFECTO y el despacho en parsear() (frontera SPEC-006, un módulo por frontera).
-  Verificación: detección idéntica entre extracción completa y delta (patrón ADR-013); dedup Mongo manda (ADR-005).
+  Verificación: extracción completa vs delta idénticas por archivo (patrón ADR-011, cursor genérico); dedup Mongo manda (ADR-005); sellos verificados byte a byte (patrón 45/45 de la evidencia codex, fase-a 2026-08-28).
 - [ ] Tests dedicados con fixtures derivados de las sesiones reales, sin datos privados en el repo.
   Verificación: suite completa en verde; cero falsos positivos sobre archivos ajenos (patrón de las fichas previas: 2.187 ajenos para claude-code).
 
@@ -64,7 +70,7 @@ Consumes: T2; docs/evidencia/.
 Produce: se crea docs/evidencia/ficha-prime-agent-2026-10-XX.md con medición de ingesta real.
 Steps:
 - [ ] Ingerir las 8 sesiones reales y medir: turnos detectados, dedup, tiempo por delta.
-  Verificación: números exactos en la evidencia; sellos verificados byte a byte (patrón 45/45 de ADR-013); sin tocar corpus operativo sin autorización.
+  Verificación: números exactos en la evidencia; sellos verificados byte a byte (patrón 45/45 de la evidencia codex, fase-a 2026-08-28); sin tocar corpus operativo sin autorización.
 
 TAREA T4 — ronda adversarial y publicación
 Consumes: T3; docs/rondas/.
@@ -73,7 +79,7 @@ Steps:
 - [ ] Ronda adversarial con revisor sin contexto de autoría (patrón del plan multiproyecto).
   Verificación: tabla de hallazgos con veredicto; correcciones aplicadas antes de publicar.
 - [ ] Publicar con suite y gates en verde.
-  Verificación: python3 scripts/check_sizes.py y python3 scripts/check_plans.py en verde; git ls-remote == main local.
+  Verificación: python3 -m unittest discover -s tests en verde; python3 scripts/check_sizes.py y python3 scripts/check_plans.py en verde; git ls-remote == main local.
 ```
 
 ## Riesgos y abortos
