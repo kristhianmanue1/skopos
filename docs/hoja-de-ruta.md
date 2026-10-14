@@ -41,10 +41,18 @@ Actualización separada del piloto de consulta desde agente (2026-10-07):
 [T4 y revisión T5](evidencia/piloto-consulta-agente-t4-t5-2026-10-07.md).
 v0.4 inició 108/108 slots; 107 completaron y Q11-v2/C falló por ocho
 llamadas agotadas. La repetición correctiva con tope 12 tuvo acuse positivo,
-pero no resolvió la tarea. Evaluación semántica y adjudicación pendientes;
-no hay promoción de uso. Continuidad en AN-KLA rev23, registro
+pero no resolvió la tarea. **Evaluación semántica ejecutada el 2026-10-13**
+por evaluador ajeno al autor:
+[evidencia y veredicto](evidencia/piloto-consulta-agente-evaluacion-2026-10-13.md) —
+104/108 éxitos por rúbrica (A 36/36, B 35/36, C 33/36), 0 fallos críticos,
+0 violaciones de autoridad; ningún umbral preregistrado de utilidad se
+cumple y la regla de ejecución completa bloquea la promoción; la
+adjudicación de aceptación sigue pendiente del Operador. Continuidad en
+AN-KLA rev23, registro
 `f-skopos-agent-query-pilot-t4-2026-10-07`, digest
-`sha256:bcd9e87b0159f285d47293907ffffe4b65c98647eea865b52d37947f036243e5`.
+`sha256:bcd9e87b0159f285d47293907ffffe4b65c98647eea865b52d37947f036243e5`;
+semana CTIM 8–10 oct registrada como rev24
+`f-skopos-ctim-week-2026-10-10`.
 Es una línea de memoria separada de la actualización H25.2 histórica siguiente.
 AN-KLA rev19 verificada: `f-skopos-h252-maintenance-2026-10-06`;
 digest `sha256:33ef48172aae84e4007b5ccc47fcbde7099d4f582b50c4fadca36cd7bf91cfd4`.
