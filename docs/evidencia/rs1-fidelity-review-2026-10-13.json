@@ -1,0 +1,105 @@
+{
+  "schema": "expertogobernanza/skopos-fidelity-review/v0.1",
+  "review_id": "rs1-bounded-visual-review-2026-10-13",
+  "review_method": "visual_nonblind",
+  "review_date": "2026-10-13",
+  "reviewer": "agente skopos, sesion del Operador",
+  "parent_material": {
+    "material_id": "operator-ctim-procedure-rs1-2026-10-10",
+    "source_revision": 2,
+    "source_sha256": "1f8ad5e506b21cbf6b568b68790d2a757ba870524a6ba341f2dff3637d2494f2",
+    "custody_receipt_id": "expertogobernanza:operator-ctim-procedure-rs1-2026-10-10:2:ba82eba90a3f642f"
+  },
+  "reviewed_manifests": [
+    {
+      "derivation_id": "a302f49fc7173592ff34839a485558f01b598f64ea23a665b3e377010c35a040",
+      "profile": "native",
+      "manifest_sha256": "7e0b4ba00b6ba49ac735c45545e245333ea9b4b74b239b4355378a06474680b4",
+      "manifest_fidelity_status_at_review": "unreviewed"
+    },
+    {
+      "derivation_id": "834ccd8733a7f558f72cf3141d6e9cf93a32287f8bb00e6be72e3ed9b1f1cf07",
+      "profile": "ocr_selective",
+      "manifest_sha256": "bf564fb45128cf9859f9217b513fbf86f2f466678879d566c3ee9e9a4fcc567b",
+      "manifest_fidelity_status_at_review": "unreviewed"
+    }
+  ],
+  "pages": [
+    {
+      "page_number": 18,
+      "modality": "native_text",
+      "status": "visually_checked_nonblind",
+      "comparison_render_sha256": "00a847544edae34c91fc3a43f1f7b69baf7cb0918fdf93966124cfb7ae333c3c",
+      "comparison_render_tool": "PDFKit via swift, 2400px, desde original con SHA verificado",
+      "defects": []
+    },
+    {
+      "page_number": 21,
+      "modality": "native_text",
+      "status": "visually_checked_nonblind",
+      "comparison_render_sha256": "73e7b449b8132d377749b725e5882025d1f3914819260a8c72baf16113b97748",
+      "comparison_render_tool": "PDFKit via swift, 2400px, desde original con SHA verificado",
+      "defects": []
+    },
+    {
+      "page_number": 22,
+      "modality": "ocr_text",
+      "status": "visually_checked_nonblind",
+      "comparison_render_sha256": "47759e0f4ef3ccd536c6f7874966de0e4fcd48ca7e679a98bfe6e14e033a63b1",
+      "ocr_lines_reviewed": 81,
+      "defects": [
+        {"bbox": [0.16165414340395814, 0.4011627907993257, 0.2518797002050635, 0.40416666671056145], "confidence": 0.5, "ocr_text": "ase a anass tecnico", "expected_text": "base a análisis técnico"},
+        {"bbox": [0.19172932469122275, 0.27166666681003426, 0.22556390951930355, 0.2805232554121002], "confidence": 0.5, "ocr_text": "Etapa 1", "expected_text": "Etapa I"},
+        {"bbox": [0.4586466162880748, 0.28488372103188386, 0.49060150081718856, 0.2877906975727673], "confidence": 0.5, "ocr_text": "revision", "expected_text": "revisión"},
+        {"bbox": [0.3834586418226361, 0.8195833332356756, 0.6691729228390187, 0.8241666665690089], "confidence": 1.0, "ocr_text": "salvaquardando los principios de iqualdad, legalidad, honradez. lealtad", "expected_text": "salvaguardando los principios de igualdad, legalidad, honradez, lealtad"},
+        {"coverage_gap": true, "missing": "numeradores circulares 1, 2, 3, 4, 6, 7, 8, 9, 11, a, A ausentes del OCR; sólo se capturó 5"}
+      ]
+    },
+    {
+      "page_number": 23,
+      "modality": "ocr_text",
+      "status": "visually_checked_nonblind",
+      "comparison_render_sha256": "1070cda5107ef4d78e8f187441a4e8467fa019efc5d6766a71fce200c28ca44b",
+      "ocr_lines_reviewed": 76,
+      "defects": [
+        {"bbox": [0.12781954950451602, 0.2936046511595106, 0.17669172850300277, 0.2966666666333533], "confidence": 0.3, "ocr_text": "reene de", "expected_text": "reenvío de"},
+        {"bbox": [0.08646616643406403, 0.3531976746483766, 0.22180450574638721, 0.36337209293883266], "confidence": 0.5, "ocr_text": "la \"CEPi Médica\" (Anexo 3) no", "expected_text": "la \"CEPI Médica\" (Anexo 3) no; además \"LINF\" donde el paso 10 dice \"LNIF\""},
+        {"bbox": [0.4248120290103613, 0.39534883724456105, 0.53195488850217, 0.4026162789941339], "confidence": 1.0, "ocr_text": "rovectos de obra avalado", "expected_text": "proyectos de obra avalados"},
+        {"bbox": [0.4586466156829825, 0.2570833335238967, 0.49624060110899737, 0.2645833335238966], "confidence": 0.5, "ocr_text": "Etapa ||", "expected_text": "Etapa II"},
+        {"coverage_gap": true, "missing": "conectores pentagonales A y B ausentes del OCR; circulitos b posiblemente leídos como 1"}
+      ]
+    },
+    {
+      "page_number": 24,
+      "modality": "ocr_text",
+      "status": "visually_checked_nonblind",
+      "comparison_render_sha256": "df45e0179520b2b6ad39045c762c20ad786385bc75d876a0b6babbbbabee13ef",
+      "ocr_lines_reviewed": 40,
+      "defects": [
+        {"bbox": [0.14661654122494364, 0.6889534882359853, 0.15601503758144736, 0.7005813951942474], "confidence": 0.5, "ocr_text": "-", "expected_text": "artefacto: flecha leída como texto"},
+        {"coverage_gap": true, "missing": "conectores pentagonales B y C ausentes del OCR"}
+      ]
+    },
+    {
+      "page_number": 25,
+      "modality": "ocr_text",
+      "status": "visually_checked_nonblind",
+      "comparison_render_sha256": "83ee46c895154a81461fc1b93c92259c3275612671eb05cc77b9830468b81d5f",
+      "ocr_lines_reviewed": 31,
+      "defects": [
+        {"coverage_gap": true, "missing": "conector pentagonal C ausente del OCR"}
+      ]
+    }
+  ],
+  "cross_manifest_check": {
+    "description": "native_text de páginas 18 y 21 idéntico línea a línea entre el manifiesto nativo y el manifiesto OCR",
+    "pages": [18, 21],
+    "result": "identical"
+  },
+  "limits": [
+    "Revisión acotada: 100% de la cobertura OCR (páginas 22-25) y muestra nativa de las páginas citadas por consultas previas (18, 21). Las 62 páginas nativas restantes no se revisaron visualmente.",
+    "Los manifiestos de derivación permanecen intactos con fidelity_status=unreviewed; esta anotación externa es la que registra el cotejo.",
+    "El render comparativo nativo usó PDFKit vía swift porque poppler/pdftoppm no estaba disponible en PATH en esta fecha; los renders OCR de 22-25 son los artefactos del propio manifiesto, verificados por SHA.",
+    "Confirma integridad, cobertura y acceso; no adjudica vigencia jurídica ni oficialidad del documento referido."
+  ]
+}
