@@ -36,3 +36,16 @@ registradas con su alcance exacto:
    ningún agente puede firmar.
 
 Los dos planes quedan con T0 resuelto (1 y 2) y en estado ejecutable.
+
+## Decisión posterior de la misma sesión
+
+7. **Integración prime-agent: CANCELADA** (posterior a las decisiones 1–6;
+   las sustituye en lo que toca a prime): prime no se utilizará. Skopos es
+   independiente y celebra contratos con proyectos de ARIA (Ágora, AN-KLA) o
+   con terceros como expertoGobernanza, **no** con prime agents; de la
+   conversación con Prime sólo se toma lo que conviene a Skopos. Efectos: el
+   [plan del adaptador](../planes/activos/adaptador-prime-agent-2026-10-13.md)
+   queda cancelado sin ejecutar (la decisión 1 sobre `rlmDepth` pierde objeto)
+   y el issue #1 se cierra como no hecho. El plan multiproyecto (decisión 2)
+   queda vigente y alineado con esta frontera: sus consumidores son proyectos
+   ARIA y expertoGobernanza.

@@ -1,9 +1,17 @@
 # Plan — adaptador prime-agent (frente de fuentes) — 2026-10-13
 
-Estado: **ACTIVO, sin ejecutar**. Deriva del issue #1 (propuesta del dueño
-2026-09-06) tras la verificación contra código y datos vivos del 2026-10-13.
-Cierra el punto ciego del ciclo ARIA: el agente que integra el ecosistema no
-es observable por Skopos.
+Estado: **CANCELADO por decisión del Operador el 2026-10-13**
+([acta](../../evidencia/acta-decisiones-operador-2026-10-13.md), decisión 7):
+prime no se utilizará y la integración queda cancelada — Skopos
+es independiente y celebra contratos con proyectos de ARIA (Ágora, AN-KLA) o
+con terceros como expertoGobernanza, **no** con prime agents. De la
+conversación con Prime sólo se toma lo que conviene a Skopos. Ninguna tarea se
+ejecutó: no se creó adaptador, registro ni prueba; las T0-T4 quedan sin
+efecto y el archivo se conserva como registro del análisis de viabilidad
+(premisas verificadas el 2026-10-13) por si la decisión se revisara algún día.
+
+Estado previo: ACTIVO, sin ejecutar; T0 resuelta (rlmDepth 0) y luego
+cancelada sin llegar a T1.
 
 ## Contexto verificado (2026-10-13)
 
