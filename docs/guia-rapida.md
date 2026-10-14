@@ -2,7 +2,9 @@
 
 > Para un agente (o persona) que nunca vio este proyecto. Si tienes más
 > tiempo, lee los documentos completos que se enlazan abajo — esto es el
-> resumen que evita releer todo el historial de commits.
+> resumen que evita releer todo el historial de commits. Si vienes a
+> **revisar o consumir** Skopos desde fuera, empieza por
+> [Qué es Skopos y cómo trabaja](que-es-skopos.md).
 
 ## Qué es Skopos, en una frase
 
