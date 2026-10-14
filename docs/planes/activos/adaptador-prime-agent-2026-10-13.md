@@ -44,8 +44,9 @@ TAREA T0 — decisión de alcance sobre sub-agentes
 Consumes: este plan; issue #1; AGENTS.md.
 Produce: decisión registrada del Operador sobre rlmDepth.
 Steps:
-- [ ] Decidir el filtro rlmDepth; recomendación del agente: sólo sesiones padre (rlmDepth 0) — los sub-agentes ya llegan resumidos vía child_usage_attributed e indexarlos duplica el corpus con eco. Nota de ronda: hoy las 8 sesiones en disco son todas rlmDepth 0 (la hija referida en un custom_message no existe en disco), y `FUENTES_POR_DEFECTO` es (dir, glob) sin gancho de filtro: el filtro vive en la ficha, como incompatibilidad tipada (rlmDepth>0 → diagnóstico propio), no en el registro de fuentes.
-  Verificación: decisión explícita del Operador en el acta de la sesión; sin ella no iniciar T1.
+- [x] Decidir el filtro rlmDepth; recomendación del agente: sólo sesiones padre (rlmDepth 0) — los sub-agentes ya llegan resumidos vía child_usage_attributed e indexarlos duplica el corpus con eco. Nota de ronda: hoy las 8 sesiones en disco son todas rlmDepth 0 (la hija referida en un custom_message no existe en disco), y `FUENTES_POR_DEFECTO` es (dir, glob) sin gancho de filtro: el filtro vive en la ficha, como incompatibilidad tipada (rlmDepth>0 → diagnóstico propio), no en el registro de fuentes.
+  **Decisión del Operador (2026-10-13): sólo rlmDepth 0** — [acta](../../evidencia/acta-decisiones-operador-2026-10-13.md).
+  Verificación: decisión explícita del Operador en el acta de la sesión; cumplida.
 
 TAREA T1 — ficha y adaptador
 Consumes: T0; src/skopos/kimi_code.py; docs/adr/ADR-010-contrato-parser-por-cli.md.

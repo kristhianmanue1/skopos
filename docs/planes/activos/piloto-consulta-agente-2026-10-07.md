@@ -1,6 +1,14 @@
 # Piloto de consulta desde un agente a Skopos
 
 Estado: v0.4 ejecutada; v0.5 correctiva limitada al único fallo v0.4.
+**CERRADO el 2026-10-13**: adjudicación del Operador aceptada tras la
+[evaluación semántica](../../evidencia/piloto-consulta-agente-evaluacion-2026-10-13.md)
+(104/108 éxitos, 0 fallos críticos, 0 violaciones de autoridad; ningún umbral
+preregistrado de utilidad cumplido; promoción bloqueada por la regla de
+ejecución completa) — B queda como candidato experimental sin promoción, C
+descartada, sin serie nueva mientras no exista una pregunta real que la
+justifique ([acta](../../evidencia/acta-decisiones-operador-2026-10-13.md),
+decisión 4).
 Fecha: 2026-10-07. Identificador: `skopos/agent-query-pilot/v0.5`.
 Base inspeccionada: `fe1e8cbf6fe521c3e45fb87e76acf38c5f476084`, rama main.
 Autor: Codex; diseño y autorrevisión documental de la misma instancia.

@@ -50,8 +50,9 @@ Produce: manifiesto con los puntos exactos de entrada/salida por donde un consum
 Steps:
 - [ ] Enumerar cada operación que sirve contenido (search/fetch/receipt y equivalentes) con archivo:línea, y decidir el punto único (o los puntos) donde el control debe vivir.
   Verificación: cada operación citada existe en código; sin operaciones huérfanas ni rutas que esquiven el control.
-- [ ] Confirmar con el Operador: sólo eje proyecto bajo la cuenta vigente, sin multiusuario.
-  Verificación: respuesta explícita registrada; si no llega, no iniciar T1.
+- [x] Confirmar con el Operador: sólo eje proyecto bajo la cuenta vigente, sin multiusuario.
+  **Confirmado (2026-10-13)** — [acta](../../evidencia/acta-decisiones-operador-2026-10-13.md), decisión 2.
+  Verificación: respuesta explícita registrada; cumplida.
 
 TAREA T1 — contrato documental nuevo
 Consumes: T0; docs/contratos/ctim-source-access-v0.2-local.md; docs/contratos/source-store-v3.md.

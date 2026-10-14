@@ -47,7 +47,9 @@ por evaluador ajeno al autor:
 104/108 éxitos por rúbrica (A 36/36, B 35/36, C 33/36), 0 fallos críticos,
 0 violaciones de autoridad; ningún umbral preregistrado de utilidad se
 cumple y la regla de ejecución completa bloquea la promoción; la
-adjudicación de aceptación sigue pendiente del Operador. Continuidad en
+adjudicación de aceptación sigue pendiente del Operador. **Adjudicada y
+cerrada el 2026-10-13** ([acta](evidencia/acta-decisiones-operador-2026-10-13.md)):
+resultados aceptados, B candidato experimental sin promoción, C descartada. Continuidad en
 AN-KLA rev23, registro
 `f-skopos-agent-query-pilot-t4-2026-10-07`, digest
 `sha256:bcd9e87b0159f285d47293907ffffe4b65c98647eea865b52d37947f036243e5`;
