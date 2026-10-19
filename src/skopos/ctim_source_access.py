@@ -69,7 +69,9 @@ def load_access_policy(path):
         raise AccessError('policy_unavailable') from None
     required = {'schema', 'inventory_root', 'inventory_ref', 'inventory_sha256',
                 'mongo_uri', 'database', 'socket_path', 'sources'}
-    if (not isinstance(policy, dict) or set(policy) != required
+    allowed = required | {'served_retention_dir'}
+    if (not isinstance(policy, dict) or not set(policy) <= allowed
+            or not required <= set(policy)
             or policy['schema'] not in (POLICY_SCHEMA, EXTENSIBLE_POLICY_SCHEMA)
             or not isinstance(policy['sources'], list)
             or (len(policy['sources']) != 7 if policy['schema'] == POLICY_SCHEMA
@@ -81,6 +83,10 @@ def load_access_policy(path):
             or not os.path.isabs(policy['socket_path'])
             or not isinstance(policy['inventory_sha256'], str)
             or not HEX.fullmatch(policy['inventory_sha256'])):
+        raise AccessError('policy_unavailable')
+    if 'served_retention_dir' in policy and (
+            not isinstance(policy['served_retention_dir'], str)
+            or not os.path.isabs(policy['served_retention_dir'])):
         raise AccessError('policy_unavailable')
     inventory_raw = _read_under(policy['inventory_root'], policy['inventory_ref'],
                                 MAX_POLICY_BYTES)

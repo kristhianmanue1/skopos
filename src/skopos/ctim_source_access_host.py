@@ -9,6 +9,7 @@ import socketserver
 import stat
 
 from skopos.ctim_source_access import AccessGateway, AccessError, _canonical
+from skopos.ctim_access_retention import retain_served_pair
 
 
 MAX_REQUEST = 4096
@@ -17,6 +18,7 @@ MAX_RESPONSE = 256 * 1024
 
 class _Handler(socketserver.StreamRequestHandler):
     def handle(self):
+        request = None
         try:
             self.request.settimeout(15)
             raw = self.rfile.readline(MAX_REQUEST + 1)
@@ -28,6 +30,15 @@ class _Handler(socketserver.StreamRequestHandler):
             response = {'schema': 'skopos/ctim-source-access/v0.1',
                         'status': 'invalid_input', 'result': None,
                         'error': {'code': 'invalid_request', 'stage': 'validation'}}
+        retention_dir = self.server.gateway.policy.get('served_retention_dir')
+        if retention_dir and isinstance(request, dict) and isinstance(
+                request.get('request_id'), str):
+            try:
+                retain_served_pair(retention_dir, request, response)
+            except AccessError:
+                response = {'schema': 'skopos/ctim-source-access/v0.1',
+                            'status': 'execution_failed', 'result': None,
+                            'error': {'code': 'retention_failed', 'stage': 'delivery'}}
         try:
             self.wfile.write(_canonical(response) + b'\n')
         except OSError:
