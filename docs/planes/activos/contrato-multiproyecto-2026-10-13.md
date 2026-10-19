@@ -48,7 +48,14 @@ TAREA T0 — preflight: mapear la superficie real de servicio
 Consumes: este plan; AGENTS.md; src/skopos/runtime_store.py; src/skopos/source_cli.py; src/skopos/ctim_source_access.py.
 Produce: manifiesto con los puntos exactos de entrada/salida por donde un consumidor obtiene contenido del almacén (CLI y puente MCP), y confirmación del Operador del alcance.
 Steps:
-- [ ] Enumerar cada operación que sirve contenido (search/fetch/receipt y equivalentes) con archivo:línea, y decidir el punto único (o los puntos) donde el control debe vivir.
+- [x] Enumerar cada operación que sirve contenido (search/fetch/receipt y equivalentes) con archivo:línea, y decidir el punto único (o los puntos) donde el control debe vivir.
+  **Hecho (2026-10-19)** — manifiesto embebido como sección «Superficie de
+  servicio declarada (T0)» del contrato T1
+  (`docs/contratos/source-consumer-access-v0.1-local.md`): cinco operaciones
+  (search, search runtime, fetch, fetch runtime, receipt) con archivo:línea;
+  `import` excluido por ser admisión (autoridad del Operador); punto único de
+  control por encima de las operaciones, no parche por ruta — el piloto usó
+  CLI y API Python, una frontera sólo en la CLI dejaría la otra sin control.
   Verificación: cada operación citada existe en código; sin operaciones huérfanas ni rutas que esquiven el control.
 - [x] Confirmar con el Operador: sólo eje proyecto bajo la cuenta vigente, sin multiusuario.
   **Confirmado (2026-10-13)** — [acta](../../evidencia/acta-decisiones-operador-2026-10-13.md), decisión 2.
@@ -58,7 +65,14 @@ TAREA T1 — contrato documental nuevo
 Consumes: T0; docs/contratos/ctim-source-access-v0.2-local.md; docs/contratos/source-store-v3.md.
 Produce: se crea docs/contratos/source-consumer-access-v0.1-local.md: esquema de política con allowed_projects (lista exacta, obligatoria), error tipado project_not_allowed, y límites declarados.
 Steps:
-- [ ] Redactar el contrato desde la instancia viva: las corridas de consumo reales (piloto de consulta con tres proyectos; corridas Ágora p18/p21) son lo que generaliza, conforme a la regla ADR-010.
+- [x] Redactar el contrato desde la instancia viva: las corridas de consumo reales (piloto de consulta con tres proyectos; corridas Ágora p18/p21) son lo que generaliza, conforme a la regla ADR-010.
+  **Hecho (2026-10-19)** — creado
+  `docs/contratos/source-consumer-access-v0.1-local.md`: anclado a backend.py
+  del piloto (project_mismatch l. 108–109 como instrucción bajo rúbrica, no
+  frontera) y a las corridas Ágora/evaluación p18/p21; política con conjunto
+  exacto de campos, `allowed_projects` obligatoria, error `project_not_allowed`
+  uniforme antes de cualquier lectura, `receipt` incluido por revelar
+  existencia; límites declarados sin promesas de multiusuario.
   Verificación: cada afirmación del contrato anclada a esa instancia; cero promesas de aislamiento multiusuario; compatibilidad de esquema resuelta por ser contrato nuevo (sin políticas previas que romper).
 
 TAREA T2 — control nuevo con pruebas (creación, no extensión)
