@@ -15,6 +15,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 import uuid
 
+import pymongo
+
 import test_runtime_store as base
 from skopos.consumer_access import (
     POLICY_SCHEMA, ConsumerAccessStore, load_consumer_policy)
@@ -69,10 +71,18 @@ class LoaderTests(unittest.TestCase):
             policy_document(mongo_uri='mongodb://localhost:27017'),
             policy_document(mongo_uri='mongodb://10.0.0.5:27017'),
             policy_document(mongo_uri='mongodb+srv://127.0.0.1:37035'),
+            # Ronda H1: lista de seeds y descubrimiento de topología.
+            policy_document(mongo_uri='mongodb://127.0.0.1:27017,10.0.0.5:27017'),
+            policy_document(mongo_uri='mongodb://127.0.0.1:27017,127.0.0.1:37035'),
+            policy_document(mongo_uri='mongodb://127.0.0.1:37035/?replicaSet=rs0'),
+            policy_document(mongo_uri='mongodb://127.0.0.1:37035/db,x'),
+            policy_document(mongo_uri='mongodb://127.0.0.1:'),
+            policy_document(mongo_uri='mongodb://user:pass@127.0.0.1:37035'),
             policy_document(database=''),
             policy_document(allowed_projects=[]),
             policy_document(allowed_projects=[ALLOWED, ALLOWED]),
             policy_document(allowed_projects=[ALLOWED, '']),
+            policy_document(allowed_projects=[ALLOWED, ' ']),
             policy_document(allowed_projects=[ALLOWED, 3]),
             policy_document(allowed_projects='pilot-cedro'),
             policy_document(extra='field'),
@@ -83,6 +93,16 @@ class LoaderTests(unittest.TestCase):
                 handle = self.policy_for(document)
                 with self.assertRaisesRegex(ValueError, '^policy_unavailable$'):
                     load_consumer_policy(handle.path)
+
+    def test_duplicate_json_keys_fail_closed(self):
+        handle = PolicyFile(policy_document())
+        self.addCleanup(handle.close)
+        raw = handle.path.read_bytes()
+        duplicated = raw.replace(b'{"schema"', b'{"schema"', 1)[:-1] + \
+            b', "consumer_id": "otro"}'
+        handle.path.write_bytes(duplicated)
+        with self.assertRaisesRegex(ValueError, '^policy_unavailable$'):
+            load_consumer_policy(handle.path)
 
     def test_missing_file_and_invalid_json_fail_closed(self):
         with self.assertRaisesRegex(ValueError, '^policy_unavailable$'):
@@ -149,10 +169,15 @@ class GuardTests(unittest.TestCase):
         return ConsumerAccessStore(store or self.store, self.policy, self.digest)
 
     def test_unlisted_project_rejects_uniformly_without_touching_the_store(self):
-        for name, kwargs in OPERATIONS:
-            with self.subTest(operation=name):
-                with self.assertRaisesRegex(ValueError, '^project_not_allowed$'):
-                    getattr(self.guarded(), name)(project_id=OTHER, **kwargs)
+        # Ronda H4: la lista es exacta — subcadenas, prefijos, mayúsculas y
+        # tipos que no son texto también son "no listado" (H7).
+        not_listed = [OTHER, 'pilot-cedro-agent', 'pilot-cedr', 'PILOT-CEDRO',
+                      ' pilot-cedro', 123, ['pilot-cedro'], None]
+        for project_id in not_listed:
+            with self.subTest(project_id=project_id):
+                for name, kwargs in OPERATIONS:
+                    with self.assertRaisesRegex(ValueError, '^project_not_allowed$'):
+                        getattr(self.guarded(), name)(project_id=project_id, **kwargs)
         self.assertEqual(self.store.calls, [])
 
     def test_listed_project_delegates_and_serves_access(self):
@@ -236,10 +261,10 @@ class ConsumerAccessIntegrationTests(base.RuntimeStoreTests):
     def setUp(self):
         super().setUp()
         self.allowed = 'cedro-' + uuid.uuid4().hex
+        self.policy_uri = 'mongodb://127.0.0.1:37035/' + self.database.name
         document = policy_document(allowed_projects=[self.allowed],
                                    database=self.database.name,
-                                   mongo_uri='mongodb://127.0.0.1:37035/'
-                                             + self.database.name)
+                                   mongo_uri=self.policy_uri)
         self.handle = PolicyFile(document)
         self.addCleanup(self.handle.close)
         policy, digest = load_consumer_policy(self.handle.path)
@@ -257,6 +282,32 @@ class ConsumerAccessIntegrationTests(base.RuntimeStoreTests):
             with self.subTest(operation=name):
                 with self.assertRaisesRegex(ValueError, '^project_not_allowed$'):
                     getattr(self.guarded, name)(project_id=self.project, **kwargs)
+
+    def test_cli_policy_serves_over_real_store(self):
+        # Ronda H4: camino feliz de la CLI bajo política sobre Mongo real.
+        # El runner sólo redirige hosts por defecto: la conexión material va
+        # al host redirigido, y el argumento recibido acredita que la URI
+        # salió de la política (ahí amarra el pin loopback).
+        real_client = pymongo.MongoClient
+        requested = []
+
+        def redirect(uri, **kwargs):
+            requested.append(uri)
+            return real_client('mongodb://localhost:27017', **kwargs)
+
+        with patch('skopos.source_cli.pymongo.MongoClient', side_effect=redirect):
+            output, error = io.StringIO(), io.StringIO()
+            with redirect_stdout(output), redirect_stderr(error):
+                code = source_command(['--policy', str(self.handle.path), 'search', 'á',
+                                       '--kind', 'runtime-events',
+                                       '--project-id', self.allowed])
+        self.assertEqual(code, 0, error.getvalue())
+        served = json.loads(output.getvalue())
+        self.assertTrue(served['results'])
+        self.assertEqual(served['access'],
+                         {'consumer_id': 'cedro-agent',
+                          'policy_sha256': self.handle.sha256})
+        self.assertEqual(requested, [self.policy_uri])
 
     def test_receipt_of_other_project_does_not_reveal_existence(self):
         # El proyecto ajeno existe con datos reales: el rechazo es idéntico.

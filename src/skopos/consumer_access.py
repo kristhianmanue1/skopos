@@ -16,15 +16,31 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import re
 
 POLICY_SCHEMA = 'skopos/source-consumer-access-policy/v0.1'
 POLICY_FIELDS = frozenset(
     {'schema', 'consumer_id', 'mongo_uri', 'database', 'allowed_projects'})
 MAX_POLICY_BYTES = 64 * 1024
+# Un solo host loopback, sin lista de seeds ni replicaSet=: el
+# descubrimiento de topología no puede ampliar la conexión fuera de
+# 127.0.0.1 (ronda adversarial 2026-10-19, H1).
+URI_RE = re.compile(r'mongodb://127\.0\.0\.1:\d{1,5}(/.*)?')
 
 
 def _text(value) -> bool:
     return type(value) is str and bool(value.strip())
+
+
+def _no_duplicate_keys(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            # El digest ampara los bytes, no la interpretación: dos lecturas
+            # humanas no deben discrepar de la política efectiva (ADR-021).
+            raise ValueError('duplicate_json_key')
+        result[key] = value
+    return result
 
 
 def load_consumer_policy(path):
@@ -42,14 +58,16 @@ def load_consumer_policy(path):
     if len(raw) > MAX_POLICY_BYTES:
         raise ValueError('policy_unavailable')
     try:
-        policy = json.loads(raw)
+        policy = json.loads(raw, object_pairs_hook=_no_duplicate_keys)
     except (UnicodeDecodeError, ValueError):
         raise ValueError('policy_unavailable') from None
     if (not isinstance(policy, dict) or set(policy) != POLICY_FIELDS
             or policy['schema'] != POLICY_SCHEMA
             or not _text(policy['consumer_id'])
             or not (type(policy['mongo_uri']) is str
-                    and policy['mongo_uri'].startswith('mongodb://127.0.0.1:'))
+                    and URI_RE.fullmatch(policy['mongo_uri'])
+                    and ',' not in policy['mongo_uri']
+                    and 'replicaset=' not in policy['mongo_uri'].casefold())
             or not _text(policy['database'])
             or type(policy['allowed_projects']) is not list
             or not policy['allowed_projects']
@@ -80,7 +98,9 @@ class ConsumerAccessStore:
     def _require(self, project_id):
         # Uniforme y antes de delegar: el almacén ni se toca, así que el
         # rechazo no filtra contenido ni existencia del proyecto ajeno.
-        if project_id not in self._allowed_projects:
+        # El tipo se comprueba primero: un project_id no de texto también
+        # es "no listado", no un accidente de hash (ronda H7).
+        if type(project_id) is not str or project_id not in self._allowed_projects:
             raise ValueError('project_not_allowed')
 
     def _served(self, result):

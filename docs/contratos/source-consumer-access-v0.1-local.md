@@ -33,11 +33,11 @@ existencia del almacén de fuentes, con el punto exacto en código:
 
 | Operación | Python (`src/skopos/runtime_store.py`) | CLI (`src/skopos/source_cli.py`) |
 |---|---|---|
-| search | `RuntimeSourceStore.search` (l. 175) | `search` (l. 29) |
+| search | `RuntimeSourceStore.search` (l. 175) | `search` (l. 33) |
 | search runtime | `search_runtime` (l. 178) | `search --kind runtime-events` |
-| fetch | `fetch` (l. 142) | `fetch` (l. 33) |
-| fetch runtime | `fetch_runtime` (l. 152) | `fetch-runtime` (l. 37) |
-| receipt | heredado `SourceStore.receipt` (`src/skopos/source_store.py` l. 156) | `receipt` (l. 35) |
+| fetch | `fetch` (l. 142) | `fetch` (l. 37) |
+| fetch runtime | `fetch_runtime` (l. 152) | `fetch-runtime` (l. 41) |
+| receipt | heredado `SourceStore.receipt` (`src/skopos/source_store.py` l. 156) | `receipt` (l. 39) |
 
 `import` no está en la superficie: la admisión es operación de autoridad del
 Operador, no acceso de consumidor. El control vive en un punto único por
@@ -51,18 +51,22 @@ de campos `schema`, `consumer_id`, `mongo_uri`, `database`,
 `allowed_projects`.
 
 - `schema`: exactamente ese valor.
-- `consumer_id`: cadena no vacía.
-- `mongo_uri`: cadena con prefijo `mongodb://127.0.0.1:` —perfil local
-  monousuario, sin exposición de red—. No se fija puerto: los ensayos de
-  laboratorio del plan usan instancias dedicadas efímeras y la política debe
-  poder apuntarlas sin dejar de ser fail-closed ante hosts no loopback.
-- `database`: cadena no vacía.
-- `allowed_projects`: lista obligatoria de al menos una cadena no vacía, sin
-  repetidos. Lista exacta: sin patrones ni comodines.
+- `consumer_id`: cadena de texto con contenido distinto de espacios.
+- `mongo_uri`: cadena que casa exactamente con
+  `mongodb://127.0.0.1:PUERTO[/resto]` — **un solo host loopback, sin
+  lista de seeds (coma) ni parámetro `replicaSet=`**, de modo que el
+  descubrimiento de topología no pueda ampliar la conexión fuera de
+  127.0.0.1. No se fija puerto: los ensayos de laboratorio del plan usan
+  instancias dedicadas efímeras y la política debe poder apuntarlas.
+- `database`: cadena de texto con contenido distinto de espacios.
+- `allowed_projects`: lista obligatoria de al menos una cadena con
+  contenido distinto de espacios, sin repetidos. Lista exacta: sin
+  patrones ni comodines.
 
-Carga fail-closed, en carga y no en uso: archivo ausente o ilegible, JSON
-inválido, conjunto de campos distinto, o cualquier violación anterior →
-`policy_unavailable` y nada se sirve.
+Carga fail-closed, en carga y no en uso: archivo ausente o ilegible, mayor
+de 64 KiB, JSON inválido o con claves duplicadas, conjunto de campos
+distinto, o cualquier violación anterior → `policy_unavailable` y nada se
+sirve.
 
 ## Conducta
 
@@ -99,13 +103,13 @@ auditoría posterior puede saber qué política autorizó cada salida.
 
 `skopos source --policy RUTA` sustituye a `--database` y `--uri` (combinarlos
 es error de uso): el punto y la base salen de la política —el consumidor no
-elige a dónde conectarse ni a qué base—, y ahí amarra de verdad el prefijo
+elige a dónde conectarse ni a qué base—, y ahí amarra de verdad la regla
 loopback de `mongo_uri`. Bajo política sólo hay lectura: las cinco
 operaciones de la superficie; `import` se rechaza con
-`operation_not_allowed` antes de conectar, porque la admisión es autoridad
-del Operador. La política ausente o inválida se rechaza en carga
-(`policy_unavailable`). Sin `--policy`, la CLI conserva el uso de Operador
-(admisión y mantenimiento) sin cambios.
+`operation_not_allowed` antes de conectar y antes de cargar la política,
+porque la admisión es autoridad del Operador. La política ausente o
+inválida se rechaza en carga (`policy_unavailable`). Sin `--policy`, la CLI
+conserva el uso de Operador (admisión y mantenimiento) sin cambios.
 
 ## Compatibilidad
 

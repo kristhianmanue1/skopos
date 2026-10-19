@@ -58,9 +58,9 @@ def source_command(argv=None):
         selected = {'text_projection': args.text_id, 'original_jsonl': args.row_id, 'derived_event': args.event_id}
         if selected[args.view] is None:
             parser.error('El selector no corresponde a --view.')
-    if bool(args.database) == bool(args.policy):
+    if (args.database is None) == (args.policy is None):
         parser.error('Elegir una vía: --database (Operador) o --policy (consumidor).')
-    if args.policy and args.uri:
+    if args.policy is not None and args.uri is not None:
         parser.error('--policy ya fija la conexión; no combinar con --uri.')
     try:
         policy = digest = None

@@ -15,8 +15,10 @@ consumidor con política de un solo proyecto, ensayo espejo con recibo.
   21 `pilot-pino`, 3 decoys. Se importaron **sólo las 42 del plan**
   (cedro+olmo), con verificación de hash por archivo contra el manifiesto.
   Las rutas del manifiesto son absolutas del piloto original y se
-  rebasaron a la extracción; las tres retenidas por `hold_after_import`
-  viven como `.held` con bytes idénticos (hash verificado igual).
+  rebasaron a la extracción. El manifiesto retiene tres fuentes con
+  `hold_after_import` — `s009-r1` de cada proyecto, que en el tarball viven
+  como `.held` con bytes idénticos (hash verificado igual); las de cedro y
+  olmo están entre las 42 y se importaron desde su `.held`.
 - Resultado: **42 admisiones** `imported` con recibo de identidad y hash
   cotejados; `source_revisions_v3` = 42 documentos; cabezas por proyecto
   **19+19**, porque `s002` y `s019` tienen dos revisiones cada una en el

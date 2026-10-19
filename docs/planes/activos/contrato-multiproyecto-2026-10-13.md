@@ -1,6 +1,9 @@
 # Plan — contrato multiproyecto para consumidores — 2026-10-13 (v2)
 
-Estado: **ACTIVO, sin ejecutar**. Autorizado por el Operador el 2026-10-13.
+Estado: **EJECUTADO (T0–T4, 2026-10-19)**. Autorizado por el Operador el
+2026-10-13; T0/T1 cerrados el 2026-10-19, T2/T3/T4 el mismo día con ronda
+adversarial y publicación. Queda como registro; la vigencia vive en el
+contrato `docs/contratos/source-consumer-access-v0.1-local.md`.
 La v1 fue refutada en su estructura por la
 [ronda adversarial](../../rondas/2026-10-13-ronda-planes-activos.md) (hallazgo
 H1): mezclaba dos pilas de servicio y consumía archivos que no contienen lo
@@ -101,9 +104,11 @@ TAREA T4 — ronda adversarial propia y publicación
 Consumes: T3; docs/rondas/.
 Produce: ronda adversarial del contrato implementado; correcciones; push reportado.
 Steps:
-- [ ] Ronda adversarial con revisor sin contexto de autoría sobre contrato+código.
+- [x] Ronda adversarial con revisor sin contexto de autoría sobre contrato+código.
+  **Hecho (2026-10-19)** — [ronda documentada](../../rondas/2026-10-19-ronda-consumer-access.md): once hallazgos (ninguno bloqueante, ninguna fuga); H1 MEDIO (URI multi-host/replicaSet rompía la promesa loopback) corregido con validación fullmatch; H2–H8 y H11 corregidos; H10 tolerable; la conjetura H9 se refutó contra el manifiesto antes de aplicarla.
   Verificación: tabla de hallazgos con veredicto; correcciones aplicadas antes de publicar.
-- [ ] Publicar con suite y gates en verde.
+- [x] Publicar con suite y gates en verde.
+  **Hecho (2026-10-19)** — suite aislada 581 pruebas OK sin omisiones; gates en verde; push reportado en la sesión.
   Verificación: python3 -m unittest discover -s tests en verde; gates en verde; git ls-remote origin refs/heads/main == main local; árbol limpio.
 ```
 
