@@ -40,7 +40,7 @@ ALIAS_HEREDADOS = {"reanalizar": "reanalyze", "indexar": "index",
 _AYUDA = f"""skopos {__version__}
 
 Comandos:
-  source --database DB <import|search|fetch|receipt>
+  source (--database DB | --policy FILE) <import|search|fetch|receipt>
                              fuentes TXT/ASR/runtime, entrada manual; fetch-runtime disponible
   custody --policy FILE --database DB --envelope-ref REF
                              custodia PDF de laboratorio (sin frontera de agente)

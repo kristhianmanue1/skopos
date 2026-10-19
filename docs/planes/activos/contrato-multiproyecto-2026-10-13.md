@@ -90,9 +90,11 @@ TAREA T3 — ensayo de dos proyectos con corpus rehidratado
 Consumes: T2; experiments/agent-query-pilot/artifacts/series-v0.4.tar.gz; experiments/agent-query-pilot/import_corpus.py.
 Produce: evidencia con recibo: proyecto permitido sirve, proyecto ajeno rechazado, sobre corpus pilot-cedro/pilot-olmo rehidratado en instancia de laboratorio dedicada.
 Steps:
-- [ ] Rehidratar el corpus del tarball con verificación de manifiesto (comprobar SHA del tarball contra su evidencia) e importar cedro+olmo a un Mongo de laboratorio dedicado; no hay instancia viva del piloto (verificado en ronda) — la del drill se crea y se destruye.
+- [x] Rehidratar el corpus del tarball con verificación de manifiesto (comprobar SHA del tarball contra su evidencia) e importar cedro+olmo a un Mongo de laboratorio dedicado; no hay instancia viva del piloto (verificado en ronda) — la del drill se crea y se destruye.
+  **Hecho (2026-10-19)** — SHA del tarball idéntico al registrado; 42 admisiones verificadas por hash contra el manifiesto (rutas rebasadas, `.held` manejado); instancia dedicada 37036/rs036 creada y destruida (puerto verificado cerrado). Evidencia: `docs/evidencia/source-consumer-access-t3-2026-10-19.md`.
   Verificación: conteos por proyecto coinciden con el manifiesto interno del tarball (21+21 fuentes); instancia en puerto de laboratorio, nunca el operativo.
-- [ ] Ejecutar el ensayo espejo: consumidor con allowed_projects=[pilot-cedro] consulta cedro (sirve) y olmo (project_not_allowed).
+- [x] Ejecutar el ensayo espejo: consumidor con allowed_projects=[pilot-cedro] consulta cedro (sirve) y olmo (project_not_allowed).
+  **Hecho (2026-10-19)** — seis llamadas por la CLI real con política de un solo proyecto: cedro sirve `search` y `fetch-runtime` con `access` y digest; olmo rechazado en `search`/`receipt`/`fetch-runtime` con stdout vacío y código uniforme (receipt con identidad real: sin fuga de existencia); `import` bajo política rechazado antes de conectar. Nota de conteo: 21 entradas de manifiesto por proyecto son 19 `source_id` únicos (s002/s019 multirrevisión) con 42 admisiones.
   Verificación: recibos de ambas llamadas archivados; ninguna fuga de contenido ni de existencia del proyecto ajeno; instancia destruida al terminar.
 
 TAREA T4 — ronda adversarial propia y publicación
