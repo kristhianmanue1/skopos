@@ -31,14 +31,18 @@ import re
 import sys
 
 # Stopwords españolas de alta frecuencia; versión fijada y reportada.
-STOPWORDS_V1 = frozenset("""
+# v2 (2026-10-19, tras el preview del borrador): añade interrogativos y
+# conjugaciones nucleares — sin ellos, toda pregunta «comparte» cómo/qué/fue
+# con casi cualquier objetivo y el traslape de accidente disfraza pares
+# irrecuperables.
+STOPWORDS_V2 = frozenset("""
 a al algo alguna algunas alguno algunos ante antes como con contra cual cuando
-de del desde donde dos el ella ellas ellos en entre era eran es esa esas ese
-eso esos esta estaba están está están ese hecho hasta hay hoy la las le les lo
-los más mi mis mucho muchos muy nada ni no nos nosotros nuestra nuestro o os
-otra otras otro otros para pero poco por porque que quien se sea según ser si
-sí sin sobre solo también tanto te tiene tienen todo todos tu tus un una uno
-unos usted ustedes ya yo
+cuál cuándo de del desde donde dos dónde el ella ellas ellos en entre era eran
+es esa esas ese eso esos esta estaba están está estén ese fue fueron hecho hasta
+hay hoy cómo la las le les lo los más mi mis mucho muchos muy nada ni no nos
+nosotros nuestra nuestro o os otra otras otro otros para pero poco por porque
+qué que quien quién se sea según ser si sí sin sobre solo también tanto te tiene
+tienen todo todos tu tus un una uno unos usted ustedes ya yo
 """.split())
 
 TOKEN_RE = re.compile(r"[a-záéíóúüñ0-9]+")
@@ -50,7 +54,7 @@ def tokenize(text):
 
 
 def content_terms(text):
-    return [term for term in tokenize(text) if term not in STOPWORDS_V1]
+    return [term for term in tokenize(text) if term not in STOPWORDS_V2]
 
 
 def overlap(query, target):
@@ -64,7 +68,7 @@ def overlap(query, target):
     target_terms = set(tokenize(target))
     shared_all = sorted(query_terms & target_terms)
     shared_content = sorted(
-        term for term in shared_all if term not in STOPWORDS_V1)
+        term for term in shared_all if term not in STOPWORDS_V2)
     return shared_all, shared_content, sorted(query_terms)
 
 
@@ -94,7 +98,7 @@ def summarize(details):
             'zero_overlap_all_rate': round(zero_all / total, 4) if total else None,
             'zero_overlap_content': zero_content,
             'zero_overlap_content_rate': round(zero_content / total, 4) if total else None,
-            'stopwords': 'spanish-builtin-v1 (%d términos)' % len(STOPWORDS_V1),
+            'stopwords': 'spanish-builtin-v2 (%d términos)' % len(STOPWORDS_V2),
             'irrecoverable_pairs': [item['query'] for item in details
                                     if item['zero_overlap_content']]}
 
@@ -130,7 +134,7 @@ def self_check():
         except ValueError as error:
             assert str(error) == 'invalid_pair'
     print('self-check OK — %d stopwords, métrica y resumen verificados'
-          % len(STOPWORDS_V1))
+          % len(STOPWORDS_V2))
 
 
 def load_pairs(path):
