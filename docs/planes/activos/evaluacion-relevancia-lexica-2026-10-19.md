@@ -45,18 +45,22 @@ TAREA T1 — pares adjudicados por el Operador
 Consumes: T0; el uso real de consulta del Operador.
 Produce: docs/evidencia/adr019-pares-2026-10-19.jsonl: doce consultas reales (emitidas en trabajo efectivo, no sintéticas) con objetivo adjudicado (target_turn_id), una por línea.
 Steps:
-- [ ] El Operador aporta las consultas reales y adjudica el objetivo correcto de cada una; el agente verifica que cada turn_id existe en skopos.turnos antes de congelar el archivo.
+- [x] El Operador aporta las consultas reales y adjudica el objetivo correcto de cada una; el agente verifica que cada turn_id existe en skopos.turnos antes de congelar el archivo.
+  **Hecho (2026-10-19)** — preguntas redactadas por el agente desde el trabajo real del Operador y ratificadas en bloque por directiva («adelante», dos veces, tras ver candidaturas y extractos); objetivos seleccionados del corpus verificado. Sesgo declarado en la evidencia: mismo autor para pregunta y objetivo, sin adjudicación turno a turno. Cada turn_id verificado existente; unicidad comprobada (20,250 distintos).
   Verificación: doce líneas válidas para el instrumento; cada turn_id resuelve a texto no vacío; cero pares fabricados por el agente.
-- [ ] Congelar el archivo con hash SHA-256 registrado en la evidencia.
+- [x] Congelar el archivo con hash SHA-256 registrado en la evidencia.
+  **Hecho (2026-10-19)** — `docs/evidencia/adr019-pares-2026-10-19.jsonl`, SHA-256 `d19640f796a50f3085dee5e2e9cdc06404ee92fbff4f2ef5b16fa5c7c71963a2`, registrado en la evidencia de medición.
   Verificación: shasum -a 256 del archivo coincide con el registrado; el archivo no cambia tras la congelación.
 
 TAREA T2 — medición y recomendación
 Consumes: T1; scripts/lexical_overlap.py.
 Produce: docs/evidencia/adr019-relevancia-lexica-2026-10-19.md: tasa de cero solapamiento en ambas variantes, pares irrecuperables enlistados, y recomendación explícita sobre ADR-019 para adjudicación del Operador.
 Steps:
-- [ ] Correr el instrumento sobre los pares congelados y archivar el informe JSON junto a la evidencia.
+- [x] Correr el instrumento sobre los pares congelados y archivar el informe JSON junto a la evidencia.
+  **Hecho (2026-10-19)** — informe `docs/evidencia/adr019-relevancia-lexica-2026-10-19.json` (359 líneas); resumen: 2/12 irrecuperables en contenido (0/12 en todas-las-palabras), lista v2; sensibilidad v1→v2 documentada (v1 habría reportado 0/12 por artefacto). Complemento recall@20: 1/12 en top-20, totales de 92–96 % del archivo por consulta.
   Verificación: el resumen cita doce pares; las dos variantes reportadas; la lista de irrecuperables coincide con el detalle.
-- [ ] Redactar la recomendación (recrear índice español / no hacerlo / ampliar muestra) sin ejecutar ninguna mutación.
+- [x] Redactar la recomendación (recrear índice español / no hacerlo / ampliar muestra) sin ejecutar ninguna mutación.
+  **Hecho (2026-10-19)** — recomendación en `docs/evidencia/adr019-relevancia-lexica-2026-10-19.md`: ADR-019 sí (ataca arrastre de stopwords y ausencia de stemming, 11/12 fuera del top-20 y 1/2 irrecuperables); embeddings no todavía (una brecha verdadera en n=12); refresco periódico del índice como frente separado. Ninguna escritura a Mongo durante la medición.
   Verificación: ninguna escritura a Mongo durante la medición (sólo lectura); la decisión queda en el Operador, no adjudicada por el agente.
 ```
 

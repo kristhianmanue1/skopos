@@ -1,0 +1,359 @@
+{
+ "summary": {
+  "pairs": 12,
+  "zero_overlap_all": 0,
+  "zero_overlap_all_rate": 0.0,
+  "zero_overlap_content": 2,
+  "zero_overlap_content_rate": 0.1667,
+  "stopwords": "spanish-builtin-v2 (108 términos)",
+  "irrecoverable_pairs": [
+   "¿Cómo recuperamos todo si se pierde la computadora?",
+   "¿Cómo se comprueba que una conversación citada no fue alterada?"
+  ]
+ },
+ "details": [
+  {
+   "query": "¿Cómo se planeó el respaldo frío de Mongo?",
+   "query_terms": [
+    "cómo",
+    "de",
+    "el",
+    "frío",
+    "mongo",
+    "planeó",
+    "respaldo",
+    "se"
+   ],
+   "shared_all": [
+    "de",
+    "el",
+    "mongo",
+    "respaldo",
+    "se"
+   ],
+   "shared_content": [
+    "mongo",
+    "respaldo"
+   ],
+   "zero_overlap_all": false,
+   "zero_overlap_content": false
+  },
+  {
+   "query": "¿Qué defectos encontró la revisión OCR de las páginas 22 a 25?",
+   "query_terms": [
+    "22",
+    "25",
+    "a",
+    "de",
+    "defectos",
+    "encontró",
+    "la",
+    "las",
+    "ocr",
+    "páginas",
+    "qué",
+    "revisión"
+   ],
+   "shared_all": [
+    "22",
+    "25",
+    "a",
+    "de",
+    "defectos",
+    "la",
+    "las",
+    "ocr",
+    "páginas",
+    "revisión"
+   ],
+   "shared_content": [
+    "22",
+    "25",
+    "defectos",
+    "ocr",
+    "páginas",
+    "revisión"
+   ],
+   "zero_overlap_all": false,
+   "zero_overlap_content": false
+  },
+  {
+   "query": "¿Por qué se canceló la integración con prime-agent?",
+   "query_terms": [
+    "agent",
+    "canceló",
+    "con",
+    "integración",
+    "la",
+    "por",
+    "prime",
+    "qué",
+    "se"
+   ],
+   "shared_all": [
+    "agent",
+    "con",
+    "integración",
+    "la",
+    "por",
+    "prime",
+    "qué",
+    "se"
+   ],
+   "shared_content": [
+    "agent",
+    "integración",
+    "prime"
+   ],
+   "zero_overlap_all": false,
+   "zero_overlap_content": false
+  },
+  {
+   "query": "¿Qué rompía la colisión de turn_id de Codex?",
+   "query_terms": [
+    "codex",
+    "colisión",
+    "de",
+    "id",
+    "la",
+    "qué",
+    "rompía",
+    "turn"
+   ],
+   "shared_all": [
+    "codex",
+    "de",
+    "id",
+    "la",
+    "turn"
+   ],
+   "shared_content": [
+    "codex",
+    "id",
+    "turn"
+   ],
+   "zero_overlap_all": false,
+   "zero_overlap_content": false
+  },
+  {
+   "query": "¿Qué mejoró la lectura incremental del vigilante?",
+   "query_terms": [
+    "del",
+    "incremental",
+    "la",
+    "lectura",
+    "mejoró",
+    "qué",
+    "vigilante"
+   ],
+   "shared_all": [
+    "del",
+    "incremental",
+    "la",
+    "lectura",
+    "mejoró"
+   ],
+   "shared_content": [
+    "incremental",
+    "lectura",
+    "mejoró"
+   ],
+   "zero_overlap_all": false,
+   "zero_overlap_content": false
+  },
+  {
+   "query": "¿Qué condiciones puso el Mediador para muse-code?",
+   "query_terms": [
+    "code",
+    "condiciones",
+    "el",
+    "mediador",
+    "muse",
+    "para",
+    "puso",
+    "qué"
+   ],
+   "shared_all": [
+    "code",
+    "el",
+    "mediador",
+    "muse",
+    "para",
+    "qué"
+   ],
+   "shared_content": [
+    "code",
+    "mediador",
+    "muse"
+   ],
+   "zero_overlap_all": false,
+   "zero_overlap_content": false
+  },
+  {
+   "query": "¿Cómo recuperamos todo si se pierde la computadora?",
+   "query_terms": [
+    "computadora",
+    "cómo",
+    "la",
+    "pierde",
+    "recuperamos",
+    "se",
+    "si",
+    "todo"
+   ],
+   "shared_all": [
+    "cómo",
+    "la",
+    "se",
+    "si"
+   ],
+   "shared_content": [],
+   "zero_overlap_all": false,
+   "zero_overlap_content": true
+  },
+  {
+   "query": "¿Dónde quedó la decisión de no renombrar los campos guardados?",
+   "query_terms": [
+    "campos",
+    "de",
+    "decisión",
+    "dónde",
+    "guardados",
+    "la",
+    "los",
+    "no",
+    "quedó",
+    "renombrar"
+   ],
+   "shared_all": [
+    "campos",
+    "de",
+    "decisión",
+    "dónde",
+    "la",
+    "los",
+    "no",
+    "renombrar"
+   ],
+   "shared_content": [
+    "campos",
+    "decisión",
+    "renombrar"
+   ],
+   "zero_overlap_all": false,
+   "zero_overlap_content": false
+  },
+  {
+   "query": "¿Qué hicimos cuando el aviso de actualización ensuciaba la salida estándar?",
+   "query_terms": [
+    "actualización",
+    "aviso",
+    "cuando",
+    "de",
+    "el",
+    "ensuciaba",
+    "estándar",
+    "hicimos",
+    "la",
+    "qué",
+    "salida"
+   ],
+   "shared_all": [
+    "actualización",
+    "cuando",
+    "de",
+    "el",
+    "la",
+    "qué",
+    "salida"
+   ],
+   "shared_content": [
+    "actualización",
+    "salida"
+   ],
+   "zero_overlap_all": false,
+   "zero_overlap_content": false
+  },
+  {
+   "query": "¿Por qué buscar palabras vacías devolvía casi todo el archivo?",
+   "query_terms": [
+    "archivo",
+    "buscar",
+    "casi",
+    "devolvía",
+    "el",
+    "palabras",
+    "por",
+    "qué",
+    "todo",
+    "vacías"
+   ],
+   "shared_all": [
+    "devolvía",
+    "el",
+    "palabras",
+    "por"
+   ],
+   "shared_content": [
+    "devolvía",
+    "palabras"
+   ],
+   "zero_overlap_all": false,
+   "zero_overlap_content": false
+  },
+  {
+   "query": "¿Cómo se comprueba que una conversación citada no fue alterada?",
+   "query_terms": [
+    "alterada",
+    "citada",
+    "comprueba",
+    "conversación",
+    "cómo",
+    "fue",
+    "no",
+    "que",
+    "se",
+    "una"
+   ],
+   "shared_all": [
+    "fue",
+    "no",
+    "que",
+    "se",
+    "una"
+   ],
+   "shared_content": [],
+   "zero_overlap_all": false,
+   "zero_overlap_content": true
+  },
+  {
+   "query": "¿Quién cuida que las copias salgan cada noche sin que nadie las pide?",
+   "query_terms": [
+    "cada",
+    "copias",
+    "cuida",
+    "las",
+    "nadie",
+    "noche",
+    "pide",
+    "que",
+    "quién",
+    "salgan",
+    "sin"
+   ],
+   "shared_all": [
+    "cada",
+    "las",
+    "noche",
+    "que",
+    "sin"
+   ],
+   "shared_content": [
+    "cada",
+    "noche"
+   ],
+   "zero_overlap_all": false,
+   "zero_overlap_content": false
+  }
+ ]
+}

@@ -1,0 +1,12 @@
+{"query": "¿Cómo se planeó el respaldo frío de Mongo?", "target_turn_id": "codex-cli:rollout-2026-10-06T05-12-55-01a10ea6-c112-7f70-ac2d-2a775412b854_01a110ea-a438-79c2-8d3b-fcba992b0a27:01a1111d-1811-7562-8d1e-ff59d7bd947f"}
+{"query": "¿Qué defectos encontró la revisión OCR de las páginas 22 a 25?", "target_turn_id": "opencode:msg_137ca87b4001hrorEw1P4OwlA2"}
+{"query": "¿Por qué se canceló la integración con prime-agent?", "target_turn_id": "opencode:msg_13882b573001EGfx5SzqrRVLkS"}
+{"query": "¿Qué rompía la colisión de turn_id de Codex?", "target_turn_id": "claude-code:3224898d-c7d1-4b90-9676-1dcf0531796d"}
+{"query": "¿Qué mejoró la lectura incremental del vigilante?", "target_turn_id": "claude-code:0252f9a6-c012-4443-bb7a-605424fde1f6"}
+{"query": "¿Qué condiciones puso el Mediador para muse-code?", "target_turn_id": "opencode:msg_135c3980a001RA6cdm44J8FPl4"}
+{"query": "¿Cómo recuperamos todo si se pierde la computadora?", "target_turn_id": "codex-cli:rollout-2026-10-06T05-12-55-01a10ea6-c112-7f70-ac2d-2a775412b854_01a110ea-a438-79c2-8d3b-fcba992b0a27:01a110fb-6c5d-7493-b849-e8dd97d1b20a"}
+{"query": "¿Dónde quedó la decisión de no renombrar los campos guardados?", "target_turn_id": "claude-code:498dc0f4-2ecb-4175-828c-6812b0b0e09f"}
+{"query": "¿Qué hicimos cuando el aviso de actualización ensuciaba la salida estándar?", "target_turn_id": "claude-code:0af0fb0e-7fcf-4964-b66a-0d0d813e4081"}
+{"query": "¿Por qué buscar palabras vacías devolvía casi todo el archivo?", "target_turn_id": "claude-code:4f62d712-2cea-4555-bc2c-c81bb5de817c"}
+{"query": "¿Cómo se comprueba que una conversación citada no fue alterada?", "target_turn_id": "opencode:msg_074aaabd700193FhlySiYmOhxq"}
+{"query": "¿Quién cuida que las copias salgan cada noche sin que nadie las pide?", "target_turn_id": "opencode:msg_138729b85001c7rUxmHO8cq7bS"}
