@@ -6,6 +6,7 @@ import sys
 import pymongo
 from pymongo.errors import PyMongoError
 
+from skopos.consumer_access import ConsumerAccessStore, load_consumer_policy
 from skopos.source_store import SourceStore
 from skopos.runtime_store import RuntimeSourceStore
 
@@ -13,9 +14,12 @@ from skopos.runtime_store import RuntimeSourceStore
 def source_command(argv=None):
     parser = argparse.ArgumentParser(
         prog='skopos source', description='Fuentes externas verificadas (ADR-020).')
-    parser.add_argument('--database', required=True, help='Base explícita; sin migración v2.')
-    parser.add_argument('--uri', default='mongodb://localhost:27017',
+    parser.add_argument('--database', help='Base explícita; sin migración v2.')
+    parser.add_argument('--uri', default=None,
                         help='Mongo local; import requiere replica set.')
+    parser.add_argument('--policy',
+                        help='Política de consumidor (source-consumer-access/v0.1): '
+                             'sólo lectura; punto y base salen de la política.')
     commands = parser.add_subparsers(dest='operation', required=True)
     admission = commands.add_parser('import', help='Importa una fuente de formato explícito.')
     admission.add_argument('path')
@@ -54,9 +58,22 @@ def source_command(argv=None):
         selected = {'text_projection': args.text_id, 'original_jsonl': args.row_id, 'derived_event': args.event_id}
         if selected[args.view] is None:
             parser.error('El selector no corresponde a --view.')
+    if bool(args.database) == bool(args.policy):
+        parser.error('Elegir una vía: --database (Operador) o --policy (consumidor).')
+    if args.policy and args.uri:
+        parser.error('--policy ya fija la conexión; no combinar con --uri.')
     try:
-        with pymongo.MongoClient(args.uri, serverSelectionTimeoutMS=2000) as client:
-            store = (RuntimeSourceStore if runtime else SourceStore)(client[args.database])
+        policy = digest = None
+        if args.policy:
+            if args.operation == 'import':
+                # La admisión es autoridad del Operador, no acceso de consumidor.
+                raise ValueError('operation_not_allowed')
+            policy, digest = load_consumer_policy(args.policy)
+        uri = policy['mongo_uri'] if policy else (args.uri or 'mongodb://localhost:27017')
+        with pymongo.MongoClient(uri, serverSelectionTimeoutMS=2000) as client:
+            database = client[args.database or policy['database']]
+            base_store = (RuntimeSourceStore if runtime else SourceStore)(database)
+            store = ConsumerAccessStore(base_store, policy, digest) if policy else base_store
             if args.operation == 'search':
                 result = (store.search_runtime if runtime else store.search)(project_id=args.project_id, term=args.term, limit=args.limit)
             else:

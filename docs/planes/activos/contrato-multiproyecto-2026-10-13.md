@@ -79,9 +79,11 @@ TAREA T2 — control nuevo con pruebas (creación, no extensión)
 Consumes: T1; src/skopos/source_cli.py; src/skopos/runtime_store.py.
 Produce: se crea src/skopos/consumer_access.py (loader fail-closed de la política y rechazo project_not_allowed en la superficie que T0 mapeó); suite en verde con casos nuevos.
 Steps:
-- [ ] Implementar el loader: política con conjunto exacto de campos (patrón de ctim_source_access.py), allowed_projects obligatorio, política ausente o inválida = nada se sirve.
+- [x] Implementar el loader: política con conjunto exacto de campos (patrón de ctim_source_access.py), allowed_projects obligatorio, política ausente o inválida = nada se sirve.
+  **Hecho (2026-10-19)** — `src/skopos/consumer_access.py`: `load_consumer_policy` falla cerrado en carga con `policy_unavailable` (archivo, JSON, campos, esquema, uri loopback, lista exacta sin repetidos); `ConsumerAccessStore` guarda las cinco operaciones con rechazo uniforme `project_not_allowed` antes de delegar; CLI con `--policy` exclusivo de `--database`/`--uri`, conexión desde la política, `import` rechazado con `operation_not_allowed` antes de conectar.
   Verificación: pruebas nuevas: proyecto listado sirve; no listado rechaza project_not_allowed sin filtrar contenido ni existencia; política malformada se rechaza en carga, no en uso.
-- [ ] Correr la suite completa y los gates.
+- [x] Correr la suite completa y los gates.
+  **Hecho (2026-10-19)** — suite aislada 579 pruebas OK sin omisiones (Mongo temporal 37035 + Ollama qwen3:8b), `tests/test_consumer_access.py` con 12 puras y 2 de integración; gates `check_sizes` (838 archivos) y `check_plans` (5 planes) en verde.
   Verificación: python3 -m unittest discover -s tests en verde; python3 scripts/check_sizes.py y python3 scripts/check_plans.py en verde.
 
 TAREA T3 — ensayo de dos proyectos con corpus rehidratado

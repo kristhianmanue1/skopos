@@ -95,6 +95,18 @@ auditoría posterior puede saber qué política autorizó cada salida.
 - No cambia la recuperación: `search` sigue siendo subcadena casefold, sin
   ranking ni semántica; este contrato no añade ninguna.
 
+## Integración CLI
+
+`skopos source --policy RUTA` sustituye a `--database` y `--uri` (combinarlos
+es error de uso): el punto y la base salen de la política —el consumidor no
+elige a dónde conectarse ni a qué base—, y ahí amarra de verdad el prefijo
+loopback de `mongo_uri`. Bajo política sólo hay lectura: las cinco
+operaciones de la superficie; `import` se rechaza con
+`operation_not_allowed` antes de conectar, porque la admisión es autoridad
+del Operador. La política ausente o inválida se rechaza en carga
+(`policy_unavailable`). Sin `--policy`, la CLI conserva el uso de Operador
+(admisión y mantenimiento) sin cambios.
+
 ## Compatibilidad
 
 Contrato nuevo: no hay políticas previas que romper ni cambios de esquema en
